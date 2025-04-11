@@ -1,1 +1,312 @@
-学习在vercel上绑定仓库
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>在线健身-online读秒健身训练</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .box{margin-top:10px;}
+        .menu {
+            font-size:14px;
+            background:#eee;
+            padding:10px;
+            height: 90vh;
+            overflow-y: auto;
+            border-radius:12px;
+            display:none;
+        }
+        #menuList{list-style: none;padding:0px;margin:0px;}
+        #menuList li{height:24px;padding-left:10px;padding-right:10px;line-height:24px;}
+        .seconds{font-size:10px;font-weight:normal;}
+        .countdown {
+            text-align: center;
+        }
+        #countdown{font-size:50px;}
+        .highlighted {
+            background-color: yellow;
+            padding:0px 10px 0px 0px;
+            margin:0px;
+            border-radius:8px;
+            font-weight:bold;
+        }
+        .xiuxi{color:#ccc4c4;font: sans-serif;}
+        
+        .menu::-webkit-scrollbar {
+          /*滚动条整体样式*/
+          width : 5px;  /* 高宽分别对应横竖滚动条的尺寸 */
+          height: 1px;
+        }
+        .menu::-webkit-scrollbar-thumb {
+          /*滚动条里面小方块*/
+          border-radius: 10px;
+          box-shadow   : inset 0 0 5px rgba(219, 219, 219, 0.5);
+          background   : #d6d6d6;
+        }
+        .menu::-webkit-scrollbar-track {
+          /*滚动条里面轨道*/
+          box-shadow   : inset 0 0 5px rgba(255, 255, 255, 0.8);
+          border-radius: 10px;
+          background   : #ffffff;
+        }
+        /* 当屏幕宽度小于某个阈值时，适用于手机端 */
+        @media (max-width: 768px) {
+            .menu {
+                height: 10vh;
+            }
+            #menuList li{font-size:18px;}
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container box">
+        <div class="row">
+            <div class="menu">
+                <ul id="menuList">
+                </ul>
+            </div>
+            <div class="countdown col-sm-12">
+                <div class="px-4 py-2 my-5 text-center">
+                    <img class="d-block mx-auto mb-4" id="action" src="00.jpg" alt="" width="300px">
+                    <h1 id="name" class="display-5 fw-bold text-body-emphasis">读秒健身训练</h1>
+                    <div class="col-lg-6 mx-auto">
+                        <p class="lead mb-4 badge rounded-pill text-bg-info" id="countdown"></p>
+                        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                            <button type="button" class="btn btn-primary btn-lg px-4 gap-3" id="startButton">开始健身</button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg px-4" id="playButton">播放音乐</button>
+                            <button type="button" class="btn btn-outline-danger btn-lg px-4" id="stopButton" style="display: none;">停止音乐</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <audio id="bgMusic" loop>
+        <source src="background.mp3" type="audio/mp3">
+        您的浏览器不支持音频标签。
+    </audio>
+    <script>
+    var playButton = document.getElementById("playButton");
+    var stopButton = document.getElementById("stopButton");
+    var bgMusic = document.getElementById("bgMusic");
+
+    playButton.addEventListener("click", function() {
+        bgMusic.play();
+        playButton.style.display = "none"; // 隐藏播放按钮
+        stopButton.style.display = "block"; // 显示停止按钮
+    });
+
+    stopButton.addEventListener("click", function() {
+        bgMusic.pause(); // 停止音乐
+        playButton.style.display = "block"; // 显示播放按钮
+        stopButton.style.display = "none"; // 隐藏停止按钮
+    });
+    </script>
+    <script>
+    var menuList = document.getElementById("menuList");
+    var nameElement = document.getElementById("name");
+    var countdownElement = document.getElementById("countdown");
+    var actionImage = document.getElementById("action");
+    var startButton = document.getElementById("startButton");
+    var menus = [
+        { name: "膝关节热身", countdownTime: 20, 'image': '1.jpg' },
+        { name: "髋关节环绕", countdownTime: 40, 'image': '2.jpg' },
+        { name: "原地慢跑", countdownTime: 20, 'image': '3.jpg' },
+        { name: "开合跳", countdownTime: 20, 'image': '4.jpg' },
+        { name: "交替提膝击掌", countdownTime: 20, 'image': '5.jpg' },
+        { name: "深蹲交替提膝", countdownTime: 32, 'image': '6.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "高抬腿", countdownTime: 30, 'image': '7.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "开合深蹲跳", countdownTime: 20, 'image': '8.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "侧移高抬腿", countdownTime: 40, 'image': '9.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "开合跳", countdownTime: 20, 'image': '4.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "左侧膝盖击掌", countdownTime: 20, 'image': '11.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "右侧膝盖击掌", countdownTime: 20, 'image': '12.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "俯身快速垫脚", countdownTime: 20, 'image': '10.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "深蹲交替提膝", countdownTime: 32, 'image': '6.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "高抬腿", countdownTime: 30, 'image': '7.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "开合深蹲跳", countdownTime: 20, 'image': '8.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "侧移高抬腿", countdownTime: 40, 'image': '9.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "开合跳", countdownTime: 30, 'image': '4.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "左侧膝盖击掌", countdownTime: 20, 'image': '11.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "右侧膝盖击掌", countdownTime: 20, 'image': '12.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "俯身快速垫脚", countdownTime: 20, 'image': '10.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "深蹲交替提膝", countdownTime: 32, 'image': '6.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "高抬腿", countdownTime: 30, 'image': '7.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "开合深蹲跳", countdownTime: 20, 'image': '8.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "侧移高抬腿", countdownTime: 40, 'image': '9.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "开合跳", countdownTime: 30, 'image': '4.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "左侧膝盖击掌", countdownTime: 20, 'image': '11.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "右侧膝盖击掌", countdownTime: 20, 'image': '12.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "俯身快速垫脚", countdownTime: 20, 'image': '10.jpg' },
+        { name: "休息", countdownTime: 10, 'image': '0.jpg' },
+        { name: "全身舒展", countdownTime: 40, 'image': '13.jpg' },
+        { name: "靠墙左侧小腿拉伸", countdownTime: 15, 'image': '14.jpg' },
+        { name: "靠墙右侧小腿拉伸", countdownTime: 15, 'image': '15.jpg' },
+        { name: "左侧大腿前侧拉伸", countdownTime: 30, 'image': '16.jpg' },
+        { name: "右侧大腿前侧拉伸", countdownTime: 30, 'image': '17.jpg' },
+    ]; // 用对象形式表示菜单和倒计时时间
+    var currentIndex = 0;
+    var countdownInterval; // 用于存储倒计时的定时器
+
+    function say(text, show = 1) {
+        if ('speechSynthesis' in window) {
+            if (show == 1) {
+                nameElement.textContent = text;
+            }
+            var speech = new SpeechSynthesisUtterance(text);
+            speech.rate = 2; // 设置语速为 0.8，更慢的语速
+            window.speechSynthesis.speak(speech);
+        }
+    }
+
+    function sayDelay(text, show = 1, delay = 0) {
+        setTimeout(function() {
+            say(text, show);
+        }, delay);
+    }
+
+    function createMenuItems() {
+        var i = 1;
+        menus.forEach(function(item, index) {
+            var li = document.createElement("li");
+            if (item.name != '休息') {
+                li.textContent = i + '.' + item.name;
+                i++;
+            } else {
+                li.textContent = item.name;
+                li.classList.add("xiuxi");
+            }
+            // 创建 <span> 标签并设置其类名和内容
+            var span = document.createElement("span");
+            span.className = "badge text-bg-success ms-1 mt-1 float-end seconds";
+            span.textContent = item.countdownTime + 's';
+            // 将 <span> 添加到 <li> 内部
+            li.appendChild(span);
+            li.id = "menu" + (index + 1); // 使用 "menu" + (index + 1) 作为 id
+            menuList.appendChild(li);
+        });
+    }
+
+    function startCountdown() {
+        if (currentIndex < menus.length) {
+            nameElement.textContent = menus[currentIndex].name;
+            countdownElement.textContent = menus[currentIndex].countdownTime; // 初始倒计时时间
+            actionImage.src = menus[currentIndex].image; // 切换动作展示图像
+            var countdown = menus[currentIndex].countdownTime;
+            var countdownInterval = setInterval(function() {
+                countdown--;
+                if (countdown == 12) sayDelay("再坚持一下", 0, 1000);
+                if (countdown <= 10 && countdown > 0) {
+                    say(countdown, 0);
+                }
+                countdownElement.textContent = countdown;
+
+                if (countdown === 0) {
+                    clearInterval(countdownInterval);
+                    currentIndex++;
+
+                    // 移除之前高亮的菜单
+                    for (var i = 0; i < menus.length; i++) {
+                        document.getElementById("menu" + (i + 1)).classList.remove("highlighted");
+                    }
+
+                    if (currentIndex < menus.length) {
+                        countdownElement.textContent = "准备";
+                        actionImage.src = menus[currentIndex].image;
+                        say(menus[currentIndex].name + menus[currentIndex].countdownTime + '秒');
+                        if (menus[currentIndex].name != '休息') {
+                            sayDelay("4", 0, 1000);
+                            sayDelay("3", 0, 2000);
+                            sayDelay("2", 0, 3000);
+                            sayDelay("1", 0, 4000);
+                        }
+                        document.getElementById("menu" + (currentIndex + 1)).classList.add("highlighted"); // 高亮当前菜单
+                        // 滚动到高亮菜单项
+                        scrollToHighlightedMenu();
+                        setTimeout(startCountdown, 5000);
+                    } else {
+                        nameElement.textContent = "本次运动已结束";
+                        countdownElement.textContent = "恭喜你，完成训练！";
+                        actionImage.src = 'end.jpeg';
+                    }
+                }
+                //countdown--;
+            }, 1000);
+        }
+    }
+
+    // 将滚动位置滚动到高亮菜单项
+    function scrollToHighlightedMenu() {
+        var highlightedMenu = document.querySelector(".highlighted");
+        if (highlightedMenu) {
+            // 滚动到高亮菜单项
+            highlightedMenu.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }
+
+    function startNextMenuWithDelay() {
+        nameElement.textContent = "即将开始";
+        countdownElement.textContent = '准备';
+        say("5秒后开始 " + menus[0].name);
+        sayDelay("4", 0, 1000);
+        sayDelay("3", 0, 2000);
+        sayDelay("2", 0, 3000);
+        sayDelay("1", 0, 4000);
+        setTimeout(function() {
+            startCountdown();
+        }, 5000); // 5秒延迟
+    }
+
+    createMenuItems();
+    // 在按钮点击时启动倒计时程序
+    startButton.addEventListener("click", function() {
+        startButton.disabled = true; // 禁用按钮，防止重复点击
+        startButton.style.display = "none"; // 隐藏开始按钮
+        var menu = document.querySelector(".menu");
+        menu.style.display = "block";
+        menu.classList.add("col-sm-2");
+        var countdown = document.querySelector(".countdown");
+        countdown.classList.remove("col-sm-12");
+        countdown.classList.add("col-sm-10");
+        startNextMenuWithDelay();
+    });
+
+
+    document.getElementById("menu1").classList.add("highlighted"); // 初始高亮第一个菜单
+    </script>
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?d28305f9a0b229b10c46f84dd77da735";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+</html>
