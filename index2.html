@@ -706,32 +706,76 @@ menus.forEach((m, i) => {
 document.getElementById('mi0').classList.add('active');
 
 /* ═══════════════════════════════════════════
-   SPEECH — 解决朗读与读秒不同步问题
-   策略：用队列 + cancel 保证每条语音都在正确时间点开始
+   AUDIO CTX — 滴滴音效 (Web Audio API，无需外部文件)
 ═══════════════════════════════════════════ */
-function cancelSpeech() {
-  window.speechSynthesis.cancel();
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
 }
 
+// 短促滴声：freq=频率 dur=时长(s) vol=音量
+function beep(freq = 880, dur = 0.08, vol = 0.35) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + dur + 0.02);
+  } catch(e) {}
+}
+
+// 倒计时滴（常规）：短促高音
+function beepTick() { beep(880, 0.07, 0.3); }
+// 最后一声（开始/结束）：低沉长音
+function beepGo()   { beep(523, 0.18, 0.45); }
+// 完成音：双音
+function beepDone() {
+  beep(659, 0.12, 0.35);
+  setTimeout(() => beep(880, 0.18, 0.4), 150);
+}
+
+/* ═══════════════════════════════════════════
+   SPEECH
+   关键修复：
+   1. speak() 不再内部 cancel，改为队列追加
+   2. 用 lastSpokenSecond 防止同一秒被 250ms 轮询触发多次
+   3. 准备倒数用绝对 setTimeout，不互相 cancel
+═══════════════════════════════════════════ */
+let lastSpokenSecond = -1; // 防重复朗读守卫
+
 function speak(text, rate = 1.8) {
-  cancelSpeech();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'zh-CN';
   u.rate = rate;
   window.speechSynthesis.speak(u);
 }
 
-function speakQueue(items) {
-  // items: [{text, delay}]  delay 单位 ms
+function cancelSpeech() {
+  window.speechSynthesis.cancel();
+  lastSpokenSecond = -1;
+}
+
+// 准备阶段倒数（4 3 2 1）：用独立 setTimeout，不干扰运动中语音
+function scheduleCountIn(startDelayMs, onDone) {
   cancelSpeech();
-  items.forEach(({ text, delay }) => {
+  const ticks = ['4','3','2','1'];
+  ticks.forEach((t, i) => {
     setTimeout(() => {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'zh-CN';
-      u.rate = 1.8;
-      window.speechSynthesis.speak(u);
-    }, delay);
+      beepTick();
+      speak(t);
+    }, startDelayMs + i * 1000);
   });
+  setTimeout(() => {
+    beepGo();
+    if (onDone) onDone();
+  }, startDelayMs + ticks.length * 1000);
 }
 
 /* ═══════════════════════════════════════════
@@ -753,8 +797,8 @@ function setRingText(text) {
 /* ═══════════════════════════════════════════
    PROGRESS
 ═══════════════════════════════════════════ */
-function updateProgress() {
-  const done = menus.slice(0, currentIndex).reduce((s, m) => s + m.time, 0);
+function updateProgress(idx) {
+  const done = menus.slice(0, idx).reduce((s, m) => s + m.time, 0);
   const pct = Math.round(done / totalSecs * 100);
   progFill.style.width = pct + '%';
   progPct.textContent = pct + '%';
@@ -851,79 +895,83 @@ document.getElementById('clearHistoryBtn').addEventListener('click', () => {
 
 /* ═══════════════════════════════════════════
    COUNTDOWN CORE
-   关键修复：setInterval 精准触发，语音与读秒完全同步
-   每次 interval 回调时先更新显示，再触发语音
+   修复要点：
+   1. lastSpokenSecond 守卫：同一秒只触发一次语音/滴声
+   2. 轮询仍保持 200ms（ring 动画流畅），但语音由守卫防重
+   3. 过渡段（准备倒数）用 scheduleCountIn，与运动期语音不冲突
 ═══════════════════════════════════════════ */
 function runCountdown(index) {
-  if (index >= menus.length) {
-    finish();
-    return;
-  }
+  if (index >= menus.length) { finish(); return; }
 
-  const item = menus[index];
+  const item   = menus[index];
   const isRest = item.name === '休息';
-  let remain = item.time;
+  lastSpokenSecond = item.time + 1; // 重置守卫（大于最大值，避免首帧误触）
 
-  // UI update
-  heroTitle.textContent = item.name;
+  // UI
+  heroTitle.textContent    = item.name;
   heroSubtitle.textContent = isRest ? '稍作休息，下一个动作准备中…' : `持续 ${item.time} 秒`;
-  actionImg.src = item.image;
-  setRing(remain, item.time, isRest);
+  actionImg.src            = item.image;
   highlightMenu(index);
-  updateProgress();
-
+  updateProgress(index);
   statusDot.classList.remove('idle');
   statusText.textContent = isRest ? '休息中' : '运动中';
 
-  // 精准倒计时：使用绝对时间基准，避免 setInterval 漂移
   const startAt = Date.now();
-  const totalMs = item.time * 1000;
 
   countdownTimer = setInterval(() => {
     const elapsed = Date.now() - startAt;
-    remain = Math.max(0, item.time - Math.round(elapsed / 1000));
+    const remain  = Math.max(0, item.time - Math.floor(elapsed / 1000));
 
-    // 更新 ring（显示与时间同步）
+    // Ring 更新（每帧）
     setRing(remain, item.time, isRest);
 
-    // 语音：与 remain 同步触发，不用额外 delay
-    if (!isRest && remain === Math.floor(item.time * 0.4) && item.time > 15) {
-      speak('再坚持一下');
-    }
-    if (remain <= 10 && remain > 0) {
-      speak(String(remain));
-    }
+    // ── 语音 + 滴声：每个整秒只触发一次 ──
+    if (remain !== lastSpokenSecond) {
+      lastSpokenSecond = remain;
 
-    if (remain === 0) {
-      clearInterval(countdownTimer);
+      if (remain > 0) {
+        // 鼓励语（运动项目，剩约40%时说一次）
+        if (!isRest && remain === Math.floor(item.time * 0.4) && item.time > 20) {
+          speak('再坚持一下');
+        }
+        // 最后10秒：滴声 + 报数
+        if (remain <= 10) {
+          beepTick();
+          speak(String(remain));
+        }
+      }
 
-      // 准备下一个
-      const next = menus[index + 1];
-      if (next) {
-        setRingText('准备');
-        heroTitle.textContent = next.name;
-        heroSubtitle.textContent = `即将开始 · ${next.time} 秒`;
-        actionImg.src = next.image;
-        statusText.textContent = '准备中';
+      // 结束处理
+      if (remain === 0) {
+        clearInterval(countdownTimer);
+
+        const next = menus[index + 1];
+        if (!next) { finish(); return; }
 
         const isNextRest = next.name === '休息';
+
+        // 切换 UI 预告
+        setRingText('准备');
+        heroTitle.textContent    = next.name;
+        heroSubtitle.textContent = `即将开始 · ${next.time} 秒`;
+        actionImg.src            = next.image;
+        statusText.textContent   = '准备中';
+
         if (isNextRest) {
-          speak(next.name + ' ' + next.time + '秒');
-          setTimeout(() => runCountdown(index + 1), 1500);
+          // 休息段：直接语音提示，1.2s 后进入
+          cancelSpeech();
+          speak('休息 ' + next.time + '秒');
+          setTimeout(() => runCountdown(index + 1), 1200);
         } else {
-          // 倒数 4 3 2 1，精准对齐 1s 每格
+          // 运动段：先报动作名，再4321倒数，倒数结束后进入
+          cancelSpeech();
           speak(next.name + ' ' + next.time + '秒');
-          const ticks = ['4','3','2','1'];
-          ticks.forEach((t, ti) => {
-            setTimeout(() => speak(t), 1000 * (ti + 1));
-          });
-          setTimeout(() => runCountdown(index + 1), 5000);
+          // 1s 后开始 4321（留时间让上面那句说完）
+          scheduleCountIn(1000, () => runCountdown(index + 1));
         }
-      } else {
-        finish();
       }
     }
-  }, 250); // 250ms 轮询，读秒展示更流畅
+  }, 200);
 }
 
 /* ═══════════════════════════════════════════
@@ -932,23 +980,26 @@ function runCountdown(index) {
 startBtn.addEventListener('click', () => {
   if (isRunning) return;
   isRunning = true;
+
+  // 解锁 AudioContext（需用户手势触发）
+  getAudioCtx();
+
   startBtn.disabled = true;
   startBtn.style.opacity = '.5';
   startBtn.textContent = '训练中…';
 
   startSessionTimer();
 
-  // 5 秒准备倒计时
   setRingText('准备');
   statusDot.classList.remove('idle');
-  statusText.textContent = '即将开始';
-  heroTitle.textContent = menus[0].name;
+  statusText.textContent  = '即将开始';
+  heroTitle.textContent   = menus[0].name;
   heroSubtitle.textContent = '5 秒后开始，请做好准备';
-  actionImg.src = menus[0].image;
+  actionImg.src           = menus[0].image;
 
+  cancelSpeech();
   speak('5秒后开始 ' + menus[0].name);
-  ['4','3','2','1'].forEach((t, i) => setTimeout(() => speak(t), 1000 * (i + 1)));
-  setTimeout(() => runCountdown(0), 5000);
+  scheduleCountIn(1000, () => runCountdown(0));
 });
 
 /* ═══════════════════════════════════════════
@@ -973,8 +1024,10 @@ function finish() {
   });
   progFill.style.width = '100%';
   progPct.textContent = '100%';
+  updateProgress(menus.length);
 
   speak('恭喜你，训练完成！');
+  beepDone();
 
   finishTime.textContent = fmtTime(elapsed);
   finishOverlay.classList.add('show');
