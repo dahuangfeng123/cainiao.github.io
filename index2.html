@@ -1,0 +1,1011 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>FitFlow · 读秒健身训练</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --mint: #00C9A7;
+      --mint-light: #E8FAF7;
+      --mint-mid: #B2EFE6;
+      --coral: #FF6B6B;
+      --coral-light: #FFF0F0;
+      --navy: #1A2340;
+      --slate: #4A5568;
+      --fog: #F7F9FC;
+      --white: #FFFFFF;
+      --border: #E2E8F0;
+      --shadow: 0 4px 24px rgba(26,35,64,0.08);
+      --shadow-lg: 0 12px 48px rgba(26,35,64,0.14);
+      --radius: 20px;
+      --radius-sm: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--fog);
+      color: var(--navy);
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--mint);
+      letter-spacing: 2px;
+    }
+    .logo span { color: var(--navy); }
+    .topbar-actions { display: flex; gap: 8px; }
+    .btn-ghost {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--slate);
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .btn-ghost:hover { border-color: var(--mint); color: var(--mint); background: var(--mint-light); }
+
+    /* ── LAYOUT ── */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 0;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      padding-right: 20px;
+    }
+    .sidebar-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .sidebar-header {
+      background: linear-gradient(135deg, var(--navy) 0%, #2D3A5E 100%);
+      padding: 20px;
+      color: white;
+    }
+    .sidebar-header h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .sidebar-header p {
+      font-size: 13px;
+      opacity: .65;
+    }
+    .total-time-badge {
+      display: inline-block;
+      background: rgba(255,255,255,.15);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 10px;
+      color: var(--mint);
+    }
+
+    .menu-list {
+      list-style: none;
+      padding: 12px 0;
+      max-height: 65vh;
+      overflow-y: auto;
+    }
+    .menu-list::-webkit-scrollbar { width: 4px; }
+    .menu-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      font-size: 14px;
+      color: var(--slate);
+      transition: all .15s;
+      cursor: default;
+    }
+    .menu-item.rest { color: #C0C8D8; font-size: 13px; }
+    .menu-item.active {
+      background: var(--mint-light);
+      color: var(--navy);
+      font-weight: 600;
+      border-right: 3px solid var(--mint);
+    }
+    .menu-item.done { color: #A0AEC0; }
+    .menu-item.done .item-name { text-decoration: line-through; }
+    .item-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--fog);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .menu-item.active .item-num { background: var(--mint); color: white; }
+    .menu-item.done .item-num { background: #E2E8F0; color: #A0AEC0; }
+    .item-name { flex: 1; }
+    .item-secs {
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--fog);
+      border-radius: 6px;
+      padding: 2px 7px;
+      color: var(--slate);
+    }
+    .menu-item.active .item-secs { background: var(--mint); color: white; }
+
+    /* ── MAIN ── */
+    .main-area { display: flex; flex-direction: column; gap: 20px; }
+
+    /* Hero Card */
+    .hero-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+    .hero-bg-accent {
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, var(--mint-light) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: 0;
+      min-height: 320px;
+    }
+    .hero-content { padding: 40px 40px 32px; display: flex; flex-direction: column; justify-content: center; }
+    .hero-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--mint);
+      margin-bottom: 12px;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--mint);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100%{ transform:scale(1); opacity:1; }
+      50%{ transform:scale(1.4); opacity:.6; }
+    }
+    .status-dot.idle { background: #CBD5E0; animation: none; }
+
+    .hero-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(42px, 6vw, 72px);
+      line-height: 1;
+      color: var(--navy);
+      margin-bottom: 8px;
+    }
+    .hero-subtitle {
+      font-size: 15px;
+      color: var(--slate);
+      margin-bottom: 32px;
+    }
+
+    /* countdown ring */
+    .countdown-ring-wrap {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      margin-bottom: 24px;
+    }
+    .ring-svg { transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: var(--fog); stroke-width: 8; }
+    .ring-progress {
+      fill: none;
+      stroke: var(--mint);
+      stroke-width: 8;
+      stroke-linecap: round;
+      transition: stroke-dashoffset .9s linear;
+    }
+    .ring-progress.rest-ring { stroke: #94A3B8; }
+    .ring-num {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 52px;
+      color: var(--navy);
+      letter-spacing: 1px;
+    }
+    .ring-num.rest-num { color: #94A3B8; font-size: 36px; }
+
+    /* action image */
+    .hero-image-side {
+      background: linear-gradient(160deg, var(--mint-light) 0%, var(--fog) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .hero-image-side img {
+      width: 100%;
+      max-width: 180px;
+      height: 180px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 8px 24px rgba(0,0,0,.1);
+      transition: opacity .3s;
+    }
+
+    /* buttons */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--mint);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 14px 32px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .18s;
+      box-shadow: 0 4px 16px rgba(0,201,167,.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,201,167,.4); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-music {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 13px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--slate);
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .btn-music:hover { border-color: var(--mint); color: var(--mint); }
+    .btn-music.active { background: #FFF5F5; border-color: var(--coral); color: var(--coral); }
+    .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    /* Session Timer */
+    .session-timer {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--slate);
+      background: var(--fog);
+      border-radius: 8px;
+      padding: 8px 14px;
+    }
+    .session-timer span { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--navy); }
+
+    /* Progress Bar */
+    .progress-bar-wrap {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 28px;
+    }
+    .prog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .prog-label { font-size: 14px; font-weight: 600; color: var(--navy); }
+    .prog-pct { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--mint); }
+    .prog-track {
+      height: 8px;
+      background: var(--fog);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    .prog-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--mint), #00E5C4);
+      border-radius: 100px;
+      transition: width .5s ease;
+      width: 0%;
+    }
+
+    /* History Panel */
+    .history-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .history-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .history-header h3 { font-size: 16px; font-weight: 700; }
+    .btn-clear {
+      font-size: 12px;
+      color: #CBD5E0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .btn-clear:hover { color: var(--coral); }
+    .history-list { padding: 8px 0; max-height: 220px; overflow-y: auto; }
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--fog);
+      transition: background .12s;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-item:hover { background: var(--fog); }
+    .history-icon {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: var(--mint-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .history-info { flex: 1; }
+    .history-date { font-size: 13px; font-weight: 600; color: var(--navy); }
+    .history-detail { font-size: 12px; color: var(--slate); margin-top: 2px; }
+    .history-dur {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      color: var(--mint);
+    }
+    .history-empty {
+      padding: 32px 24px;
+      text-align: center;
+      color: #CBD5E0;
+      font-size: 14px;
+    }
+
+    /* Finish overlay */
+    .finish-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26,35,64,.6);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .finish-overlay.show { display: flex; }
+    .finish-modal {
+      background: var(--white);
+      border-radius: 28px;
+      padding: 48px 40px;
+      text-align: center;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: var(--shadow-lg);
+      animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn {
+      from{ transform: scale(.8); opacity:0; }
+      to{ transform: scale(1); opacity:1; }
+    }
+    .finish-emoji { font-size: 64px; margin-bottom: 16px; }
+    .finish-modal h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      color: var(--navy);
+      margin-bottom: 8px;
+    }
+    .finish-modal p { color: var(--slate); font-size: 15px; margin-bottom: 8px; }
+    .finish-stat {
+      display: inline-block;
+      background: var(--mint-light);
+      color: var(--mint);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      border-radius: 12px;
+      padding: 10px 24px;
+      margin: 12px 0 28px;
+    }
+    .finish-modal .btn-primary { margin: 0 auto; display: flex; justify-content: center; }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      .app-shell { grid-template-columns: 1fr; padding: 16px; }
+      .sidebar { padding-right: 0; }
+      .menu-list { max-height: 180px; }
+      .hero-inner { grid-template-columns: 1fr; }
+      .hero-image-side { display: none; }
+      .hero-content { padding: 28px 24px; }
+      .hero-title { font-size: 48px; }
+    }
+    @media (max-width: 480px) {
+      .topbar { padding: 0 16px; }
+      .hero-actions { gap: 8px; }
+      .btn-primary { padding: 12px 22px; font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo">Fit<span>Flow</span></div>
+  <div class="topbar-actions">
+    <button class="btn-ghost" id="historyToggleBtn">📋 历史记录</button>
+    <button class="btn-ghost" id="musicBtn">🎵 播放音乐</button>
+  </div>
+</header>
+
+<!-- FINISH OVERLAY -->
+<div class="finish-overlay" id="finishOverlay">
+  <div class="finish-modal">
+    <div class="finish-emoji">🏆</div>
+    <h2>训练完成！</h2>
+    <p>太棒了，今天的训练已全部完成</p>
+    <div class="finish-stat" id="finishTime">00:00</div>
+    <p style="font-size:13px;color:#A0AEC0;margin-bottom:24px;">本次训练总耗时</p>
+    <button class="btn-primary" id="finishOkBtn">✓ &nbsp;确认并记录</button>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-card">
+      <div class="sidebar-header">
+        <h3>今日训练计划</h3>
+        <p>全身有氧 · 中等强度</p>
+        <div class="total-time-badge" id="totalTimeBadge">总计 — 分钟</div>
+      </div>
+      <ul class="menu-list" id="menuList"></ul>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-area">
+
+    <!-- Hero -->
+    <div class="hero-card">
+      <div class="hero-bg-accent"></div>
+      <div class="hero-inner">
+        <div class="hero-content">
+          <div class="hero-status">
+            <div class="status-dot idle" id="statusDot"></div>
+            <span id="statusText">准备就绪</span>
+          </div>
+          <div class="hero-title" id="heroTitle">读秒健身训练</div>
+          <div class="hero-subtitle" id="heroSubtitle">点击「开始健身」，语音引导全程带你完成</div>
+
+          <div class="countdown-ring-wrap">
+            <svg class="ring-svg" viewBox="0 0 120 120" width="140" height="140">
+              <circle class="ring-bg" cx="60" cy="60" r="52"/>
+              <circle class="ring-progress" id="ringProgress" cx="60" cy="60" r="52"
+                stroke-dasharray="326.73"
+                stroke-dashoffset="326.73"/>
+            </svg>
+            <div class="ring-num" id="ringNum">—</div>
+          </div>
+
+          <div class="hero-actions">
+            <button class="btn-primary" id="startBtn">▶ &nbsp;开始健身</button>
+            <div class="session-timer" id="sessionTimer">
+              ⏱ 本次用时 <span id="sessionTimerVal">00:00</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-image-side">
+          <img id="actionImg" src="00.jpg" alt="动作图示" onerror="this.style.opacity='.3'">
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-bar-wrap">
+      <div class="prog-header">
+        <span class="prog-label">训练进度</span>
+        <span class="prog-pct" id="progPct">0%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+    </div>
+
+    <!-- History -->
+    <div class="history-card" id="historyPanel">
+      <div class="history-header">
+        <h3>🗓 训练历史</h3>
+        <button class="btn-clear" id="clearHistoryBtn">清空记录</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+  </main>
+</div>
+
+<audio id="bgMusic" loop>
+  <source src="background.mp3" type="audio/mp3">
+</audio>
+
+<script>
+/* ═══════════════════════════════════════════
+   DATA
+═══════════════════════════════════════════ */
+const menus = [
+  { name:"膝关节热身",      time:20,  image:"1.jpg"  },
+  { name:"髋关节环绕",      time:40,  image:"2.jpg"  },
+  { name:"原地慢跑",        time:20,  image:"3.jpg"  },
+  { name:"开合跳",          time:20,  image:"4.jpg"  },
+  { name:"交替提膝击掌",    time:20,  image:"5.jpg"  },
+  { name:"深蹲交替提膝",    time:32,  image:"6.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"高抬腿",          time:30,  image:"7.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"开合深蹲跳",      time:20,  image:"8.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"侧移高抬腿",      time:40,  image:"9.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"开合跳",          time:20,  image:"4.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"左侧膝盖击掌",    time:20,  image:"11.jpg" },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"右侧膝盖击掌",    time:20,  image:"12.jpg" },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"俯身快速垫脚",    time:20,  image:"10.jpg" },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"深蹲交替提膝",    time:32,  image:"6.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"高抬腿",          time:30,  image:"7.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"开合深蹲跳",      time:20,  image:"8.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"侧移高抬腿",      time:40,  image:"9.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"开合跳",          time:30,  image:"4.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"左侧膝盖击掌",    time:20,  image:"11.jpg" },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"右侧膝盖击掌",    time:20,  image:"12.jpg" },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"俯身快速垫脚",    time:20,  image:"10.jpg" },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"深蹲交替提膝",    time:32,  image:"6.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"高抬腿",          time:30,  image:"7.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"开合深蹲跳",      time:20,  image:"8.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"侧移高抬腿",      time:40,  image:"9.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"开合跳",          time:30,  image:"4.jpg"  },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"左侧膝盖击掌",    time:20,  image:"11.jpg" },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"右侧膝盖击掌",    time:20,  image:"12.jpg" },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"俯身快速垫脚",    time:20,  image:"10.jpg" },
+  { name:"休息",            time:10,  image:"0.jpg"  },
+  { name:"全身舒展",        time:40,  image:"13.jpg" },
+  { name:"靠墙左侧小腿拉伸",time:15,  image:"14.jpg" },
+  { name:"靠墙右侧小腿拉伸",time:15,  image:"15.jpg" },
+  { name:"左侧大腿前侧拉伸",time:30,  image:"16.jpg" },
+  { name:"右侧大腿前侧拉伸",time:30,  image:"17.jpg" },
+];
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let currentIndex = 0;
+let countdownTimer = null;
+let sessionStartTime = null;
+let sessionTimerInterval = null;
+let isRunning = false;
+const CIRC = 2 * Math.PI * 52; // 326.73
+
+/* ═══════════════════════════════════════════
+   DOM REFS
+═══════════════════════════════════════════ */
+const menuList      = document.getElementById('menuList');
+const heroTitle     = document.getElementById('heroTitle');
+const heroSubtitle  = document.getElementById('heroSubtitle');
+const statusDot     = document.getElementById('statusDot');
+const statusText    = document.getElementById('statusText');
+const ringProgress  = document.getElementById('ringProgress');
+const ringNum       = document.getElementById('ringNum');
+const actionImg     = document.getElementById('actionImg');
+const startBtn      = document.getElementById('startBtn');
+const sessionTimerVal = document.getElementById('sessionTimerVal');
+const progFill      = document.getElementById('progFill');
+const progPct       = document.getElementById('progPct');
+const totalTimeBadge= document.getElementById('totalTimeBadge');
+const finishOverlay = document.getElementById('finishOverlay');
+const finishTime    = document.getElementById('finishTime');
+const finishOkBtn   = document.getElementById('finishOkBtn');
+const historyList   = document.getElementById('historyList');
+const musicBtn      = document.getElementById('musicBtn');
+const bgMusic       = document.getElementById('bgMusic');
+
+/* ═══════════════════════════════════════════
+   TOTAL TIME
+═══════════════════════════════════════════ */
+const totalSecs = menus.reduce((s, m) => s + m.time, 0);
+const totalMins = Math.ceil(totalSecs / 60);
+totalTimeBadge.textContent = `总计约 ${totalMins} 分钟`;
+
+/* ═══════════════════════════════════════════
+   BUILD MENU
+═══════════════════════════════════════════ */
+let exIdx = 1;
+menus.forEach((m, i) => {
+  const li = document.createElement('li');
+  li.className = 'menu-item' + (m.name === '休息' ? ' rest' : '');
+  li.id = 'mi' + i;
+
+  const numEl = document.createElement('span');
+  numEl.className = 'item-num';
+  numEl.textContent = m.name === '休息' ? '·' : exIdx++;
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'item-name';
+  nameEl.textContent = m.name;
+
+  const secsEl = document.createElement('span');
+  secsEl.className = 'item-secs';
+  secsEl.textContent = m.time + 's';
+
+  li.append(numEl, nameEl, secsEl);
+  menuList.appendChild(li);
+});
+document.getElementById('mi0').classList.add('active');
+
+/* ═══════════════════════════════════════════
+   SPEECH — 解决朗读与读秒不同步问题
+   策略：用队列 + cancel 保证每条语音都在正确时间点开始
+═══════════════════════════════════════════ */
+function cancelSpeech() {
+  window.speechSynthesis.cancel();
+}
+
+function speak(text, rate = 1.8) {
+  cancelSpeech();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  u.rate = rate;
+  window.speechSynthesis.speak(u);
+}
+
+function speakQueue(items) {
+  // items: [{text, delay}]  delay 单位 ms
+  cancelSpeech();
+  items.forEach(({ text, delay }) => {
+    setTimeout(() => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN';
+      u.rate = 1.8;
+      window.speechSynthesis.speak(u);
+    }, delay);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   RING
+═══════════════════════════════════════════ */
+function setRing(remain, total, isRest) {
+  const offset = CIRC * (1 - remain / total);
+  ringProgress.style.strokeDashoffset = offset;
+  ringProgress.classList.toggle('rest-ring', isRest);
+  ringNum.classList.toggle('rest-num', isRest);
+  ringNum.textContent = remain > 0 ? remain : (isRest ? '休息' : '✓');
+}
+
+function setRingText(text) {
+  ringNum.textContent = text;
+  ringProgress.style.strokeDashoffset = CIRC;
+}
+
+/* ═══════════════════════════════════════════
+   PROGRESS
+═══════════════════════════════════════════ */
+function updateProgress() {
+  const done = menus.slice(0, currentIndex).reduce((s, m) => s + m.time, 0);
+  const pct = Math.round(done / totalSecs * 100);
+  progFill.style.width = pct + '%';
+  progPct.textContent = pct + '%';
+}
+
+/* ═══════════════════════════════════════════
+   HIGHLIGHT MENU
+═══════════════════════════════════════════ */
+function highlightMenu(idx) {
+  menus.forEach((_, i) => {
+    const el = document.getElementById('mi' + i);
+    el.classList.remove('active');
+    if (i < idx) el.classList.add('done');
+  });
+  if (idx < menus.length) {
+    const el = document.getElementById('mi' + idx);
+    el.classList.add('active');
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+/* ═══════════════════════════════════════════
+   SESSION TIMER
+═══════════════════════════════════════════ */
+function fmtTime(sec) {
+  const m = String(Math.floor(sec / 60)).padStart(2, '0');
+  const s = String(sec % 60).padStart(2, '0');
+  return m + ':' + s;
+}
+
+function startSessionTimer() {
+  sessionStartTime = Date.now();
+  sessionTimerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+    sessionTimerVal.textContent = fmtTime(elapsed);
+  }, 1000);
+}
+
+function stopSessionTimer() {
+  clearInterval(sessionTimerInterval);
+}
+
+function getElapsedSecs() {
+  return Math.floor((Date.now() - sessionStartTime) / 1000);
+}
+
+/* ═══════════════════════════════════════════
+   HISTORY (localStorage)
+═══════════════════════════════════════════ */
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem('fitflow_history') || '[]'); }
+  catch { return []; }
+}
+
+function saveHistory(arr) {
+  localStorage.setItem('fitflow_history', JSON.stringify(arr));
+}
+
+function addHistoryRecord(durationSecs) {
+  const arr = loadHistory();
+  arr.unshift({
+    date: new Date().toLocaleString('zh-CN'),
+    duration: durationSecs,
+    exercises: menus.filter(m => m.name !== '休息').length
+  });
+  saveHistory(arr.slice(0, 20)); // keep 20
+  renderHistory();
+}
+
+function renderHistory() {
+  const arr = loadHistory();
+  if (arr.length === 0) {
+    historyList.innerHTML = '<div class="history-empty">暂无训练记录，完成第一次训练后将在此显示</div>';
+    return;
+  }
+  historyList.innerHTML = arr.map((r, i) => `
+    <div class="history-item">
+      <div class="history-icon">💪</div>
+      <div class="history-info">
+        <div class="history-date">${r.date}</div>
+        <div class="history-detail">${r.exercises} 个动作完成</div>
+      </div>
+      <div class="history-dur">${fmtTime(r.duration)}</div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+  if (confirm('确认清空所有训练历史？')) {
+    saveHistory([]);
+    renderHistory();
+  }
+});
+
+/* ═══════════════════════════════════════════
+   COUNTDOWN CORE
+   关键修复：setInterval 精准触发，语音与读秒完全同步
+   每次 interval 回调时先更新显示，再触发语音
+═══════════════════════════════════════════ */
+function runCountdown(index) {
+  if (index >= menus.length) {
+    finish();
+    return;
+  }
+
+  const item = menus[index];
+  const isRest = item.name === '休息';
+  let remain = item.time;
+
+  // UI update
+  heroTitle.textContent = item.name;
+  heroSubtitle.textContent = isRest ? '稍作休息，下一个动作准备中…' : `持续 ${item.time} 秒`;
+  actionImg.src = item.image;
+  setRing(remain, item.time, isRest);
+  highlightMenu(index);
+  updateProgress();
+
+  statusDot.classList.remove('idle');
+  statusText.textContent = isRest ? '休息中' : '运动中';
+
+  // 精准倒计时：使用绝对时间基准，避免 setInterval 漂移
+  const startAt = Date.now();
+  const totalMs = item.time * 1000;
+
+  countdownTimer = setInterval(() => {
+    const elapsed = Date.now() - startAt;
+    remain = Math.max(0, item.time - Math.round(elapsed / 1000));
+
+    // 更新 ring（显示与时间同步）
+    setRing(remain, item.time, isRest);
+
+    // 语音：与 remain 同步触发，不用额外 delay
+    if (!isRest && remain === Math.floor(item.time * 0.4) && item.time > 15) {
+      speak('再坚持一下');
+    }
+    if (remain <= 10 && remain > 0) {
+      speak(String(remain));
+    }
+
+    if (remain === 0) {
+      clearInterval(countdownTimer);
+
+      // 准备下一个
+      const next = menus[index + 1];
+      if (next) {
+        setRingText('准备');
+        heroTitle.textContent = next.name;
+        heroSubtitle.textContent = `即将开始 · ${next.time} 秒`;
+        actionImg.src = next.image;
+        statusText.textContent = '准备中';
+
+        const isNextRest = next.name === '休息';
+        if (isNextRest) {
+          speak(next.name + ' ' + next.time + '秒');
+          setTimeout(() => runCountdown(index + 1), 1500);
+        } else {
+          // 倒数 4 3 2 1，精准对齐 1s 每格
+          speak(next.name + ' ' + next.time + '秒');
+          const ticks = ['4','3','2','1'];
+          ticks.forEach((t, ti) => {
+            setTimeout(() => speak(t), 1000 * (ti + 1));
+          });
+          setTimeout(() => runCountdown(index + 1), 5000);
+        }
+      } else {
+        finish();
+      }
+    }
+  }, 250); // 250ms 轮询，读秒展示更流畅
+}
+
+/* ═══════════════════════════════════════════
+   START
+═══════════════════════════════════════════ */
+startBtn.addEventListener('click', () => {
+  if (isRunning) return;
+  isRunning = true;
+  startBtn.disabled = true;
+  startBtn.style.opacity = '.5';
+  startBtn.textContent = '训练中…';
+
+  startSessionTimer();
+
+  // 5 秒准备倒计时
+  setRingText('准备');
+  statusDot.classList.remove('idle');
+  statusText.textContent = '即将开始';
+  heroTitle.textContent = menus[0].name;
+  heroSubtitle.textContent = '5 秒后开始，请做好准备';
+  actionImg.src = menus[0].image;
+
+  speak('5秒后开始 ' + menus[0].name);
+  ['4','3','2','1'].forEach((t, i) => setTimeout(() => speak(t), 1000 * (i + 1)));
+  setTimeout(() => runCountdown(0), 5000);
+});
+
+/* ═══════════════════════════════════════════
+   FINISH
+═══════════════════════════════════════════ */
+function finish() {
+  clearInterval(countdownTimer);
+  stopSessionTimer();
+  const elapsed = getElapsedSecs();
+
+  heroTitle.textContent = '训练完成！';
+  heroSubtitle.textContent = '太棒了，今天的任务全部完成 🎉';
+  setRingText('🏆');
+  statusDot.classList.add('idle');
+  statusText.textContent = '已完成';
+  actionImg.src = 'end.jpeg';
+
+  menus.forEach((_, i) => {
+    const el = document.getElementById('mi' + i);
+    el.classList.remove('active');
+    el.classList.add('done');
+  });
+  progFill.style.width = '100%';
+  progPct.textContent = '100%';
+
+  speak('恭喜你，训练完成！');
+
+  finishTime.textContent = fmtTime(elapsed);
+  finishOverlay.classList.add('show');
+
+  finishOkBtn.onclick = () => {
+    addHistoryRecord(elapsed);
+    finishOverlay.classList.remove('show');
+  };
+}
+
+/* ═══════════════════════════════════════════
+   MUSIC
+═══════════════════════════════════════════ */
+let musicPlaying = false;
+musicBtn.addEventListener('click', () => {
+  if (musicPlaying) {
+    bgMusic.pause();
+    musicBtn.textContent = '🎵 播放音乐';
+    musicBtn.classList.remove('active');
+  } else {
+    bgMusic.play();
+    musicBtn.textContent = '⏹ 停止音乐';
+    musicBtn.classList.add('active');
+  }
+  musicPlaying = !musicPlaying;
+});
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+renderHistory();
+</script>
+</body>
+</html>
