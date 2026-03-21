@@ -762,10 +762,10 @@ function cancelSpeech() {
   lastSpokenSecond = -1;
 }
 
-// 准备阶段倒数（4 3 2 1）：用独立 setTimeout，不干扰运动中语音
+// 准备阶段倒数（5 4 3 2 1）：用独立 setTimeout，不干扰运动中语音
 function scheduleCountIn(startDelayMs, onDone) {
   cancelSpeech();
-  const ticks = ['4','3','2','1'];
+  const ticks = ['5','4','3','2','1'];
   ticks.forEach((t, i) => {
     setTimeout(() => {
       beepTick();
