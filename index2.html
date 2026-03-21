@@ -457,11 +457,44 @@
     }
     .finish-modal .btn-primary { margin: 0 auto; display: flex; justify-content: center; }
 
+    /* 移动端侧边栏折叠 */
+    .sidebar-toggle {
+      display: none;
+      width: 100%;
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--navy);
+      cursor: pointer;
+      text-align: left;
+      margin-bottom: 4px;
+      transition: all .18s;
+    }
+    .sidebar-toggle:hover { border-color: var(--mint); color: var(--mint); }
+    .sidebar-toggle .arrow { float: right; transition: transform .25s; }
+    .sidebar-toggle.open .arrow { transform: rotate(180deg); }
+
+    .sidebar-body {
+      overflow: hidden;
+      transition: max-height .35s ease;
+    }
+
     /* RESPONSIVE */
     @media (max-width: 900px) {
-      .app-shell { grid-template-columns: 1fr; padding: 16px; }
+      .app-shell { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
       .sidebar { padding-right: 0; }
-      .menu-list { max-height: 180px; }
+
+      /* 移动端侧边栏默认收起 */
+      .sidebar-toggle { display: block; }
+      .sidebar-body { max-height: 0; }
+      .sidebar-body.open { max-height: 400px; }
+      .sidebar-card { border-radius: var(--radius-sm); }
+      .menu-list { max-height: 260px; }
+
       .hero-inner { grid-template-columns: 1fr; }
       .hero-image-side { display: none; }
       .hero-content { padding: 28px 24px; }
@@ -480,7 +513,6 @@
 <header class="topbar">
   <div class="logo">Fit<span>Flow</span></div>
   <div class="topbar-actions">
-    <button class="btn-ghost" id="historyToggleBtn">📋 历史记录</button>
     <button class="btn-ghost" id="musicBtn">🎵 播放音乐</button>
   </div>
 </header>
@@ -501,13 +533,18 @@
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
-    <div class="sidebar-card">
-      <div class="sidebar-header">
-        <h3>今日训练计划</h3>
-        <p>全身有氧 · 中等强度</p>
-        <div class="total-time-badge" id="totalTimeBadge">总计 — 分钟</div>
+    <button class="sidebar-toggle" id="sidebarToggle">
+      📋 今日训练计划 <span class="arrow">▾</span>
+    </button>
+    <div class="sidebar-body" id="sidebarBody">
+      <div class="sidebar-card">
+        <div class="sidebar-header">
+          <h3>今日训练计划</h3>
+          <p>全身有氧 · 中等强度</p>
+          <div class="total-time-badge" id="totalTimeBadge">总计 — 分钟</div>
+        </div>
+        <ul class="menu-list" id="menuList"></ul>
       </div>
-      <ul class="menu-list" id="menuList"></ul>
     </div>
   </aside>
 
@@ -762,10 +799,10 @@ function cancelSpeech() {
   lastSpokenSecond = -1;
 }
 
-// 准备阶段倒数（5 4 3 2 1）：用独立 setTimeout，不干扰运动中语音
+// 准备阶段倒数（4 3 2 1）：用独立 setTimeout，不干扰运动中语音
 function scheduleCountIn(startDelayMs, onDone) {
   cancelSpeech();
-  const ticks = ['5','4','3','2','1'];
+  const ticks = ['4','3','2','1'];
   ticks.forEach((t, i) => {
     setTimeout(() => {
       beepTick();
@@ -986,7 +1023,15 @@ startBtn.addEventListener('click', () => {
 
   startBtn.disabled = true;
   startBtn.style.opacity = '.5';
-  startBtn.textContent = '训练中…';
+  startBtn.innerHTML = '训练中…';
+
+  // 重置菜单高亮（应对再练一次场景）
+  menus.forEach((_, i) => {
+    const el = document.getElementById('mi' + i);
+    el.classList.remove('active', 'done');
+  });
+  document.getElementById('mi0').classList.add('active');
+  updateProgress(0);
 
   startSessionTimer();
 
@@ -1026,6 +1071,12 @@ function finish() {
   progPct.textContent = '100%';
   updateProgress(menus.length);
 
+  // 恢复开始按钮
+  isRunning = false;
+  startBtn.disabled = false;
+  startBtn.style.opacity = '1';
+  startBtn.innerHTML = '↺ &nbsp;再练一次';
+
   speak('恭喜你，训练完成！');
   beepDone();
 
@@ -1054,6 +1105,18 @@ musicBtn.addEventListener('click', () => {
   }
   musicPlaying = !musicPlaying;
 });
+
+/* ═══════════════════════════════════════════
+   SIDEBAR TOGGLE (mobile)
+═══════════════════════════════════════════ */
+const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebarBody   = document.getElementById('sidebarBody');
+if (sidebarToggle) {
+  sidebarToggle.addEventListener('click', () => {
+    const open = sidebarBody.classList.toggle('open');
+    sidebarToggle.classList.toggle('open', open);
+  });
+}
 
 /* ═══════════════════════════════════════════
    INIT
