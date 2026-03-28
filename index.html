@@ -542,7 +542,7 @@
 
             // 动物数量过多时移除旧的
             const allAnimals = animalContainer.querySelectorAll('.animal-spawn');
-            if (allAnimals.length > 50) {
+            if (allAnimals.length > 5000000) {
                 allAnimals[0].style.opacity = '0';
                 allAnimals[0].style.transform = 'scale(0)';
                 setTimeout(() => {
