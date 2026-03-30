@@ -1,0 +1,1025 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>早读动物园</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'sky-light': '#E8F4FC',
+                        'grass': '#90EE90',
+                        'grass-dark': '#7CCD7C',
+                        'primary': '#3B82F6',
+                        'primary-dark': '#2563EB',
+                        'danger': '#F472B6',
+                        'danger-dark': '#EC4899',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+
+        /* Custom range slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: #E5E7EB;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3B82F6;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+            transition: transform 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        /* Animal bounce animation */
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .animal-bounce {
+            animation: bounce 1s ease-in-out infinite;
+        }
+
+        /* Floating animation */
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            25% {
+                transform: translateY(-3px) rotate(2deg);
+            }
+
+            75% {
+                transform: translateY(3px) rotate(-2deg);
+            }
+        }
+
+        .animal-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Animal spawn class */
+        .animal-spawn {
+            position: absolute;
+            z-index: 10;
+        }
+
+        /* Checkbox custom style */
+        .animal-checkbox {
+            accent-color: #3B82F6;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        /* Modal animation */
+        .modal-enter {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50">
+    <!-- 主容器 -->
+    <div class="max-w-4xl mx-auto px-4 py-6">
+
+        <!-- 顶部标题区 -->
+        <header class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-blue-800 mb-2">早读动物园</h1>
+            <p class="text-gray-500 text-lg">大声朗读小动物们才会出现，快点大声朗读吧！</p>
+        </header>
+
+        <!-- 动物展示区 -->
+        <div id="animalContainer" class="relative overflow-hidden rounded-2xl shadow-lg mb-6" style="height: 400px;">
+            <!-- 天空背景 -->
+            <div class="absolute inset-0 bg-gradient-to-b from-sky-200 via-sky-100 to-sky-50"></div>
+            <!-- 草地背景 -->
+            <div
+                class="absolute bottom-0 left-0 right-0 h-[15%] bg-gradient-to-t from-green-400 via-green-300 to-green-200">
+            </div>
+            <!-- 云朵装饰 -->
+            <div class="absolute top-8 left-10 text-white text-4xl opacity-80">☁️</div>
+            <div class="absolute top-16 right-16 text-white text-3xl opacity-70">☁️</div>
+            <div class="absolute top-6 left-1/3 text-white text-2xl opacity-60">☁️</div>
+            <!-- 太阳装饰 -->
+            <div class="absolute top-6 right-8 text-5xl">🌞</div>
+            <!-- 动物会通过JS动态生成在这里 -->
+        </div>
+
+        <!-- 动物统计区 -->
+        <div class="bg-white rounded-2xl shadow-lg p-4 mb-6 flex items-center justify-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="text-3xl">🐾</span>
+                <span class="text-gray-600 text-lg">当前动物数量：</span>
+                <span id="animalCount" class="text-3xl font-bold text-orange-500">0</span>
+                <span class="text-gray-500 text-lg">只</span>
+            </div>
+            <button id="clearAnimalsBtn"
+                class="ml-4 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1">
+                <span>🗑️</span>
+                <span>清空</span>
+            </button>
+            <button id="historyBtn"
+                class="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
+                <span>📜</span>
+                <span>历史记录</span>
+            </button>
+        </div>
+
+        <!-- PK状态面板 -->
+        <div id="pkPanel" class="bg-white rounded-2xl shadow-lg p-4 mb-6 hidden">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-semibold text-purple-600">🏆 PK排行榜</h3>
+                <span class="text-sm text-gray-500">参与人数: <span id="pkParticipantCount">0</span></span>
+            </div>
+
+            <!-- 前三名显示 -->
+            <div class="grid grid-cols-3 gap-2 mb-3">
+                <div class="text-center p-2 bg-yellow-50 rounded-lg">
+                    <div class="text-2xl font-bold text-yellow-500">🥇</div>
+                    <div class="text-xs text-gray-600">第1名</div>
+                    <div class="text-sm font-semibold" id="firstPlaceCount">0只</div>
+                </div>
+                <div class="text-center p-2 bg-gray-50 rounded-lg">
+                    <div class="text-2xl font-bold text-gray-400">🥈</div>
+                    <div class="text-xs text-gray-600">第2名</div>
+                    <div class="text-sm font-semibold" id="secondPlaceCount">0只</div>
+                </div>
+                <div class="text-center p-2 bg-orange-50 rounded-lg">
+                    <div class="text-2xl font-bold text-orange-500">🥉</div>
+                    <div class="text-xs text-gray-600">第3名</div>
+                    <div class="text-sm font-semibold" id="thirdPlaceCount">0只</div>
+                </div>
+            </div>
+
+            <!-- 自己的排名 -->
+            <div class="bg-blue-50 rounded-lg p-3">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="text-sm font-semibold text-blue-600">我的排名</div>
+                        <div class="text-2xl font-bold text-blue-500" id="myRank">-</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-600">动物数量</div>
+                        <div class="text-2xl font-bold text-orange-500" id="myAnimalCount">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部控制面板区 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <!-- 左侧卡片：分贝仪 -->
+            <div class="bg-white rounded-2xl shadow-lg p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-gray-600 font-medium">当前分贝</span>
+                    <span class="text-2xl">🔊</span>
+                </div>
+                <div class="text-center mb-4">
+                    <span id="decibelValue" class="text-5xl font-bold text-blue-500">35</span>
+                    <span class="text-2xl text-blue-400 ml-1">dB</span>
+                </div>
+                <div class="mb-2">
+                    <div class="flex justify-between text-sm text-gray-500 mb-2">
+                        <span>分贝阈值</span>
+                        <span id="thresholdValue">30 dB</span>
+                    </div>
+                    <input type="range" id="thresholdSlider" min="30" max="100" value="30" class="w-full">
+                </div>
+            </div>
+
+            <!-- 中间卡片：计时器 -->
+            <div class="bg-white rounded-2xl shadow-lg p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-gray-600 font-medium">大声朗读时间</span>
+                    <span class="text-2xl">⏱️</span>
+                </div>
+                <div class="text-center py-4">
+                    <span id="timerDisplay" class="text-5xl font-bold text-green-500 font-mono">00:01:50</span>
+                </div>
+                <div class="text-center text-gray-400 text-sm">
+                    持续大声朗读吧！
+                </div>
+            </div>
+
+            <!-- 右侧卡片：操作按钮 -->
+            <div class="bg-white rounded-2xl shadow-lg p-5 flex flex-col justify-center gap-4">
+                <button id="settingsBtn"
+                    class="w-full py-3 px-4 border-2 border-blue-400 text-blue-500 rounded-xl font-medium hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                    <span class="text-xl">⚙️</span>
+                    <span>设置</span>
+                </button>
+                <button id="pkBtn"
+                    class="w-full py-3 px-4 bg-gradient-to-r from-purple-400 to-pink-400 text-white rounded-xl font-medium hover:from-purple-500 hover:to-pink-500 transition-all shadow-md flex items-center justify-center gap-2">
+                    <span class="text-xl">🏆</span>
+                    <span>开始PK</span>
+                </button>
+                <button id="pauseBtn"
+                    class="w-full py-3 px-4 bg-gradient-to-r from-pink-400 to-red-400 text-white rounded-xl font-medium hover:from-pink-500 hover:to-red-500 transition-all shadow-md flex items-center justify-center gap-2">
+                    <span class="text-xl">⏸️</span>
+                    <span>暂停监测</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden modal-enter">
+            <!-- 弹窗头部 -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>🦁</span>
+                    动物园设置
+                </h2>
+            </div>
+
+            <!-- 弹窗内容 -->
+            <div class="p-6 overflow-y-auto custom-scrollbar" style="max-height: calc(90vh - 140px);">
+
+                <!-- 动物生成速度区块 -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">动物生成速度</h3>
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <input type="range" id="speedSlider" min="1" max="60" value="1" class="w-full mb-3">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>最快 (1秒)</span>
+                            <span id="speedDisplay">1秒生成一只</span>
+                            <span>最慢 (60秒)</span>
+                        </div>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-2">调节动物在噪音环境中的生成频率</p>
+                </div>
+
+                <!-- 选择动物种类区块 -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">选择动物种类</h3>
+                    <div class="flex gap-2 mb-3">
+                        <button id="selectAllBtn"
+                            class="px-4 py-1.5 bg-blue-100 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors">
+                            全选
+                        </button>
+                        <button id="deselectAllBtn"
+                            class="px-4 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                            全不选
+                        </button>
+                    </div>
+
+                    <!-- 动物网格 -->
+                    <div class="border border-gray-200 rounded-xl p-4 h-48 overflow-y-auto custom-scrollbar">
+                        <div id="animalGrid" class="grid grid-cols-5 gap-3">
+                            <!-- 动物选项会通过JS生成 -->
+                        </div>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-2">选择你希望出现的动物种类（至少选择一种）</p>
+                </div>
+            </div>
+
+            <!-- 弹窗底部 -->
+            <div class="border-t border-gray-100 px-6 py-4 flex gap-3 justify-end bg-gray-50">
+                <button id="resetBtn"
+                    class="px-6 py-2.5 bg-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-300 transition-colors">
+                    重置默认
+                </button>
+                <button id="saveBtn"
+                    class="px-6 py-2.5 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors shadow-md">
+                    保存设置
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 历史记录弹窗 -->
+    <div id="historyModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden modal-enter">
+            <!-- 弹窗头部 -->
+            <div class="bg-gradient-to-r from-purple-500 to-indigo-500 px-6 py-4 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>📜</span>
+                    历史记录
+                </h2>
+                <button id="closeHistoryBtn" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+
+            <!-- 弹窗内容 -->
+            <div id="historyList" class="p-4 overflow-y-auto custom-scrollbar" style="max-height: calc(80vh - 120px);">
+                <!-- 历史记录会通过JS生成 -->
+                <div class="text-center text-gray-400 py-8">
+                    暂无历史记录
+                </div>
+            </div>
+
+            <!-- 弹窗底部 -->
+            <div class="border-t border-gray-100 px-6 py-3 bg-gray-50">
+                <div class="text-sm text-gray-500 flex items-center justify-center">
+                    共 <span id="historyTotalCount" class="font-bold text-purple-500 mx-1">0</span> 条记录
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 可配置参数 ====================
+        // 最低分贝阈值（修改此值可调整前端阈值的最低限制，前端UI无法调低）
+        const MIN_THRESHOLD = 30;
+
+        // ==================== 数据定义 ====================
+        const animalEmojis = [
+            '🐰', '🐯', '🐷', '🐸', '🐶', '🐱', '🐭', '🐹', '🦊', '🐻',
+            '🐨', '🦁', '🐮', '🐵', '🐔', '🐧', '🐦', '🦆', '🦅', '🦉'
+        ];
+
+        // ==================== 状态变量 ====================
+        let timerSeconds = 0;
+        let currentDecibel = 0;
+        let isMonitoring = false;
+        let isMicActive = false;
+        let selectedAnimals = [...animalEmojis];
+        let generateSpeed = 1; // 秒
+        let lastGenerateTime = 0;
+
+        // PK相关状态
+        const pkState = {
+            isPKActive: false,
+            participants: [],
+            currentParticipant: null,
+            pkStartTime: null
+        };
+
+        // 音频相关
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let dataArray = null;
+
+        // ==================== DOM 元素获取 ====================
+        const timerDisplay = document.getElementById('timerDisplay');
+        const decibelValue = document.getElementById('decibelValue');
+        const thresholdSlider = document.getElementById('thresholdSlider');
+        const thresholdValue = document.getElementById('thresholdValue');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const saveBtn = document.getElementById('saveBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const deselectAllBtn = document.getElementById('deselectAllBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const pkBtn = document.getElementById('pkBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const animalGrid = document.getElementById('animalGrid');
+        const animalContainer = document.getElementById('animalContainer');
+        const animalCount = document.getElementById('animalCount');
+        const clearAnimalsBtn = document.getElementById('clearAnimalsBtn');
+        const historyBtn = document.getElementById('historyBtn');
+        const historyModal = document.getElementById('historyModal');
+        const historyList = document.getElementById('historyList');
+        const historyTotalCount = document.getElementById('historyTotalCount');
+        const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+        const pkPanel = document.getElementById('pkPanel');
+        const pkParticipantCount = document.getElementById('pkParticipantCount');
+        const firstPlaceCount = document.getElementById('firstPlaceCount');
+        const secondPlaceCount = document.getElementById('secondPlaceCount');
+        const thirdPlaceCount = document.getElementById('thirdPlaceCount');
+        const myRank = document.getElementById('myRank');
+        const myAnimalCount = document.getElementById('myAnimalCount');
+
+        // ==================== 初始化函数 ====================
+        function init() {
+            // 设置阈值滑块的最低值
+            thresholdSlider.min = MIN_THRESHOLD;
+            thresholdSlider.value = MIN_THRESHOLD;
+            thresholdValue.textContent = `${MIN_THRESHOLD} dB`;
+
+            generateAnimalCheckboxes();
+            updateTimerDisplay();
+            updateAnimalCount();
+            loadHistory();
+            bindEvents();
+        }
+
+        // ==================== PK功能 ====================
+        function startPK() {
+            pkState.isPKActive = true;
+            pkState.pkStartTime = Date.now();
+
+            // 创建当前参与者
+            pkState.currentParticipant = {
+                id: generateUniqueId(),
+                name: `访客${Math.floor(Math.random() * 1000)}`,
+                animalCount: 0,
+                joinTime: Date.now(),
+                rank: 0
+            };
+            pkState.participants.push(pkState.currentParticipant);
+
+            pkPanel.classList.remove('hidden');
+            updatePKUI();
+            startPKSimulation();
+        }
+
+        function endPK() {
+            pkState.isPKActive = false;
+            pkState.participants = [];
+            pkState.currentParticipant = null;
+            pkState.pkStartTime = null;
+            pkPanel.classList.add('hidden');
+            updatePKUI();
+        }
+
+        function updatePKUI() {
+            if (!pkState.isPKActive) {
+                pkParticipantCount.textContent = '0';
+                firstPlaceCount.textContent = '0只';
+                secondPlaceCount.textContent = '0只';
+                thirdPlaceCount.textContent = '0只';
+                myRank.textContent = '-';
+                myAnimalCount.textContent = '0';
+                return;
+            }
+
+            pkParticipantCount.textContent = pkState.participants.length;
+
+            // 更新前三名
+            const sortedParticipants = [...pkState.participants].sort((a, b) => b.animalCount - a.animalCount);
+            firstPlaceCount.textContent = sortedParticipants[0]?.animalCount || 0;
+            secondPlaceCount.textContent = sortedParticipants[1]?.animalCount || 0;
+            thirdPlaceCount.textContent = sortedParticipants[2]?.animalCount || 0;
+
+            // 更新自己的排名
+            const myParticipant = pkState.currentParticipant;
+            if (myParticipant) {
+                myAnimalCount.textContent = myParticipant.animalCount;
+                myRank.textContent = myParticipant.rank;
+            }
+        }
+
+        function updateParticipantRank() {
+            if (!pkState.isPKActive) return;
+
+            // 按动物数量排序
+            pkState.participants.sort((a, b) => b.animalCount - a.animalCount);
+
+            // 更新每个参与者的排名
+            pkState.participants.forEach((participant, index) => {
+                participant.rank = index + 1;
+            });
+
+            updatePKUI();
+        }
+
+        function startPKSimulation() {
+            setInterval(() => {
+                if (pkState.isPKActive) {
+                    // 随机生成新访客（10%概率）
+                    if (Math.random() < 0.1 && pkState.participants.length < 10) {
+                        const newParticipant = {
+                            id: generateUniqueId(),
+                            name: `访客${Math.floor(Math.random() * 1000)}`,
+                            animalCount: Math.floor(Math.random() * 5),
+                            joinTime: Date.now(),
+                            rank: 0
+                        };
+                        pkState.participants.push(newParticipant);
+                    }
+
+                    // 随机更新其他访客的动物数量
+                    pkState.participants.forEach(participant => {
+                        if (participant.id !== pkState.currentParticipant.id) {
+                            if (Math.random() < 0.3) {
+                                participant.animalCount += Math.floor(Math.random() * 3);
+                            }
+                        }
+                    });
+
+                    updateParticipantRank();
+                }
+            }, 2000);
+        }
+
+        function generateUniqueId() {
+            return 'pk_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // ==================== 历史记录功能 ====================
+        const HISTORY_KEY = 'zoo_history';
+        const MAX_HISTORY = 50;
+
+        function getHistory() {
+            try {
+                const data = localStorage.getItem(HISTORY_KEY);
+                return data ? JSON.parse(data) : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function saveHistory(record) {
+            const history = getHistory();
+            history.push(record);
+
+            // 超过50条删除最早的
+            if (history.length > MAX_HISTORY) {
+                history.shift();
+            }
+
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        }
+
+        function loadHistory() {
+            renderHistoryList();
+        }
+
+        function renderHistoryList() {
+            const history = getHistory();
+            historyTotalCount.textContent = history.length;
+
+            if (history.length === 0) {
+                historyList.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        暂无历史记录
+                    </div>
+                `;
+                return;
+            }
+
+            // 按时间倒序显示，但保留原始索引用于删除
+            const sortedHistory = history.map((record, index) => ({ ...record, originalIndex: index })).reverse();
+
+            historyList.innerHTML = sortedHistory.map((record) => `
+                <div class="bg-gray-50 rounded-xl p-4 mb-3 hover:bg-gray-100 transition-colors group" data-index="${record.originalIndex}">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-sm text-gray-500">${record.date}</div>
+                        <button class="delete-history-btn opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-500 text-sm transition-opacity" data-index="${record.originalIndex}">
+                            🗑️ 删除
+                        </button>
+                    </div>
+                    <div class="flex gap-6">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">⏱️</span>
+                            <span class="text-lg font-semibold text-green-500">${record.duration}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">🐾</span>
+                            <span class="text-lg font-semibold text-orange-500">${record.animalCount}</span>
+                            <span class="text-sm text-gray-500">只</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // 绑定删除按钮事件
+            historyList.querySelectorAll('.delete-history-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    deleteHistoryItem(index);
+                });
+            });
+        }
+
+        function deleteHistoryItem(index) {
+            const history = getHistory();
+            history.splice(index, 1);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+            renderHistoryList();
+        }
+
+        // 创建历史记录
+        function createHistoryRecord() {
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+            const hours = Math.floor(timerSeconds / 3600);
+            const minutes = Math.floor((timerSeconds % 3600) / 60);
+            const seconds = timerSeconds % 60;
+            const durationStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            return {
+                date: dateStr,
+                duration: durationStr,
+                animalCount: animalContainer.querySelectorAll('.animal-spawn').length
+            };
+        }
+
+        // 更新动物数量显示
+        function updateAnimalCount() {
+            const count = animalContainer.querySelectorAll('.animal-spawn').length;
+            animalCount.textContent = count;
+        }
+
+        // 随机生成一只动物
+        function spawnAnimal() {
+            if (selectedAnimals.length === 0) return;
+
+            const emoji = selectedAnimals[Math.floor(Math.random() * selectedAnimals.length)];
+            const animal = document.createElement('div');
+            animal.className = 'absolute cursor-pointer select-none animal-spawn';
+
+            // 随机大小
+            const sizes = ['text-3xl', 'text-4xl', 'text-5xl'];
+            animal.classList.add(sizes[Math.floor(Math.random() * sizes.length)]);
+            animal.textContent = emoji;
+
+            // 随机位置（避开草地，在天空区域）
+            const x = Math.random() * 80 + 10; // 10% - 90%
+            const y = Math.random() * 65 + 5;  // 5% - 70%
+            animal.style.left = `${x}%`;
+            animal.style.top = `${y}%`;
+
+            // 添加入场动画类
+            animal.style.opacity = '0';
+            animal.style.transform = 'scale(0) translateY(-20px)';
+            animal.style.transition = 'all 0.3s ease-out';
+
+            animalContainer.appendChild(animal);
+
+            // 触发入场动画
+            requestAnimationFrame(() => {
+                animal.style.opacity = '1';
+                animal.style.transform = 'scale(1) translateY(0)';
+            });
+
+            // 添加浮动动画
+            setTimeout(() => {
+                animal.style.animation = `float ${2 + Math.random() * 2}s ease-in-out infinite`;
+                animal.style.animationDelay = `${Math.random() * 0.5}s`;
+            }, 300);
+
+            // 更新数量
+            updateAnimalCount();
+
+            // 如果PK激活，更新PK状态
+            if (pkState.isPKActive) {
+                pkState.currentParticipant.animalCount++;
+                updateParticipantRank();
+            }
+
+            // 动物数量过多时移除旧的
+            const allAnimals = animalContainer.querySelectorAll('.animal-spawn');
+            if (allAnimals.length > 1000000) {
+                allAnimals[0].style.opacity = '0';
+                allAnimals[0].style.transform = 'scale(0)';
+                setTimeout(() => {
+                    allAnimals[0].remove();
+                    updateAnimalCount();
+                }, 300);
+            }
+        }
+
+        // 生成设置面板的动物复选框
+        function generateAnimalCheckboxes() {
+            animalGrid.innerHTML = '';
+            animalEmojis.forEach((emoji, index) => {
+                const item = document.createElement('label');
+                item.className = 'flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'animal-checkbox';
+                checkbox.value = emoji;
+                checkbox.checked = selectedAnimals.includes(emoji);
+                checkbox.id = `animal-${index}`;
+
+                const emojiSpan = document.createElement('span');
+                emojiSpan.className = 'text-2xl';
+                emojiSpan.textContent = emoji;
+
+                item.appendChild(checkbox);
+                item.appendChild(emojiSpan);
+                animalGrid.appendChild(item);
+            });
+        }
+
+        // ==================== 麦克风相关 ====================
+        async function startMicrophone() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.8;
+                microphone.connect(analyser);
+
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                isMicActive = true;
+                isMonitoring = true;
+                updatePauseButton();
+
+                // 开始分析音量
+                analyzeVolume();
+
+                // 启动计时器
+                startTimer();
+
+                console.log('麦克风已启动');
+            } catch (err) {
+                console.error('麦克风访问失败:', err);
+                alert('无法访问麦克风，请检查浏览器权限设置！');
+            }
+        }
+
+        function stopMicrophone() {
+            if (microphone) {
+                microphone.disconnect();
+                microphone = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            isMicActive = false;
+            isMonitoring = false;
+            updatePauseButton();
+        }
+
+        function analyzeVolume() {
+            if (!isMicActive || !analyser) return;
+
+            analyser.getByteFrequencyData(dataArray);
+
+            // 计算平均音量
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+            }
+            const average = sum / dataArray.length;
+
+            // 将音量转换为分贝值 (0-100 范围)
+            currentDecibel = Math.round(average * 100 / 255);
+            decibelValue.textContent = currentDecibel;
+
+            // 检查是否超过阈值
+            const threshold = parseInt(thresholdSlider.value);
+            const now = Date.now();
+
+            if (currentDecibel > threshold && isMonitoring) {
+                // 检查是否到达生成时间
+                const interval = generateSpeed * 1000;
+                if (now - lastGenerateTime >= interval) {
+                    spawnAnimal();
+                    lastGenerateTime = now;
+                }
+            }
+
+            requestAnimationFrame(analyzeVolume);
+        }
+
+        // ==================== 计时器功能 ====================
+        let timerInterval = null;
+
+        function startTimer() {
+            if (timerInterval) return;
+
+            timerInterval = setInterval(() => {
+                if (isMonitoring) {
+                    timerSeconds++;
+                    updateTimerDisplay();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const hours = Math.floor(timerSeconds / 3600);
+            const minutes = Math.floor((timerSeconds % 3600) / 60);
+            const seconds = timerSeconds % 60;
+
+            timerDisplay.textContent =
+                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function updatePauseButton() {
+            if (isMicActive) {
+                if (isMonitoring) {
+                    pauseBtn.innerHTML = '<span class="text-xl">⏸️</span><span>暂停监测</span>';
+                    pauseBtn.className = 'w-full py-3 px-4 bg-gradient-to-r from-pink-400 to-red-400 text-white rounded-xl font-medium hover:from-pink-500 hover:to-red-500 transition-all shadow-md flex items-center justify-center gap-2';
+                } else {
+                    pauseBtn.innerHTML = '<span class="text-xl">▶️</span><span>继续监测</span>';
+                    pauseBtn.className = 'w-full py-3 px-4 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-xl font-medium hover:from-green-500 hover:to-emerald-500 transition-all shadow-md flex items-center justify-center gap-2';
+                }
+            } else {
+                pauseBtn.innerHTML = '<span class="text-xl">🎤</span><span>开始监测</span>';
+                pauseBtn.className = 'w-full py-3 px-4 bg-gradient-to-r from-blue-400 to-indigo-400 text-white rounded-xl font-medium hover:from-blue-500 hover:to-indigo-500 transition-all shadow-md flex items-center justify-center gap-2';
+            }
+        }
+
+        // ==================== 事件绑定 ====================
+        function bindEvents() {
+            // 阈值滑块
+            thresholdSlider.addEventListener('input', (e) => {
+                thresholdValue.textContent = `${e.target.value} dB`;
+            });
+
+            // 速度滑块
+            speedSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                generateSpeed = value;
+                speedDisplay.textContent = value === 1 ? '1秒生成一只' : `${value}秒生成一只`;
+            });
+
+            // 打开设置弹窗
+            settingsBtn.addEventListener('click', () => {
+                settingsModal.classList.remove('hidden');
+                settingsModal.classList.add('flex');
+            });
+
+            // 关闭设置弹窗 - 点击遮罩层
+            settingsModal.addEventListener('click', (e) => {
+                if (e.target === settingsModal) {
+                    closeModal();
+                }
+            });
+
+            // 保存按钮
+            saveBtn.addEventListener('click', () => {
+                const checkboxes = animalGrid.querySelectorAll('input[type="checkbox"]');
+                selectedAnimals = [];
+                checkboxes.forEach(cb => {
+                    if (cb.checked) {
+                        selectedAnimals.push(cb.value);
+                    }
+                });
+                closeModal();
+            });
+
+            // 重置按钮
+            resetBtn.addEventListener('click', () => {
+                speedSlider.value = 1;
+                generateSpeed = 1;
+                speedDisplay.textContent = '1秒生成一只';
+                selectedAnimals = [...animalEmojis];
+                generateAnimalCheckboxes();
+            });
+
+            // 全选
+            selectAllBtn.addEventListener('click', () => {
+                const checkboxes = animalGrid.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(cb => cb.checked = true);
+            });
+
+            // 全不选
+            deselectAllBtn.addEventListener('click', () => {
+                const checkboxes = animalGrid.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(cb => cb.checked = false);
+            });
+
+            // PK按钮
+            pkBtn.addEventListener('click', () => {
+                if (!pkState.isPKActive) {
+                    startPK();
+                    pkBtn.innerHTML = '<span class="text-xl">🚪</span><span>退出PK</span>';
+                    pkBtn.className = 'w-full py-3 px-4 bg-gradient-to-r from-red-400 to-orange-400 text-white rounded-xl font-medium hover:from-red-500 hover:to-orange-500 transition-all shadow-md flex items-center justify-center gap-2';
+                } else {
+                    endPK();
+                    pkBtn.innerHTML = '<span class="text-xl">🏆</span><span>开始PK</span>';
+                    pkBtn.className = 'w-full py-3 px-4 bg-gradient-to-r from-purple-400 to-pink-400 text-white rounded-xl font-medium hover:from-purple-500 hover:to-pink-500 transition-all shadow-md flex items-center justify-center gap-2';
+                }
+            });
+
+            // 暂停/开始按钮
+            pauseBtn.addEventListener('click', () => {
+                if (!isMicActive) {
+                    // 还没启动，开始监测
+                    startMicrophone();
+                } else if (isMonitoring) {
+                    // 正在监测，停止并保存记录
+                    const record = createHistoryRecord();
+                    if (record.animalCount > 0 || timerSeconds > 0) {
+                        saveHistory(record);
+                        renderHistoryList();
+                    }
+                    isMonitoring = false;
+                    updatePauseButton();
+                } else {
+                    // 已暂停，继续
+                    isMonitoring = true;
+                    updatePauseButton();
+                }
+            });
+
+            // 清空动物按钮
+            clearAnimalsBtn.addEventListener('click', () => {
+                const allAnimals = animalContainer.querySelectorAll('.animal-spawn');
+                allAnimals.forEach((animal, index) => {
+                    setTimeout(() => {
+                        animal.style.opacity = '0';
+                        animal.style.transform = 'scale(0) rotate(180deg)';
+                        setTimeout(() => animal.remove(), 300);
+                    }, index * 50);
+                });
+                setTimeout(() => updateAnimalCount(), allAnimals.length * 50 + 300);
+            });
+
+            // 历史记录按钮
+            historyBtn.addEventListener('click', () => {
+                historyModal.classList.remove('hidden');
+                historyModal.classList.add('flex');
+            });
+
+            // 关闭历史记录弹窗
+            closeHistoryBtn.addEventListener('click', () => {
+                historyModal.classList.add('hidden');
+                historyModal.classList.remove('flex');
+            });
+
+            // 点击遮罩层关闭历史记录弹窗
+            historyModal.addEventListener('click', (e) => {
+                if (e.target === historyModal) {
+                    historyModal.classList.add('hidden');
+                    historyModal.classList.remove('flex');
+                }
+            });
+
+            // ESC 键关闭弹窗
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (!settingsModal.classList.contains('hidden')) {
+                        closeModal();
+                    }
+                    if (!historyModal.classList.contains('hidden')) {
+                        historyModal.classList.add('hidden');
+                        historyModal.classList.remove('flex');
+                    }
+                }
+            });
+        }
+
+        function closeModal() {
+            settingsModal.classList.add('hidden');
+            settingsModal.classList.remove('flex');
+        }
+
+        // ==================== 启动应用 ====================
+        init();
+        updatePauseButton();
+    </script>
+</body>
+
+</html>
