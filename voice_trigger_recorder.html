@@ -1,0 +1,229 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+#app { padding: 1rem 0; }
+.header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-border-tertiary); flex-shrink: 0; transition: background 0.3s; }
+.status-dot.listening { background: #1D9E75; animation: pulse 1.2s infinite; }
+.status-dot.triggered { background: #E24B4A; animation: pulse 0.6s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.title-row { flex: 1; }
+.title-row h2 { font-size: 16px; font-weight: 500; color: var(--color-text-primary); }
+.title-row p { font-size: 13px; color: var(--color-text-secondary); margin-top: 2px; }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1.25rem; }
+.ctrl-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 14px; }
+.ctrl-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 6px; }
+.ctrl-card input { width: 100%; font-size: 13px; color: var(--color-text-primary); background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 6px 10px; }
+.btn-row { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+button { flex: 1; padding: 9px 0; font-size: 14px; border-radius: var(--border-radius-md); cursor: pointer; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); transition: background 0.15s, transform 0.1s; }
+button:hover { background: var(--color-background-secondary); }
+button:active { transform: scale(0.98); }
+button.primary { background: #1D9E75; color: #fff; border-color: #1D9E75; }
+button.primary:hover { background: #0F6E56; }
+button.danger { background: #E24B4A; color: #fff; border-color: #E24B4A; }
+.live-box { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 14px; margin-bottom: 1.25rem; min-height: 44px; display: flex; align-items: center; gap: 8px; }
+.live-label { font-size: 12px; color: var(--color-text-secondary); flex-shrink: 0; }
+.live-text { font-size: 13px; color: var(--color-text-primary); flex: 1; font-style: italic; }
+.records-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.records-header span { font-size: 13px; color: var(--color-text-secondary); }
+.records-header button { flex: unset; width: auto; padding: 4px 12px; font-size: 12px; }
+.record-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+.record-item { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; animation: fadeIn 0.25s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+.record-num { font-size: 12px; color: var(--color-text-secondary); flex-shrink: 0; margin-top: 1px; width: 20px; }
+.record-body { flex: 1; }
+.record-content { font-size: 14px; color: var(--color-text-primary); line-height: 1.5; }
+.record-meta { font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; }
+.record-del { font-size: 12px; color: var(--color-text-secondary); cursor: pointer; padding: 2px 6px; border-radius: 4px; border: none; background: none; flex-shrink: 0; }
+.record-del:hover { color: #E24B4A; background: var(--color-background-secondary); }
+.empty-hint { font-size: 13px; color: var(--color-text-secondary); text-align: center; padding: 2rem 0; }
+.no-support { background: #FAEEDA; border-radius: var(--border-radius-md); padding: 12px 14px; font-size: 13px; color: #854F0B; }
+</style>
+
+<div id="app">
+  <div class="header">
+    <div class="status-dot" id="dot"></div>
+    <div class="title-row">
+      <h2>语音触发记录器</h2>
+      <p id="status-text">点击"开始监听"启动</p>
+    </div>
+  </div>
+
+  <div id="no-support" class="no-support" style="display:none">
+    当前浏览器不支持 Web Speech API，请使用 Chrome 或 Edge。
+  </div>
+
+  <div id="main-ui">
+    <div class="controls">
+      <div class="ctrl-card">
+        <div class="ctrl-label">触发口令（可自定义）</div>
+        <input type="text" id="keyword" value="语音记录" placeholder="触发词">
+      </div>
+      <div class="ctrl-card">
+        <div class="ctrl-label">语言</div>
+        <input type="text" id="lang" value="zh-CN" placeholder="zh-CN / en-US">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="primary" id="btn-start" onclick="startListening()">开始监听</button>
+      <button id="btn-stop" onclick="stopListening()" disabled>停止</button>
+      <button onclick="exportRecords()">导出 TXT</button>
+    </div>
+
+    <div class="live-box">
+      <span class="live-label">实时识别：</span>
+      <span class="live-text" id="live-text">—</span>
+    </div>
+
+    <div class="records-header">
+      <span id="count-label">暂无记录</span>
+      <button onclick="clearRecords()">清空</button>
+    </div>
+
+    <div class="record-list" id="record-list">
+      <div class="empty-hint">说出口令词 + 内容，例如：<br>「语音记录 今天下午三点开产品会」</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let recognition = null;
+let running = false;
+let records = [];
+
+function checkSupport() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    document.getElementById('no-support').style.display = 'block';
+    document.getElementById('main-ui').style.opacity = '0.4';
+    document.getElementById('main-ui').style.pointerEvents = 'none';
+    return false;
+  }
+  return true;
+}
+
+function startListening() {
+  if (!checkSupport()) return;
+  const keyword = document.getElementById('keyword').value.trim() || '语音记录';
+  const lang = document.getElementById('lang').value.trim() || 'zh-CN';
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = lang;
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    document.getElementById('live-text').textContent = final || interim || '—';
+
+    if (final) {
+      const kw = document.getElementById('keyword').value.trim() || '语音记录';
+      const idx = final.indexOf(kw);
+      if (idx !== -1) {
+        const content = final.slice(idx + kw.length).trim();
+        if (content) {
+          addRecord(content);
+          flashTrigger();
+        }
+      }
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error !== 'no-speech') setStatus('错误: ' + e.error, false);
+  };
+
+  recognition.onend = () => {
+    if (running) recognition.start();
+  };
+
+  running = true;
+  recognition.start();
+  setStatus('监听中…说出口令触发记录', true);
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-stop').disabled = false;
+}
+
+function stopListening() {
+  running = false;
+  if (recognition) recognition.stop();
+  setStatus('已停止', false);
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-stop').disabled = true;
+  document.getElementById('live-text').textContent = '—';
+}
+
+function setStatus(text, listening) {
+  document.getElementById('status-text').textContent = text;
+  const dot = document.getElementById('dot');
+  dot.className = 'status-dot' + (listening ? ' listening' : '');
+}
+
+function flashTrigger() {
+  const dot = document.getElementById('dot');
+  dot.className = 'status-dot triggered';
+  setTimeout(() => { if (running) dot.className = 'status-dot listening'; }, 800);
+}
+
+function addRecord(content) {
+  const now = new Date();
+  const time = now.toLocaleString('zh-CN', { hour12: false });
+  records.unshift({ content, time, id: Date.now() });
+  renderRecords();
+}
+
+function renderRecords() {
+  const list = document.getElementById('record-list');
+  const count = records.length;
+  document.getElementById('count-label').textContent = count ? `共 ${count} 条记录` : '暂无记录';
+  if (!count) {
+    list.innerHTML = '<div class="empty-hint">说出口令词 + 内容，例如：<br>「语音记录 今天下午三点开产品会」</div>';
+    return;
+  }
+  list.innerHTML = records.map((r, i) => `
+    <div class="record-item">
+      <span class="record-num">${count - i}</span>
+      <div class="record-body">
+        <div class="record-content">${escHtml(r.content)}</div>
+        <div class="record-meta">${r.time}</div>
+      </div>
+      <button class="record-del" onclick="deleteRecord(${r.id})">删除</button>
+    </div>
+  `).join('');
+}
+
+function deleteRecord(id) {
+  records = records.filter(r => r.id !== id);
+  renderRecords();
+}
+
+function clearRecords() {
+  if (records.length && confirm('确定清空所有记录？')) {
+    records = [];
+    renderRecords();
+  }
+}
+
+function exportRecords() {
+  if (!records.length) { alert('暂无记录可导出'); return; }
+  const text = [...records].reverse().map((r, i) => `[${r.time}] ${r.content}`).join('\n');
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '语音记录_' + new Date().toLocaleDateString('zh-CN').replace(/\//g, '-') + '.txt';
+  a.click();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+checkSupport();
+</script>
