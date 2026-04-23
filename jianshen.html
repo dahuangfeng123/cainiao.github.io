@@ -714,7 +714,7 @@ const bgMusic       = document.getElementById('bgMusic');
 ═══════════════════════════════════════════ */
 const totalSecs = menus.reduce((s, m) => s + m.time, 0);
 const totalMins = Math.ceil(totalSecs / 60);
-totalTimeBadge.textContent = `总计约 ${totalMins} 分钟`;
+totalTimeBadge.textContent = `总计约 ${totalMins} 分钟(不含休息)`;
 
 /* ═══════════════════════════════════════════
    BUILD MENU
