@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>单词复习工具 - 艾宾浩斯双用户版</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #f8f9fa;
+            color: #222;
+        }
+
+        .top {
+            height: 60px;
+            background: #34a853;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+        }
+
+        .nav a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 16px;
+            font-size: 15px;
+        }
+
+        .mode-bar {
+            height: 40px;
+            background: #e6f4ea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .mode-bar .mbtn {
+            padding: 5px 16px;
+            border: none;
+            border-radius: 20px;
+            background: #fff;
+            color: #34a853;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .mode-bar .mbtn.on {
+            background: #34a853;
+            color: #fff;
+        }
+
+        .user button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #fff;
+            color: #34a853;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 25px 0;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 22px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.06);
+        }
+
+        h2 {
+            color: #34a853;
+            margin-bottom: 14px;
+            font-size: 20px;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 4px;
+        }
+
+        .btn-blue {
+            background: #34a853;
+            color: #fff;
+        }
+
+        .btn-gray {
+            background: #f1f3f4;
+            color: #333;
+        }
+
+        .btn-red {
+            background: #ea4335;
+            color: #fff;
+        }
+
+        .btn-green {
+            background: #34a853;
+            color: #fff;
+        }
+
+        .btn-orange {
+            background: #fbbc04;
+            color: #333;
+        }
+
+        .hide {
+            display: none;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .flex {
+            display: flex;
+            gap: 20px;
+        }
+
+        .col {
+            flex: 1;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 5px 11px;
+            background: #e6f4ea;
+            border-radius: 20px;
+            margin: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .tag.on {
+            background: #34a853;
+            color: #fff;
+        }
+
+        .word-item {
+            padding: 14px;
+            border-bottom: 1px solid #f1f1f1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .word-item:last-child {
+            border-bottom: none;
+        }
+
+        .word-text {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .word-meaning {
+            color: #666;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .word-meta {
+            font-size: 12px;
+            color: #999;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .modal-body {
+            width: 650px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 30px;
+            max-height: 85vh;
+            overflow: auto;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+
+        .calendar-day {
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+
+        .calendar-day.today {
+            background: #34a853;
+            color: #fff;
+        }
+
+        .calendar-day.has-task {
+            background: #e6f4ea;
+        }
+
+        .calendar-day.selected {
+            background: #34a853;
+            color: #fff;
+        }
+
+        .calendar-day.selected span {
+            color: #fff;
+        }
+
+        .collins-star {
+            color: #fbbc04;
+        }
+
+        .exam-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #e6f4ea;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #34a853;
+            margin: 1px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="top">
+        <div class="nav">
+            <a href="javascript:show('home')">首页</a>
+            <a href="javascript:show('plan')">复习计划</a>
+            <a href="javascript:show('lib')">单词库</a>
+            <a href="javascript:show('mine')">个人中心</a>
+        </div>
+        <div class="user">
+            当前：<span id="show-user">同学A</span>
+            <button onclick="toggleUser()">切换 A/B</button>
+        </div>
+    </div>
+
+    <div class="mode-bar">
+        <button class="mbtn on" onclick="setMode(1)">看词写义</button>
+        <button class="mbtn" onclick="setMode(2)">看义写词</button>
+        <button class="mbtn" onclick="setMode(3)">听写单词</button>
+    </div>
+
+    <div class="container">
+        <!-- 首页 -->
+        <div class="page" id="page-home">
+            <div class="card">
+                <h2>📌 今日待复习</h2>
+                <p>今日需复习：<span id="today-count" style="font-weight:bold;color:red">0</span> 个</p>
+                <button class="btn btn-blue" onclick="show('plan')">前往复习</button>
+            </div>
+            <div class="card">
+                <h2>📊 同学 A / B 学习对比</h2>
+                <div class="flex">
+                    <div class="col card">
+                        <h3>同学A</h3>
+                        <p>已学：<span id="a-total">0</span></p>
+                        <p>待复习：<span id="a-wait">0</span></p>
+                        <p>已掌握：<span id="a-done">0</span></p>
+                    </div>
+                    <div class="col card">
+                        <h3>同学B</h3>
+                        <p>已学：<span id="b-total">0</span></p>
+                        <p>待复习：<span id="b-wait">0</span></p>
+                        <p>已掌握：<span id="b-done">0</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 复习计划 -->
+        <div class="page" id="page-plan">
+            <div class="card">
+                <h2>📅 复习日历</h2>
+                <div class="calendar" id="calendar"></div>
+            </div>
+            <div class="card">
+                <h2>📖 <span id="review-date-label">今日</span>待复习列表</h2>
+                <div id="today-list"></div>
+            </div>
+        </div>
+
+        <!-- 单词库 -->
+        <div class="page" id="page-lib">
+            <div class="card">
+                <h2>🔍 分类筛选</h2>
+                <div style="margin-bottom:8px;color:#666;font-size:13px;">柯林斯分级：</div>
+                <div id="collins-list"></div>
+                <div style="margin-top:10px;color:#666;font-size:13px;">考试范围：</div>
+                <div id="exam-list"></div>
+            </div>
+            <div class="card">
+                <h2>📚 单词库（<span id="word-count">0</span> 个）</h2>
+                <div id="word-list" style="margin-top:15px;"></div>
+            </div>
+        </div>
+
+        <!-- 个人中心 -->
+        <div class="page" id="page-mine">
+            <div class="card">
+                <h2>🎯 我的考试范围</h2>
+                <div id="exam-setting"></div>
+                <p style="margin-top:8px;color:#999;font-size:13px;">设置考试范围后，今日待复习列表仅推荐对应范围的单词</p>
+            </div>
+            <div class="card">
+                <h2>📈 我的学习数据</h2>
+                <p>已学习：<span id="my-total">0</span> 个 <span style="color:#999;font-size:12px;">（点击过"学习/复习"的单词总数）</span></p>
+                <p>待复习：<span id="my-wait">0</span> 个 <span style="color:#999;font-size:12px;">（已学习但未完成全部复习周期，且下次复习时间≤今日的单词）</span></p>
+                <p>已掌握：<span id="my-done">0</span> 个 <span style="color:#999;font-size:12px;">（完成全部7次艾宾浩斯复习周期的单词）</span></p>
+            </div>
+            <div class="card">
+                <h2>⚙️ 数据管理</h2>
+                <button class="btn btn-red" onclick="resetUser()">重置我的所有学习记录</button>
+                <p style="margin-top:10px;color:#999;font-size:13px;">只清空当前用户，不影响对方</p>
+            </div>
+            <div class="card" style="text-align:center;">
+                <button class="btn btn-blue" onclick="downloadXlsx()">📥 下载所有单词（xlsx）</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 答题弹窗 -->
+    <div class="modal" id="modal">
+        <div class="modal-body">
+            <div id="q-text" style="font-size:17px;line-height:1.7;margin-bottom:15px;"></div>
+            <textarea id="input-ans" placeholder="请输入答案..."></textarea>
+            <div style="margin-top:10px;">
+                <button class="btn btn-gray" onclick="showAns()">查看答案</button>
+                <button class="btn btn-blue" onclick="doneReview()">已复习</button>
+                <button class="btn" onclick="closeModal()">关闭</button>
+            </div>
+            <div id="ans-show" style="margin-top:18px;line-height:1.7;color:#333;"></div>
+        </div>
+    </div>
+
+    <!-- 学习展示弹窗 -->
+    <div class="modal" id="learn-modal">
+        <div class="modal-body" style="text-align:center;max-width:600px;">
+            <div id="learn-word" style="font-size:32px;font-weight:bold;margin-bottom:8px;"></div>
+            <div id="learn-phonetic" style="font-size:14px;color:#666;margin-bottom:8px;"></div>
+            <div id="learn-meaning" style="font-size:20px;line-height:1.8;margin-bottom:8px;"></div>
+            <div id="learn-meta" style="font-size:13px;color:#999;margin-bottom:15px;"></div>
+            <div>
+                <button class="btn btn-blue" onclick="addToReview()">加入复习</button>
+                <button class="btn btn-gray" onclick="speakWord()">🔊 朗读</button>
+                <button class="btn" onclick="closeLearnModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PERIOD = [0, 1, 2, 4, 7, 15, 30];
+        let user = "A";
+        let mode = 1;
+        let curr = null;
+        let learnIdx = null;
+        let currCollins = "";
+        let currExam = "";
+        let selectedDate = null;
+        let ALL_WORDS = [];
+
+        const EXAM_LABELS = {
+            zk: "中考", gk: "高考", cet4: "四级", cet6: "六级",
+            ky: "考研", ielts: "雅思", toefl: "托福"
+        };
+
+        function loadWords() {
+            let stored = localStorage.getItem("ALL_WORDS_DATA");
+            if (stored) {
+                try {
+                    ALL_WORDS = JSON.parse(stored);
+                    if (ALL_WORDS.length > 1000) return;
+                } catch (e) {}
+            }
+            fetch("words.json")
+                .then(r => r.json())
+                .then(d => {
+                    ALL_WORDS = d;
+                    localStorage.setItem("ALL_WORDS_DATA", JSON.stringify(d));
+                    renderAll();
+                })
+                .catch(() => {
+                    alert("单词数据加载失败，请确保words.json在同一目录下");
+                });
+        }
+
+        function getWords() { return ALL_WORDS; }
+
+        function getUser() { return JSON.parse(localStorage.getItem("wuser" + user)); }
+        function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
+
+        function show(p) {
+            document.querySelectorAll(".page").forEach(el => el.classList.remove("active"));
+            document.getElementById("page-" + p).classList.add("active");
+            selectedDate = null;
+            renderAll();
+        }
+
+        function toggleUser() {
+            user = user === "A" ? "B" : "A";
+            document.getElementById("show-user").innerText = "同学" + user;
+            selectedDate = null;
+            renderAll();
+        }
+
+        function safeUser(u) {
+            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [] };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [] };
+        }
+
+        // ==============================
+        // 分类筛选
+        // ==============================
+        function renderCollins() {
+            let filtered = currExam ? getWords().filter(w => w.exam.split(" ").includes(currExam)) : getWords();
+            let arr = [...new Set(filtered.map(w => w.collins))].sort();
+            let html = `<span class="tag ${currCollins == '' ? 'on' : ''}" onclick="filterCollins('')">全部</span>`;
+            arr.forEach(c => {
+                let stars = "★".repeat(c) + "☆".repeat(5 - c);
+                html += `<span class="tag ${currCollins == c ? 'on' : ''}" onclick="filterCollins(${c})">${c}星 ${stars}</span>`;
+            });
+            document.getElementById("collins-list").innerHTML = html;
+        }
+
+        function renderExam() {
+            let tags = ["zk", "gk", "cet4", "cet6", "ky", "ielts", "toefl"];
+            let html = `<span class="tag ${currExam == '' ? 'on' : ''}" onclick="filterExam('')">全部</span>`;
+            tags.forEach(t => {
+                html += `<span class="tag ${currExam == t ? 'on' : ''}" onclick="filterExam('${t}')">${EXAM_LABELS[t]}</span>`;
+            });
+            document.getElementById("exam-list").innerHTML = html;
+        }
+
+        function filterCollins(c) {
+            currCollins = c;
+            renderCollins();
+            renderWordList();
+        }
+
+        function filterExam(e) {
+            currExam = e;
+            currCollins = "";
+            renderExam();
+            renderCollins();
+            renderWordList();
+        }
+
+        // ==============================
+        // 单词列表
+        // ==============================
+        function renderWordList() {
+            let all = getWords();
+            let u = safeUser(getUser());
+            let list = all;
+            if (currExam) list = list.filter(w => w.exam.split(" ").includes(currExam));
+            if (currCollins) list = list.filter(w => w.collins == currCollins);
+            document.getElementById("word-count").innerText = list.length;
+            let html = "";
+            list.forEach((w, i) => {
+                let realIdx = all.indexOf(w);
+                let learned = u.learn.includes(realIdx);
+                let skilled = u.skilled && u.skilled.includes(realIdx);
+                let btnText = learned ? "复习" : "学习";
+                let btnClass = learned ? "btn-blue" : "btn-green";
+                let examHtml = w.exam.split(" ").map(t => EXAM_LABELS[t] ? `<span class="exam-tag">${EXAM_LABELS[t]}</span>` : "").join("");
+                html += `
+        <div class="word-item" style="${skilled ? 'opacity:0.5;' : ''}">
+            <div>
+                <span class="word-text">${w.word}</span>
+                <span class="collins-star">${"★".repeat(w.collins)}</span>
+                <span class="word-meta">${examHtml}</span>
+                <div class="word-meaning">${w.meaning}</div>
+            </div>
+            <div>
+                ${skilled ? '' : `<button class="btn ${btnClass}" onclick="start(${realIdx})">${btnText}</button>`}
+                <button class="btn ${skilled ? 'btn-green' : 'btn-gray'}" onclick="toggleSkilled(${realIdx})">${skilled ? '✅ 熟练' : '熟练'}</button>
+            </div>
+        </div>`;
+            });
+            document.getElementById("word-list").innerHTML = html;
+        }
+
+        function toggleSkilled(idx) {
+            let u = safeUser(getUser());
+            if (!u.skilled) u.skilled = [];
+            let pos = u.skilled.indexOf(idx);
+            if (pos >= 0) u.skilled.splice(pos, 1);
+            else u.skilled.push(idx);
+            setUser(u);
+            renderWordList();
+        }
+
+        // ==============================
+        // 学习 & 复习
+        // ==============================
+        function start(idx) {
+            let u = safeUser(getUser());
+            if (u.learn.includes(idx)) {
+                openModal(idx);
+            } else {
+                openLearnModal(idx);
+            }
+        }
+
+        function openLearnModal(idx) {
+            let w = getWords()[idx];
+            learnIdx = idx;
+            document.getElementById("learn-word").innerText = w.word;
+            document.getElementById("learn-meaning").innerText = w.meaning;
+            let examHtml = w.exam.split(" ").map(t => EXAM_LABELS[t] || t).join("、");
+            document.getElementById("learn-meta").innerHTML = `柯林斯 ${"★".repeat(w.collins)} | ${examHtml}`;
+            document.getElementById("learn-modal").style.display = "flex";
+        }
+
+        function closeLearnModal() {
+            document.getElementById("learn-modal").style.display = "none";
+            learnIdx = null;
+        }
+
+        function addToReview() {
+            let idx = learnIdx;
+            if (idx === null) return;
+            let u = safeUser(getUser());
+            let now = Date.now();
+            let todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            if (!u.learn.includes(idx)) {
+                u.learn.push(idx);
+                u.log[idx] = { t: now, c: 0, next: todayStart.getTime() };
+                setUser(u);
+            }
+            closeLearnModal();
+            renderAll();
+        }
+
+        function speakWord() {
+            if (learnIdx === null) return;
+            let w = getWords()[learnIdx];
+            let utter = new SpeechSynthesisUtterance(w.word);
+            utter.lang = 'en-US';
+            utter.rate = 0.8;
+            speechSynthesis.speak(utter);
+        }
+
+        function speakWordBy(idx) {
+            let w = getWords()[idx];
+            let utter = new SpeechSynthesisUtterance(w.word);
+            utter.lang = 'en-US';
+            utter.rate = 0.8;
+            speechSynthesis.speak(utter);
+        }
+
+        // ==============================
+        // 答题弹窗
+        // ==============================
+        function openModal(idx) {
+            curr = { idx, item: getWords()[idx] };
+            document.getElementById("modal").style.display = "flex";
+            renderQ();
+        }
+
+        function closeModal() {
+            document.getElementById("modal").style.display = "none";
+            curr = null;
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll(".mode-bar .mbtn").forEach((b, i) => {
+                b.classList.toggle("on", i === m - 1);
+            });
+            if (curr) renderQ();
+            renderTodayList();
+        }
+
+        function renderQ() {
+            let w = curr.item;
+            let t = "";
+            if (mode == 1) {
+                t = `单词：<strong style="font-size:22px;">${w.word}</strong><br>请写出中文释义`;
+            } else if (mode == 2) {
+                t = `释义：${w.meaning}<br>请写出英文单词`;
+            } else if (mode == 3) {
+                t = `请听写单词（点击朗读按钮播放）<br><button class="btn btn-gray" onclick="speakCurrWord()">🔊 朗读</button>`;
+            }
+            document.getElementById("q-text").innerHTML = t;
+            document.getElementById("input-ans").value = "";
+            document.getElementById("ans-show").innerText = "";
+        }
+
+        function speakCurrWord() {
+            if (!curr) return;
+            let utter = new SpeechSynthesisUtterance(curr.item.word);
+            utter.lang = 'en-US';
+            utter.rate = 0.8;
+            speechSynthesis.speak(utter);
+        }
+
+        function showAns() {
+            let w = curr.item;
+            document.getElementById("ans-show").innerText = `${w.word}\n${w.meaning}`;
+        }
+
+        function doneReview() {
+            let u = safeUser(getUser());
+            let idx = curr.idx;
+            let log = u.log[idx];
+            if (!log) { closeModal(); return; }
+            log.c += 1;
+            let next = nextDate(log.t, log.c);
+            if (!next) {
+                if (!u.done.includes(idx)) u.done.push(idx);
+                log.next = null;
+            } else {
+                log.next = next;
+            }
+            setUser(u);
+            closeModal();
+            renderAll();
+        }
+
+        function nextDate(st, count) {
+            if (count >= PERIOD.length) return null;
+            let d = new Date(st);
+            d.setDate(d.getDate() + PERIOD[count]);
+            return d.getTime();
+        }
+
+        // ==============================
+        // 统计 & 日历 & 今日任务
+        // ==============================
+        function renderExamSetting() {
+            let u = safeUser(getUser());
+            let tags = ["zk", "gk", "cet4", "cet6", "ky", "ielts", "toefl"];
+            let html = `<span class="tag ${u.exam == '' ? 'on' : ''}" onclick="setMyExam('')">全部</span>`;
+            tags.forEach(t => {
+                html += `<span class="tag ${u.exam == t ? 'on' : ''}" onclick="setMyExam('${t}')">${EXAM_LABELS[t]}</span>`;
+            });
+            document.getElementById("exam-setting").innerHTML = html;
+        }
+
+        function setMyExam(e) {
+            let u = safeUser(getUser());
+            u.exam = e;
+            setUser(u);
+            renderExamSetting();
+            renderTodayList();
+        }
+
+        function renderStats() {
+            let a = safeUser(JSON.parse(localStorage.getItem("wuserA") || "null"));
+            let b = safeUser(JSON.parse(localStorage.getItem("wuserB") || "null"));
+            let u = safeUser(getUser());
+            let today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let ts = today.getTime();
+            let countWait = (usr) => usr.learn.filter(x => !usr.done.includes(x) && usr.log[x] && usr.log[x].next && usr.log[x].next <= ts + 86400000).length;
+            document.getElementById("a-total").innerText = a.learn.length;
+            document.getElementById("a-wait").innerText = countWait(a);
+            document.getElementById("a-done").innerText = a.done.length;
+            document.getElementById("b-total").innerText = b.learn.length;
+            document.getElementById("b-wait").innerText = countWait(b);
+            document.getElementById("b-done").innerText = b.done.length;
+            document.getElementById("my-total").innerText = u.learn.length;
+            document.getElementById("my-wait").innerText = countWait(u);
+            document.getElementById("my-done").innerText = u.done.length;
+        }
+
+        function renderToday() {
+            let cnt = getTodayTasks().length;
+            document.getElementById("today-count").innerText = cnt;
+        }
+
+        function renderTodayList() {
+            let targetDate = selectedDate || new Date();
+            targetDate.setHours(0, 0, 0, 0);
+            let isToday = !selectedDate;
+            let tasks = isToday ? getTodayTasks() : getTasksByDate(targetDate);
+            let dateStr = isToday ? "今日" : `${targetDate.getMonth() + 1}月${targetDate.getDate()}日`;
+            document.getElementById("review-date-label").innerText = dateStr;
+            let html = "";
+            let u = safeUser(getUser());
+            if (tasks.length === 0 && isToday) {
+                let words = getWords();
+                let pool = words.map((w, i) => ({ w, i })).filter(x => {
+                    if (u.exam && !x.w.exam.split(" ").includes(u.exam)) return false;
+                    if (u.skilled && u.skilled.includes(x.i)) return false;
+                    return true;
+                });
+                let shuffled = pool.sort(() => Math.random() - 0.5);
+                let picks = shuffled.slice(0, Math.min(10, pool.length));
+                let examLabel = u.exam ? EXAM_LABELS[u.exam] : '';
+                html = `<p style='margin-bottom:12px;color:#666;'>今日暂无待复习，随机推荐${examLabel}10个单词：</p>`;
+                picks.forEach(x => {
+                    let hideWord = (mode == 2);
+                    let hideMeaning = (mode == 1);
+                    html += `
+        <div class="word-item">
+            <div>
+                <span class="word-text">${hideWord ? '____' : x.w.word}</span>
+                <div class="word-meaning">${hideMeaning ? '' : x.w.meaning}</div>
+            </div>
+            <div>
+                <button class="btn btn-green" onclick="start(${x.i})">学习</button>
+                <button class="btn btn-gray" onclick="speakWordBy(${x.i})">🔊</button>
+            </div>
+        </div>`;
+                });
+            } else if (tasks.length === 0 && !isToday) {
+                html = `<p style='color:#666;'>${dateStr}暂无待复习单词</p>`;
+            } else {
+                tasks.forEach(t => {
+                    let hideWord = (mode == 2 || mode == 3);
+                    let hideMeaning = (mode == 1);
+                    html += `
+        <div class="word-item">
+            <div>
+                <span class="word-text">${hideWord ? '____' : t.word.word}</span>
+                <div class="word-meaning">${hideMeaning ? '' : t.word.meaning}</div>
+            </div>
+            <div>
+                <button class="btn btn-blue" onclick="start(${t.idx})">复习</button>
+                <button class="btn btn-gray" onclick="speakWordBy(${t.idx})">🔊</button>
+            </div>
+        </div>`;
+                });
+            }
+            document.getElementById("today-list").innerHTML = html;
+        }
+
+        function getTodayTasks() {
+            let u = safeUser(getUser());
+            let words = getWords();
+            let today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let ts = today.getTime();
+            let tasks = [];
+            let needSave = false;
+            u.learn.forEach(i => {
+                if (u.done.includes(i)) return;
+                if (!u.log[i] || !u.log[i].next) return;
+                let nt = u.log[i].next;
+                if (nt <= ts + 86400000) {
+                    tasks.push({ idx: i, word: words[i], nextTime: nt });
+                }
+                if (nt < ts) {
+                    u.log[i].next = ts;
+                    needSave = true;
+                }
+            });
+            if (needSave) setUser(u);
+            return tasks;
+        }
+
+        function getTasksByDate(date) {
+            let u = safeUser(getUser());
+            let words = getWords();
+            let ts = date.getTime();
+            let tasks = [];
+            u.learn.forEach(i => {
+                if (u.done.includes(i)) return;
+                if (!u.log[i] || !u.log[i].next) return;
+                let nt = u.log[i].next;
+                if (nt >= ts && nt < ts + 86400000) {
+                    tasks.push({ idx: i, word: words[i], nextTime: nt });
+                }
+            });
+            return tasks;
+        }
+
+        function renderCalendar() {
+            let u = safeUser(getUser());
+            let now = new Date();
+            let year = now.getFullYear();
+            let month = now.getMonth();
+            let firstDay = new Date(year, month, 1).getDay();
+            let daysInMonth = new Date(year, month + 1, 0).getDate();
+            let today = now.getDate();
+            let taskDays = {};
+            u.learn.forEach(i => {
+                if (u.done.includes(i)) return;
+                if (!u.log[i] || !u.log[i].next) return;
+                let d = new Date(u.log[i].next);
+                if (d.getFullYear() == year && d.getMonth() == month) {
+                    let day = d.getDate();
+                    if (!taskDays[day]) taskDays[day] = 0;
+                    taskDays[day]++;
+                }
+            });
+            let html = "";
+            let weekNames = ["日", "一", "二", "三", "四", "五", "六"];
+            weekNames.forEach(w => { html += `<div style="font-weight:bold;padding:8px;text-align:center;">${w}</div>`; });
+            for (let i = 0; i < firstDay; i++) { html += `<div class="calendar-day"></div>`; }
+            for (let d = 1; d <= daysInMonth; d++) {
+                let cls = "calendar-day";
+                if (d == today) cls += " today";
+                if (taskDays[d]) cls += " has-task";
+                if (selectedDate && selectedDate.getFullYear() == year && selectedDate.getMonth() == month && selectedDate.getDate() == d) cls += " selected";
+                html += `<div class="${cls}" onclick="selectDate(${year},${month},${d})" style="cursor:pointer;">${d}${taskDays[d] ? `<br><span style="font-size:11px;">${taskDays[d]}个</span>` : ""}</div>`;
+            }
+            document.getElementById("calendar").innerHTML = html;
+        }
+
+        function selectDate(y, m, d) {
+            selectedDate = new Date(y, m, d);
+            renderCalendar();
+            renderTodayList();
+        }
+
+        // ==============================
+        // 下载单词xlsx
+        // ==============================
+        function downloadXlsx() {
+            let words = getWords();
+            let data = [["单词", "柯林斯分级", "考试范围", "词义"]];
+            words.forEach(w => data.push([w.word, w.collins, w.exam, w.meaning]));
+            let ws = XLSX.utils.aoa_to_sheet(data);
+            ws['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 20 }, { wch: 60 }];
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "单词");
+            XLSX.writeFile(wb, "单词库.xlsx");
+        }
+
+        // ==============================
+        // 重置用户
+        // ==============================
+        function resetUser() {
+            if (!confirm("确定重置当前用户的所有学习记录？")) return;
+            localStorage.removeItem("wuser" + user);
+            renderAll();
+        }
+
+        // ==============================
+        // 渲染全部
+        // ==============================
+        function renderAll() {
+            renderExam();
+            renderCollins();
+            renderWordList();
+            renderStats();
+            renderToday();
+            renderTodayList();
+            renderCalendar();
+            renderExamSetting();
+        }
+
+        window.onload = function () {
+            loadWords();
+            show("home");
+        };
+    </script>
+</body>
+</html>
