@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <title>诗词复习工具 - 艾宾浩斯双用户版</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/cnchar/cnchar.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/cnchar-draw/cnchar.draw.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/cnchar-voice/cnchar.voice.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -110,6 +113,11 @@
 
         .btn-red {
             background: #ea4335;
+            color: #fff;
+        }
+
+        .btn-green {
+            background: #34a853;
             color: #fff;
         }
 
@@ -229,11 +237,18 @@
 
         .calendar-day.today {
             background: #4285F4;
-            color: #fff;
+            color: #f53b3b;
         }
 
         .calendar-day.has-task {
             background: #e8f0fe;
+        }
+        .calendar-day.selected {
+            background: #4285F4;
+            color: #fff;
+        }
+        .calendar-day.selected span {
+            color: #fff;
         }
     </style>
 </head>
@@ -294,7 +309,7 @@
                 <div class="calendar" id="calendar"></div>
             </div>
             <div class="card">
-                <h2>📖 今日待复习列表</h2>
+                <h2>📖 <span id="review-date-label">今日</span>待复习列表</h2>
                 <div id="today-list"></div>
             </div>
         </div>
@@ -345,10 +360,27 @@
             <textarea id="input-ans" placeholder="请输入答案..."></textarea>
             <div style="margin-top:10px;">
                 <button class="btn btn-gray" onclick="showAns()">查看答案</button>
-                <button class="btn btn-blue" onclick="doneReview()">完成</button>
+                <button class="btn btn-blue" onclick="doneReview()">已复习</button>
                 <button class="btn" onclick="closeModal()">关闭</button>
             </div>
             <div id="ans-show" style="margin-top:18px;line-height:1.7;color:#333;"></div>
+        </div>
+    </div>
+
+    <!-- 学习展示弹窗 -->
+    <div class="modal" id="learn-modal">
+        <div class="modal-body" style="text-align:center;max-width:600px;">
+            <div id="learn-title" style="font-size:25px;font-weight:bold;margin-bottom:8px;"></div>
+            <div id="learn-author" style="font-size:12px;margin-bottom:8px;"></div>
+            <div id="learn-poem" style="font-size:15px;margin-bottom:30px;font-family:'KaiTi','STKaiti','楷体',serif;"></div>
+            <div id="learn-draw-canvas" style="margin-bottom:10px;"></div>
+            <div>
+                <button class="btn btn-blue" onclick="addToReview()">加入复习</button>
+                <button class="btn btn-gray" id="btn-pinyin" onclick="togglePinyin()">拼音</button>
+                <button class="btn btn-gray" id="btn-draw" onclick="toggleDraw()">笔画</button>
+                <button class="btn btn-gray" onclick="speakPoem()">朗读</button>
+                <button class="btn" onclick="closeLearnModal()">关闭</button>
+            </div>
         </div>
     </div>
 
@@ -360,6 +392,7 @@
         let user = "A";
         let mode = 1;
         let curr = null;
+        let learnIdx = null;
 
         // ==============================
         // 诗词内置
@@ -2315,6 +2348,7 @@ function authorLabel(poem) {
         // ==============================
         function renderPoemList() {
             let all = getPoems();
+            let u = safeUser(getUser());
             let list = all;
             if (currGrade) list = list.filter(i => i.grade == currGrade);
             if (currCate) list = list.filter(i => i.cate == currCate);
@@ -2322,13 +2356,18 @@ function authorLabel(poem) {
             let html = "";
             list.forEach((p, i) => {
                 let realIdx = all.indexOf(p);
+                let learned = u.learn.includes(realIdx);
+                let mastered = u.done.includes(realIdx);
+                let skilled = u.skilled && u.skilled.includes(realIdx);
+                let btnText = learned ? "复习" : "学习";
+                let btnClass = learned ? "btn-blue" : "btn-green";
                 html += `
-        <div class="poem-item">
+        <div class="poem-item" style="${skilled ? 'opacity:0.5;' : ''}">
             <div class="poem-title">${p.title}</div>
-            <div class="poem-author">${p.author}</div>
-            <div class="poem-content">${p.cont}</div>
+            <div class="poem-author">${authorLabel(p)}</div>
             <div style="margin-top:8px;">
-                <button class="btn btn-blue" onclick="start(${realIdx})">学习 / 复习</button>
+                ${skilled ? '' : `<button class="btn ${btnClass}" onclick="start(${realIdx})">${btnText}</button>`}
+                <button class="btn ${skilled ? 'btn-green' : 'btn-gray'}" onclick="toggleSkilled(${realIdx})">${skilled ? '✅ 熟练' : '熟练'}</button>
             </div>
         </div>`;
             });
@@ -2339,24 +2378,133 @@ function authorLabel(poem) {
         // 学习 & 复习
         // ==============================
         function start(idx) {
-            let u = getUser();
-            if (!u) u = { learn: [], done: [], log: {} };
-            if (!u.learn) u.learn = [];
-            if (!u.done) u.done = [];
-            if (!u.log) u.log = {};
+            let u = safeUser(getUser());
+            if (u.learn.includes(idx)) {
+                openModal(idx);
+            } else {
+                openLearnModal(idx);
+            }
+        }
+        let showPinyin = false;
+        let showDraw = false;
+        function isCnChar(ch) {
+            return /[\u4e00-\u9fff]/.test(ch);
+        }
+        function getCharPinyin(ch) {
+            try { return ch.spell('tone', 'low'); } catch (e) { return ''; }
+        }
+        function renderPoemDisplay() {
+            if (learnIdx === null) return;
+            let p = getPoems()[learnIdx];
+            let text = p.cont.replace(/\n/g, '');
+            let sentences = text.split(/([。！？；])/);
+            let lines = [];
+            let buf = '';
+            sentences.forEach(seg => {
+                buf += seg;
+                if (/^[。！？；]$/.test(seg)) {
+                    lines.push(buf);
+                    buf = '';
+                }
+            });
+            if (buf) lines.push(buf);
+            let html = '';
+            lines.forEach((line, li) => {
+                let chars = [...line];
+                chars.forEach(ch => {
+                    if (isCnChar(ch)) {
+                        let py = showPinyin ? getCharPinyin(ch) : '';
+                        let pyHtml = `<span style="font-size:12px;color:#888;display:block;height:16px;line-height:16px;">${py}</span>`;
+                        let style = showDraw ? 'cursor:pointer;border-bottom:2px solid #4285F4;' : '';
+                        let click = showDraw ? `onclick="drawChar('${ch}')"` : '';
+                        html += `<span style="display:inline-block;vertical-align:bottom;padding-right: 5px;${style}" ${click}>${pyHtml}<span style="display:block;">${ch}</span></span>`;
+                    } else {
+                        html += `<span style="display:inline-block;vertical-align:bottom;padding-right: 5px;"><span style="display:block;height:16px;"></span><span style="display:block;">${ch}</span></span>`;
+                    }
+                });
+                if (li < lines.length - 1) html += '<br>';
+            });
+            document.getElementById('learn-poem').innerHTML = html;
+            document.getElementById('btn-pinyin').classList.toggle('btn-blue', showPinyin);
+            document.getElementById('btn-pinyin').classList.toggle('btn-gray', !showPinyin);
+            document.getElementById('btn-draw').classList.toggle('btn-blue', showDraw);
+            document.getElementById('btn-draw').classList.toggle('btn-gray', !showDraw);
+        }
+        function openLearnModal(idx) {
+            let p = getPoems()[idx];
+            learnIdx = idx;
+            showPinyin = false;
+            showDraw = false;
+            document.getElementById("learn-title").innerText = p.title;
+            document.getElementById("learn-author").innerText = authorLabel(p);
+            document.getElementById("learn-draw-canvas").innerHTML = "";
+            renderPoemDisplay();
+            document.getElementById("learn-modal").style.display = "flex";
+        }
+        function closeLearnModal() {
+            document.getElementById("learn-modal").style.display = "none";
+            learnIdx = null;
+        }
+        function togglePinyin() {
+            showPinyin = !showPinyin;
+            renderPoemDisplay();
+        }
+        function toggleDraw() {
+            showDraw = !showDraw;
+            document.getElementById("learn-draw-canvas").innerHTML = "";
+            renderPoemDisplay();
+        }
+        function drawChar(ch) {
+            let container = document.getElementById("learn-draw-canvas");
+            container.innerHTML = "";
+            try {
+                cnchar.draw(ch, {
+                    el: container,
+                    type: cnchar.draw.TYPE.ANIMATION,
+                    style: {
+                        backgroundColor: '#fff',
+                        showCharacter: false,
+                        length: 60
+                    }
+                });
+            } catch (e) {
+                container.innerText = "笔画绘制加载失败";
+            }
+        }
+        function speakPoem() {
+            if (learnIdx === null) return;
+            let p = getPoems()[learnIdx];
+            let text = p.cont.replace(/[\n\r]/g, '，');
+            try {
+                if (cnchar.voice && cnchar.voice.speak) {
+                    cnchar.voice.speak(text);
+                } else {
+                    let utter = new SpeechSynthesisUtterance(text);
+                    utter.lang = 'zh-CN';
+                    utter.rate = 0.8;
+                    speechSynthesis.speak(utter);
+                }
+            } catch (e) {
+                let utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'zh-CN';
+                utter.rate = 0.8;
+                speechSynthesis.speak(utter);
+            }
+        }
+        function addToReview() {
+            let idx = learnIdx;
+            if (idx === null) return;
+            let u = safeUser(getUser());
             let now = Date.now();
             let todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
             if (!u.learn.includes(idx)) {
                 u.learn.push(idx);
-                u.log[idx] = {
-                    t: now,
-                    c: 0,
-                    next: todayStart.getTime()
-                };
+                u.log[idx] = { t: now, c: 0, next: todayStart.getTime() };
                 setUser(u);
             }
-            openModal(idx);
+            closeLearnModal();
+            renderAll();
         }
 
         // 计算下一次复习时间
@@ -2430,8 +2578,17 @@ function authorLabel(poem) {
         // 统计 & 日历 & 今日任务
         // ==============================
         function safeUser(u) {
-            if (!u) return { learn: [], done: [], log: {}, grade: "" };
-            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, grade: u.grade || "" };
+            if (!u) return { learn: [], done: [], log: {}, grade: "", skilled: [] };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, grade: u.grade || "", skilled: u.skilled || [] };
+        }
+        function toggleSkilled(idx) {
+            let u = safeUser(getUser());
+            if (!u.skilled) u.skilled = [];
+            let pos = u.skilled.indexOf(idx);
+            if (pos >= 0) u.skilled.splice(pos, 1);
+            else u.skilled.push(idx);
+            setUser(u);
+            renderPoemList();
         }
         function renderGradeSetting() {
             let u = safeUser(getUser());
@@ -2473,13 +2630,22 @@ function authorLabel(poem) {
             document.getElementById("today-count").innerText = cnt;
         }
         function renderTodayList() {
-            let tasks = getTodayTasks();
+            let targetDate = selectedDate || new Date();
+            targetDate.setHours(0, 0, 0, 0);
+            let isToday = !selectedDate;
+            let tasks = isToday ? getTodayTasks() : getTasksByDate(targetDate);
+            let dateStr = isToday ? "今日" : `${targetDate.getMonth() + 1}月${targetDate.getDate()}日`;
+            document.getElementById("review-date-label").innerText = dateStr;
             let html = "";
             let hideInfo = (mode == 4);
             let u = safeUser(getUser());
-            if (tasks.length === 0) {
+            if (tasks.length === 0 && isToday) {
                 let poems = getPoems();
-                let pool = u.grade ? poems.map((p, i) => ({ p, i })).filter(x => x.p.grade == u.grade) : poems.map((p, i) => ({ p, i }));
+                let pool = poems.map((p, i) => ({ p, i })).filter(x => {
+                    if (u.grade && x.p.grade != u.grade) return false;
+                    if (u.skilled && u.skilled.includes(x.i)) return false;
+                    return true;
+                });
                 let shuffled = pool.sort(() => Math.random() - 0.5);
                 let picks = shuffled.slice(0, Math.min(5, pool.length));
                 html = `<p style='margin-bottom:12px;color:#666;'>今日暂无待复习，随机推荐${u.grade ? u.grade : ''}5首：</p>`;
@@ -2487,9 +2653,11 @@ function authorLabel(poem) {
                     html += `
         <div class="poem-item">
             ${hideInfo ? `<div class="poem-content">${x.p.cont}</div>` : `<div class="poem-title">${x.p.title}</div><div class="poem-author">${authorLabel(x.p)}</div>`}
-            <button class="btn btn-blue" onclick="start(${x.i})">开始学习</button>
+            <button class="btn btn-green" onclick="start(${x.i})">学习</button>
         </div>`;
                 });
+            } else if (tasks.length === 0 && !isToday) {
+                html = `<p style='color:#666;'>${dateStr}暂无待复习诗词</p>`;
             } else {
                 tasks.forEach(t => {
                     html += `
@@ -2524,6 +2692,7 @@ function authorLabel(poem) {
             if (needSave) setUser(u);
             return tasks;
         }
+        let selectedDate = null;
         function renderCalendar() {
             let u = safeUser(getUser());
             let poems = getPoems();
@@ -2551,10 +2720,31 @@ function authorLabel(poem) {
             for (let d = 1; d <= daysInMonth; d++) {
                 let cls = "calendar-day";
                 if (d == today) cls += " today";
-                else if (taskDays[d]) cls += " has-task";
-                html += `<div class="${cls}">${d}${taskDays[d] ? `<br><span style="font-size:11px;">${taskDays[d]}首</span>` : ""}</div>`;
+                if (taskDays[d]) cls += " has-task";
+                if (selectedDate && selectedDate.getFullYear() == year && selectedDate.getMonth() == month && selectedDate.getDate() == d) cls += " selected";
+                html += `<div class="${cls}" onclick="selectDate(${year},${month},${d})" style="cursor:pointer;">${d}${taskDays[d] ? `<br><span style="font-size:11px;">${taskDays[d]}首</span>` : ""}</div>`;
             }
             document.getElementById("calendar").innerHTML = html;
+        }
+        function selectDate(y, m, d) {
+            selectedDate = new Date(y, m, d);
+            renderCalendar();
+            renderTodayList();
+        }
+        function getTasksByDate(date) {
+            let u = safeUser(getUser());
+            let poems = getPoems();
+            let ts = date.getTime();
+            let tasks = [];
+            u.learn.forEach(i => {
+                if (u.done.includes(i)) return;
+                if (!u.log[i] || !u.log[i].next) return;
+                let nt = u.log[i].next;
+                if (nt >= ts && nt < ts + 86400000) {
+                    tasks.push({ idx: i, poem: poems[i], nextTime: nt });
+                }
+            });
+            return tasks;
         }
 
         // ==============================
