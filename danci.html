@@ -357,7 +357,7 @@
                     <input type="checkbox" id="translate-toggle" onchange="toggleTranslate()" style="width:18px;height:18px;">
                     <span>开启英文释义中文翻译</span>
                 </label>
-                <p style="margin-top:8px;color:#999;font-size:13px;">开启后，学习弹窗中的英文释义会自动翻译为中文（首次使用需下载翻译模型，约30MB）</p>
+                <p style="margin-top:8px;color:#999;font-size:13px;">开启后，学习弹窗中的英文释义会自动翻译为中文</p>
             </div>
             <div class="card">
                 <h2>📈 我的学习数据</h2>
@@ -399,7 +399,6 @@
                 <div id="learn-meaning" style="font-size:20px;line-height:1.8;margin-bottom:8px;"></div>
                 <div id="learn-meta" style="font-size:13px;color:#999;margin-bottom:10px;"></div>
                 <div id="learn-detail" style="text-align:left;font-size:14px;line-height:1.8;color:#444;"></div>
-                <div id="trans-status" style="font-size:12px;color:#d35400;margin-top:6px;"></div>
             </div>
             <div style="border-top:1px solid #eee;padding-top:12px;flex-shrink:0;">
                 <button class="btn btn-blue" onclick="addToReview()">加入复习</button>
@@ -588,7 +587,6 @@
         }
 
         let dictCache = {};
-        let hfTranslator = null;
         let transCache = {};
 
         function openLearnModal(idx) {
@@ -695,12 +693,6 @@
                 processTransQueue();
                 return;
             }
-            if (!hfTranslator) {
-                if (el) el.innerText = "（翻译模型加载中…）";
-                transRunning = false;
-                processTransQueue();
-                return;
-            }
             if (!el) {
                 transRunning = false;
                 processTransQueue();
@@ -708,8 +700,13 @@
             }
             el.innerText = "（翻译中…）";
             try {
-                let result = await hfTranslator(text);
-                let zh = result[0].translation_text || "";
+                let url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=" + encodeURIComponent(text);
+                let res = await fetch(url);
+                let data = await res.json();
+                let zh = "";
+                if (data && data[0]) {
+                    zh = data[0].map(item => item[0] || "").join("");
+                }
                 if (zh) {
                     transCache[text] = "（" + zh + "）";
                     el.innerText = "（" + zh + "）";
@@ -721,21 +718,6 @@
             }
             transRunning = false;
             processTransQueue();
-        }
-
-        async function initTranslator() {
-            if (hfTranslator) return;
-            let statusEl = document.getElementById("trans-status");
-            try {
-                if (statusEl) statusEl.innerText = "⏳ 首次加载翻译模型，请耐心等待...";
-                let { pipeline } = await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2");
-                hfTranslator = await pipeline('translation_en_to_zh', 'Xenova/opus-mt-en-zh', { quantized: true });
-                if (statusEl) statusEl.innerText = "✅ 翻译模型已就绪";
-                setTimeout(() => { if (statusEl) statusEl.innerText = ""; }, 3000);
-            } catch (e) {
-                if (statusEl) statusEl.innerText = "❌ 翻译模型加载失败，释义翻译不可用";
-                console.warn("翻译模型加载失败:", e);
-            }
         }
 
         function highlightWord(text, word) {
@@ -892,9 +874,6 @@
             let u = safeUser(getUser());
             u.translate = document.getElementById("translate-toggle").checked;
             setUser(u);
-            if (u.translate && !hfTranslator) {
-                initTranslator();
-            }
         }
 
         function setMyExam(e) {
