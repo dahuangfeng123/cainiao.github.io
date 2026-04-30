@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>纯前端英中翻译</title>
+  <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"></script>
+</head>
+<body>
+  <h1>英文 → 中文 纯前端翻译</h1>
+  <textarea id="input" placeholder="输入英文..." rows="5" cols="60"></textarea><br><br>
+  <button onclick="translateText()">翻译成中文</button>
+  <p id="output"></p>
+
+  <script>
+    let translator = null;
+
+    async function loadTranslator() {
+      if (!translator) {
+        document.getElementById('output').textContent = '首次加载模型中（约 240MB），请耐心等待...';
+        translator = await Xenova.pipeline(
+          'translation',
+          'Xenova/nllb-200-distilled-600M',
+          { 
+            quantized: true,   // 使用量化版本，速度更快、体积更小
+            progress_callback: (data) => {
+              console.log('加载进度:', data);
+            }
+          }
+        );
+        document.getElementById('output').textContent = '模型加载完成！';
+      }
+    }
+
+    async function translateText() {
+      await loadTranslator();
+      
+      const inputText = document.getElementById('input').value.trim();
+      if (!inputText) return;
+
+      try {
+        const output = await translator(inputText, {
+          src_lang: "eng_Latn",   // 英文
+          tgt_lang: "zho_Hans",   // 简体中文（zho_Hant 为繁体）
+        });
+        
+        document.getElementById('output').innerHTML = 
+          `<strong>翻译结果：</strong><br>${output[0].translation_text}`;
+      } catch (err) {
+        console.error(err);
+        alert('翻译出错：' + err.message);
+      }
+    }
+
+    // 页面加载时预加载模型（可选）
+    window.onload = loadTranslator;
+  </script>
+</body>
+</html>
