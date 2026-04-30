@@ -352,6 +352,14 @@
                 <p style="margin-top:8px;color:#999;font-size:13px;">设置考试范围后，今日待复习列表仅推荐对应范围的单词</p>
             </div>
             <div class="card">
+                <h2>🌐 释义翻译</h2>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="translate-toggle" onchange="toggleTranslate()" style="width:18px;height:18px;">
+                    <span>开启英文释义中文翻译</span>
+                </label>
+                <p style="margin-top:8px;color:#999;font-size:13px;">开启后，学习弹窗中的英文释义会自动翻译为中文（首次使用需下载翻译模型，约30MB）</p>
+            </div>
+            <div class="card">
                 <h2>📈 我的学习数据</h2>
                 <p>已学习：<span id="my-total">0</span> 个 <span style="color:#999;font-size:12px;">（点击过"学习/复习"的单词总数）</span></p>
                 <p>待复习：<span id="my-wait">0</span> 个 <span style="color:#999;font-size:12px;">（已学习但未完成全部复习周期，且下次复习时间≤今日的单词）</span></p>
@@ -461,8 +469,8 @@
         }
 
         function safeUser(u) {
-            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [] };
-            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [] };
+            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate };
         }
 
         // ==============================
@@ -618,8 +626,6 @@
                 });
         }
 
-        let transIdxCounter = 0;
-
         function renderDict(data) {
             if (!data || !data[0] || !data[0].meanings) {
                 document.getElementById("learn-detail").innerHTML = '<span style="color:#ccc;">暂无在线例句</span>';
@@ -640,37 +646,34 @@
                 learnAudioUrl = audioUrl;
             }
             let word = data[0].word.toLowerCase();
-            let container = document.getElementById("learn-detail");
-            container.innerHTML = "";
-            transIdxCounter = 0;
-            let allItems = [];
-            data[0].meanings.forEach(m => {
-                m.definitions.slice(0, 3).forEach((d, i) => {
-                    allItems.push({ pos: m.partOfSpeech, def: d, defIdx: i, word: word });
-                });
-            });
-            streamItems(container, allItems, 0);
-        }
-
-        function streamItems(container, items, i) {
-            if (i >= items.length) return;
-            let item = items[i];
-            let idx = transIdxCounter++;
-            let isNewPos = (i === 0) || (items[i].pos !== items[i - 1].pos);
             let html = "";
-            if (isNewPos) {
-                html += `<div style="color:#34a853;font-weight:bold;margin-bottom:4px;margin-top:${i > 0 ? '10px' : '0'};">${item.pos}</div>`;
+            let transIdx = 0;
+            let transQueue = [];
+            let u = safeUser(getUser());
+            data[0].meanings.forEach(m => {
+                html += `<div style="margin-bottom:10px;">`;
+                html += `<div style="color:#34a853;font-weight:bold;margin-bottom:4px;">${m.partOfSpeech}</div>`;
+                m.definitions.slice(0, 3).forEach((d, i) => {
+                    html += `<div style="margin-bottom:6px;padding-left:8px;">`;
+                    html += `<div>${i + 1}. ${d.definition}`;
+                    if (u.translate) {
+                        html += `<span id="trans-${transIdx}" style="color:#999;font-size:12px;margin-left:4px;"></span>`;
+                        transQueue.push({ text: d.definition, idx: transIdx });
+                    }
+                    html += `</div>`;
+                    transIdx++;
+                    if (d.example) {
+                        let highlighted = highlightWord(d.example, word);
+                        html += `<div style="color:#888;font-style:italic;padding-left:12px;display:flex;align-items:center;gap:6px;">"${highlighted}"<span class="speak-example" style="cursor:pointer;font-style:normal;font-size:16px;" onclick="speakExample(this)" data-text="${escAttr(d.example)}">🔊</span></div>`;
+                    }
+                    html += `</div>`;
+                });
+                html += `</div>`;
+            });
+            document.getElementById("learn-detail").innerHTML = html || '<span style="color:#ccc;">暂无在线例句</span>';
+            if (u.translate && transQueue.length > 0) {
+                transQueue.forEach(item => translateDef(item.text, item.idx));
             }
-            html += `<div style="margin-bottom:6px;padding-left:8px;">`;
-            html += `<div>${item.defIdx + 1}. ${item.def.definition}<span id="trans-${idx}" style="color:#999;font-size:12px;margin-left:4px;"></span></div>`;
-            if (item.def.example) {
-                let highlighted = highlightWord(item.def.example, item.word);
-                html += `<div style="color:#888;font-style:italic;padding-left:12px;align-items:center;gap:6px;">"${highlighted}"<span class="speak-example" style="cursor:pointer;font-style:normal;font-size:16px;" onclick="speakExample(this)" data-text="${escAttr(item.def.example)}">🔊</span></div>`;
-            }
-            html += `</div>`;
-            container.insertAdjacentHTML("beforeend", html);
-            translateDef(item.def.definition, idx);
-            requestAnimationFrame(() => streamItems(container, items, i + 1));
         }
 
         let transQueue = [];
@@ -721,6 +724,7 @@
         }
 
         async function initTranslator() {
+            if (hfTranslator) return;
             let statusEl = document.getElementById("trans-status");
             try {
                 if (statusEl) statusEl.innerText = "⏳ 首次加载翻译模型，请耐心等待...";
@@ -733,7 +737,6 @@
                 console.warn("翻译模型加载失败:", e);
             }
         }
-        initTranslator();
 
         function highlightWord(text, word) {
             let re = new RegExp('(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
@@ -882,6 +885,16 @@
                 html += `<span class="tag ${u.exam == t ? 'on' : ''}" onclick="setMyExam('${t}')">${EXAM_LABELS[t]}</span>`;
             });
             document.getElementById("exam-setting").innerHTML = html;
+            document.getElementById("translate-toggle").checked = u.translate;
+        }
+
+        function toggleTranslate() {
+            let u = safeUser(getUser());
+            u.translate = document.getElementById("translate-toggle").checked;
+            setUser(u);
+            if (u.translate && !hfTranslator) {
+                initTranslator();
+            }
         }
 
         function setMyExam(e) {
