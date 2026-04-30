@@ -2,21 +2,20 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>纯前端英中翻译 - Transformers.js</title>
+  <title>纯前端英中翻译</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    textarea { width: 100%; max-width: 600px; height: 120px; }
-    button { padding: 10px 20px; font-size: 16px; }
-    #output { margin-top: 20px; white-space: pre-wrap; }
-    #status { color: #666; }
+    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+    textarea { width: 100%; max-width: 700px; height: 140px; padding: 10px; }
+    button { padding: 12px 24px; font-size: 16px; margin: 10px 0; }
+    #status { color: #d35400; margin: 15px 0; }
+    #output { margin-top: 20px; padding: 15px; background: #f8f9fa; border: 1px solid #ddd; white-space: pre-wrap; }
   </style>
 </head>
 <body>
-  <h1>英文 → 中文（纯前端 AI 翻译）</h1>
+  <h1>纯前端英文 → 中文翻译（无需后端）</h1>
   
-  <textarea id="input" placeholder="请输入英文文本..."></textarea><br><br>
-  
-  <button onclick="translateText()">翻译成中文</button>
+  <textarea id="input" placeholder="请输入英文文本..."></textarea><br>
+  <button onclick="window.translateText()">翻译成中文</button>
   
   <p id="status"></p>
   <div id="output"></div>
@@ -26,67 +25,54 @@
 
     let translator = null;
 
-    async function loadTranslator() {
-      if (translator) return;
-
-      const statusEl = document.getElementById('status');
-      statusEl.textContent = '首次加载 AI 翻译模型（约 240MB），请耐心等待 20~60 秒...';
-
-      try {
-        translator = await pipeline(
-          'translation',
-          'Xenova/nllb-200-distilled-600M',
-          {
-            quantized: true,        // 使用量化版本，体积更小、速度更快
-            progress_callback: (data) => {
-              if (data.status === 'progress') {
-                console.log(`下载进度: ${Math.round(data.progress)}%`);
-              }
-            }
-          }
-        );
-
-        statusEl.textContent = '✅ 模型加载完成！现在可以翻译了。';
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = '❌ 模型加载失败: ' + err.message;
-      }
-    }
-
-    async function translateText() {
-      await loadTranslator();
-
-      const inputText = document.getElementById('input').value.trim();
-      if (!inputText) {
-        alert('请输入英文文本');
-        return;
-      }
-
+    // 暴露到全局，解决 onclick 问题
+    window.translateText = async function() {
+      const inputEl = document.getElementById('input');
       const statusEl = document.getElementById('status');
       const outputEl = document.getElementById('output');
 
-      statusEl.textContent = '正在翻译...';
-      outputEl.textContent = '';
+      const text = inputEl.value.trim();
+      if (!text) {
+        alert("请输入英文文本！");
+        return;
+      }
+
+      if (!translator) {
+        statusEl.textContent = "首次加载翻译模型（约 80-120MB），请耐心等待 15~40 秒...";
+        
+        try {
+          translator = await pipeline('translation', 'Xenova/opus-mt-en-zh', {
+            quantized: true,
+            // progress_callback: (data) => console.log(data)
+          });
+          statusEl.textContent = "✅ 模型加载完成！";
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = "❌ 模型加载失败: " + err.message;
+          return;
+        }
+      }
+
+      statusEl.textContent = "正在翻译...";
+      outputEl.textContent = "";
 
       try {
-        const result = await translator(inputText, {
-          src_lang: "eng_Latn",     // 英文
-          tgt_lang: "zho_Hans",     // 简体中文
-          // tgt_lang: "zho_Hant"   // 如果你想要繁体中文，改成这行
+        const result = await translator(text, {
+          src_lang: "en",
+          tgt_lang: "zh"
         });
 
         outputEl.innerHTML = `<strong>翻译结果：</strong><br>${result[0].translation_text}`;
-        statusEl.textContent = '✅ 翻译完成';
+        statusEl.textContent = "✅ 翻译完成";
       } catch (err) {
         console.error(err);
-        statusEl.textContent = '❌ 翻译出错，请重试';
-        outputEl.textContent = '错误: ' + err.message;
+        statusEl.textContent = "❌ 翻译出错，请重试";
       }
-    }
+    };
 
-    // 可选：页面加载后就开始预加载模型
-    window.onload = () => {
-      loadTranslator();
+    // 页面加载时开始预加载（提升体验）
+    window.onload = async () => {
+      // 可选：提前静默加载模型
     };
   </script>
 </body>
