@@ -664,12 +664,15 @@
             if (transCache[text]) {
                 let el = document.getElementById("trans-" + idx);
                 if (el) el.innerText = transCache[text];
+                console.info("读取翻译缓存");
                 return;
             }
             if (!hfTranslator) return;
             let el = document.getElementById("trans-" + idx);
             if (!el) return;
+            console.info("使用翻译管道");
             hfTranslator(text).then(result => {
+                console.info("翻译结果:", result);
                 let zh = result[0].translation_text || "";
                 if (zh) {
                     transCache[text] = "（" + zh + "）";
