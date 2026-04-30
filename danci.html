@@ -338,6 +338,9 @@
             <div class="card">
                 <h2>📚 单词库（<span id="word-count">0</span> 个）</h2>
                 <div id="word-list" style="margin-top:15px;"></div>
+                <div id="word-more" style="text-align:center;padding:15px;display:none;">
+                    <button class="btn btn-gray" onclick="loadMoreWords()">加载更多（已显示 <span id="word-shown">0</span>/<span id="word-total2">0</span>）</button>
+                </div>
             </div>
         </div>
 
@@ -404,6 +407,9 @@
         let currExam = "";
         let selectedDate = null;
         let ALL_WORDS = [];
+        let filteredList = [];
+        let wordPageSize = 30;
+        let wordPage = 0;
 
         const EXAM_LABELS = {
             zk: "中考", gk: "高考", cet4: "四级", cet6: "六级",
@@ -500,9 +506,20 @@
             let list = all;
             if (currExam) list = list.filter(w => w.exam.split(" ").includes(currExam));
             if (currCollins) list = list.filter(w => w.collins == currCollins);
+            filteredList = list;
+            wordPage = 0;
             document.getElementById("word-count").innerText = list.length;
+            document.getElementById("word-list").innerHTML = "";
+            appendWords();
+        }
+        function appendWords() {
+            let all = getWords();
+            let u = safeUser(getUser());
+            let start = wordPage * wordPageSize;
+            let end = Math.min(start + wordPageSize, filteredList.length);
             let html = "";
-            list.forEach((w, i) => {
+            for (let i = start; i < end; i++) {
+                let w = filteredList[i];
                 let realIdx = all.indexOf(w);
                 let learned = u.learn.includes(realIdx);
                 let skilled = u.skilled && u.skilled.includes(realIdx);
@@ -522,8 +539,17 @@
                 <button class="btn ${skilled ? 'btn-green' : 'btn-gray'}" onclick="toggleSkilled(${realIdx})">${skilled ? '✅ 熟练' : '熟练'}</button>
             </div>
         </div>`;
-            });
-            document.getElementById("word-list").innerHTML = html;
+            }
+            document.getElementById("word-list").insertAdjacentHTML("beforeend", html);
+            let shown = Math.min(end, filteredList.length);
+            document.getElementById("word-shown").innerText = shown;
+            document.getElementById("word-total2").innerText = filteredList.length;
+            let moreEl = document.getElementById("word-more");
+            moreEl.style.display = shown < filteredList.length ? "block" : "none";
+        }
+        function loadMoreWords() {
+            wordPage++;
+            appendWords();
         }
 
         function toggleSkilled(idx) {
