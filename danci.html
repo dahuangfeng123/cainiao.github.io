@@ -579,6 +579,7 @@
         }
 
         let dictCache = {};
+        let transCache = {};
 
         function openLearnModal(idx) {
             let w = getWords()[idx];
@@ -637,13 +638,16 @@
             let word = data[0].word.toLowerCase();
             let html = "";
             let meanings = data[0].meanings;
+            let transIdx = 0;
             meanings.forEach(m => {
                 html += `<div style="margin-bottom:10px;">`;
                 html += `<div style="color:#34a853;font-weight:bold;margin-bottom:4px;">${m.partOfSpeech}</div>`;
                 let defs = m.definitions.slice(0, 3);
                 defs.forEach((d, i) => {
                     html += `<div style="margin-bottom:6px;padding-left:8px;">`;
-                    html += `<div>${i + 1}. ${d.definition}</div>`;
+                    html += `<div>${i + 1}. ${d.definition}<span id="trans-${transIdx}" style="color:#999;font-size:12px;margin-left:4px;"></span></div>`;
+                    translateDef(d.definition, transIdx);
+                    transIdx++;
                     if (d.example) {
                         let highlighted = highlightWord(d.example, word);
                         html += `<div style="color:#888;font-style:italic;padding-left:12px;display:flex;align-items:center;gap:6px;">"${highlighted}"<span class="speak-example" style="cursor:pointer;font-style:normal;font-size:16px;" onclick="speakExample(this)" data-text="${escAttr(d.example)}">🔊</span></div>`;
@@ -653,6 +657,35 @@
                 html += `</div>`;
             });
             document.getElementById("learn-detail").innerHTML = html || '<span style="color:#ccc;">暂无在线例句</span>';
+        }
+
+        function translateDef(text, idx) {
+            if (transCache[text]) {
+                let el = document.getElementById("trans-" + idx);
+                if (el) el.innerText = transCache[text];
+                return;
+            }
+            fetch("https://libretranslate.com/translate", {
+                method: "POST",
+                body: JSON.stringify({
+                    q: text,
+                    source: "en",
+                    target: "zh",
+                    format: "text",
+                    api_key: ""
+                }),
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(r => r.json())
+            .then(d => {
+                let zh = d.translatedText || "";
+                if (zh) {
+                    transCache[text] = zh;
+                    let el = document.getElementById("trans-" + idx);
+                    if (el) el.innerText = "（" + zh + "）";
+                }
+            })
+            .catch(() => {});
         }
 
         function highlightWord(text, word) {
