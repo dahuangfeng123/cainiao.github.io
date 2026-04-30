@@ -391,6 +391,7 @@
                 <div id="learn-meaning" style="font-size:20px;line-height:1.8;margin-bottom:8px;"></div>
                 <div id="learn-meta" style="font-size:13px;color:#999;margin-bottom:10px;"></div>
                 <div id="learn-detail" style="text-align:left;font-size:14px;line-height:1.8;color:#444;"></div>
+                <div id="trans-status" style="font-size:12px;color:#d35400;margin-top:6px;"></div>
             </div>
             <div style="border-top:1px solid #eee;padding-top:12px;flex-shrink:0;">
                 <button class="btn btn-blue" onclick="addToReview()">加入复习</button>
@@ -664,29 +665,39 @@
             if (transCache[text]) {
                 let el = document.getElementById("trans-" + idx);
                 if (el) el.innerText = transCache[text];
-                console.info("读取翻译缓存");
                 return;
             }
-            if (!hfTranslator) return;
+            if (!hfTranslator) {
+                let el = document.getElementById("trans-" + idx);
+                if (el) el.innerText = "（翻译模型加载中…）";
+                return;
+            }
             let el = document.getElementById("trans-" + idx);
             if (!el) return;
-            console.info("使用翻译管道");
+            el.innerText = "（翻译中…）";
             hfTranslator(text).then(result => {
-                console.info("翻译结果:", result);
                 let zh = result[0].translation_text || "";
                 if (zh) {
                     transCache[text] = "（" + zh + "）";
                     if (el) el.innerText = "（" + zh + "）";
+                } else {
+                    if (el) el.innerText = "";
                 }
-            }).catch(() => {});
+            }).catch(() => {
+                if (el) el.innerText = "（翻译失败）";
+            });
         }
 
         async function initTranslator() {
+            let statusEl = document.getElementById("trans-status");
             try {
+                if (statusEl) statusEl.innerText = "⏳ 首次加载翻译模型，请耐心等待...";
                 let { pipeline } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2");
                 hfTranslator = await pipeline('translation_en_to_zh', 'Xenova/opus-mt-en-zh', { quantized: true });
-                console.info("翻译模型加载成功");
+                if (statusEl) statusEl.innerText = "✅ 翻译模型已就绪";
+                setTimeout(() => { if (statusEl) statusEl.innerText = ""; }, 3000);
             } catch (e) {
+                if (statusEl) statusEl.innerText = "❌ 翻译模型加载失败，释义翻译不可用";
                 console.warn("翻译模型加载失败:", e);
             }
         }
