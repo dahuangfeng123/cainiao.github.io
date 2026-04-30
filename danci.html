@@ -384,15 +384,17 @@
 
     <!-- 学习展示弹窗 -->
     <div class="modal" id="learn-modal">
-        <div class="modal-body" style="text-align:center;max-width:600px;">
-            <div id="learn-word" style="font-size:32px;font-weight:bold;margin-bottom:8px;"></div>
-            <div id="learn-phonetic" style="font-size:14px;color:#666;margin-bottom:8px;"></div>
-            <div id="learn-meaning" style="font-size:20px;line-height:1.8;margin-bottom:8px;"></div>
-            <div id="learn-meta" style="font-size:13px;color:#999;margin-bottom:10px;"></div>
-            <div id="learn-detail" style="text-align:left;margin-bottom:15px;font-size:14px;line-height:1.8;color:#444;"></div>
-            <div>
+        <div class="modal-body" style="text-align:center;max-width:600px;display:flex;flex-direction:column;max-height:80vh;">
+            <div style="flex:1;overflow-y:auto;padding-bottom:10px;">
+                <div id="learn-word" style="font-size:32px;font-weight:bold;margin-bottom:8px;"></div>
+                <div id="learn-phonetic" style="font-size:14px;color:#666;margin-bottom:8px;"></div>
+                <div id="learn-meaning" style="font-size:20px;line-height:1.8;margin-bottom:8px;"></div>
+                <div id="learn-meta" style="font-size:13px;color:#999;margin-bottom:10px;"></div>
+                <div id="learn-detail" style="text-align:left;font-size:14px;line-height:1.8;color:#444;"></div>
+            </div>
+            <div style="border-top:1px solid #eee;padding-top:12px;flex-shrink:0;">
                 <button class="btn btn-blue" onclick="addToReview()">加入复习</button>
-                <button class="btn btn-gray" onclick="speakWord()">🔊 朗读</button>
+                <button class="btn btn-gray" onclick="speakWord()">🔊 朗读单词</button>
                 <button class="btn" onclick="closeLearnModal()">关闭</button>
             </div>
         </div>
@@ -632,6 +634,7 @@
             if (audioUrl) {
                 learnAudioUrl = audioUrl;
             }
+            let word = data[0].word.toLowerCase();
             let html = "";
             let meanings = data[0].meanings;
             meanings.forEach(m => {
@@ -642,13 +645,31 @@
                     html += `<div style="margin-bottom:6px;padding-left:8px;">`;
                     html += `<div>${i + 1}. ${d.definition}</div>`;
                     if (d.example) {
-                        html += `<div style="color:#888;font-style:italic;padding-left:12px;">"${d.example}"</div>`;
+                        let highlighted = highlightWord(d.example, word);
+                        html += `<div style="color:#888;font-style:italic;padding-left:12px;display:flex;align-items:center;gap:6px;">"${highlighted}"<span class="speak-example" style="cursor:pointer;font-style:normal;font-size:16px;" onclick="speakExample(this)" data-text="${escAttr(d.example)}">🔊</span></div>`;
                     }
                     html += `</div>`;
                 });
                 html += `</div>`;
             });
             document.getElementById("learn-detail").innerHTML = html || '<span style="color:#ccc;">暂无在线例句</span>';
+        }
+
+        function highlightWord(text, word) {
+            let re = new RegExp('(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+            return text.replace(re, '<span style="background:#fbbc04;color:#000;font-weight:bold;font-style:normal;">$1</span>');
+        }
+
+        function escAttr(s) {
+            return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function speakExample(el) {
+            let text = el.getAttribute('data-text');
+            let utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'en-US';
+            utter.rate = 0.8;
+            speechSynthesis.speak(utter);
         }
 
         function closeLearnModal() {
