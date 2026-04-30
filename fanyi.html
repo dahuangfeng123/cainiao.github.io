@@ -1,3 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>纯前端英中翻译</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+    textarea { width: 100%; max-width: 700px; height: 140px; padding: 10px; }
+    button { padding: 12px 24px; font-size: 16px; margin: 10px 0; }
+    #status { color: #d35400; margin: 15px 0; }
+    #output { margin-top: 20px; padding: 15px; background: #f8f9fa; border: 1px solid #ddd; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>纯前端英文 → 中文翻译（无需后端）</h1>
+  
+  <textarea id="input" placeholder="请输入英文文本..."></textarea><br>
+  <button onclick="window.translateText()">翻译成中文</button>
+  
+  <p id="status"></p>
+  <div id="output"></div>
+
 <script type="module">
   import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2";
 
@@ -34,3 +56,5 @@
     }
   };
 </script>
+</body>
+</html>
