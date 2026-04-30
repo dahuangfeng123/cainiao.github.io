@@ -657,7 +657,7 @@
 
         function highlightWord(text, word) {
             let re = new RegExp('(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-            return text.replace(re, '<span style="background:#fbbc04;color:#000;font-weight:bold;font-style:normal;">$1</span>');
+            return text.replace(re, '<span style="background: #ffff00;padding: 0px 3px;color:#000;font-weight:bold;font-style:normal;">$1</span>');
         }
 
         function escAttr(s) {
