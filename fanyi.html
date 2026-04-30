@@ -1,79 +1,36 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-  <meta charset="UTF-8">
-  <title>纯前端英中翻译</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-    textarea { width: 100%; max-width: 700px; height: 140px; padding: 10px; }
-    button { padding: 12px 24px; font-size: 16px; margin: 10px 0; }
-    #status { color: #d35400; margin: 15px 0; }
-    #output { margin-top: 20px; padding: 15px; background: #f8f9fa; border: 1px solid #ddd; white-space: pre-wrap; }
-  </style>
-</head>
-<body>
-  <h1>纯前端英文 → 中文翻译（无需后端）</h1>
-  
-  <textarea id="input" placeholder="请输入英文文本..."></textarea><br>
-  <button onclick="window.translateText()">翻译成中文</button>
-  
-  <p id="status"></p>
-  <div id="output"></div>
+<script type="module">
+  import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2";
 
-  <script type="module">
-    import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0";
+  let translator = null;
 
-    let translator = null;
+  window.translateText = async function() {
+    const inputEl = document.getElementById('input');
+    const statusEl = document.getElementById('status');
+    const outputEl = document.getElementById('output');
+    const text = inputEl.value.trim();
+    
+    if (!text) { alert("请输入英文文本！"); return; }
 
-    // 暴露到全局，解决 onclick 问题
-    window.translateText = async function() {
-      const inputEl = document.getElementById('input');
-      const statusEl = document.getElementById('status');
-      const outputEl = document.getElementById('output');
-
-      const text = inputEl.value.trim();
-      if (!text) {
-        alert("请输入英文文本！");
+    if (!translator) {
+      statusEl.textContent = "首次加载翻译模型，请耐心等待...";
+      try {
+        translator = await pipeline('translation_en_to_zh', 'Xenova/opus-mt-en-zh', {
+          quantized: true,
+        });
+        statusEl.textContent = "✅ 模型加载完成！";
+      } catch (err) {
+        statusEl.textContent = "❌ 模型加载失败: " + err.message;
         return;
       }
+    }
 
-      if (!translator) {
-        statusEl.textContent = "首次加载翻译模型（约 80-120MB），请耐心等待 15~40 秒...";
-        
-        try {
-          translator = await pipeline('translation', 'Xenova/opus-mt-en-zh', {
-            quantized: true,
-            // progress_callback: (data) => console.log(data)
-          });
-          statusEl.textContent = "✅ 模型加载完成！";
-        } catch (err) {
-          console.error(err);
-          statusEl.textContent = "❌ 模型加载失败: " + err.message;
-          return;
-        }
-      }
-
-      statusEl.textContent = "正在翻译...";
-      outputEl.textContent = "";
-
-      try {
-        const result = await translator(text, {
-          src_lang: "en",
-          tgt_lang: "zh"
-        });
-
-        outputEl.innerHTML = `<strong>翻译结果：</strong><br>${result[0].translation_text}`;
-        statusEl.textContent = "✅ 翻译完成";
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = "❌ 翻译出错，请重试";
-      }
-    };
-
-    // 页面加载时开始预加载（提升体验）
-    window.onload = async () => {
-      // 可选：提前静默加载模型
-    };
-  </script>
-</body>
-</html>
+    statusEl.textContent = "正在翻译...";
+    try {
+      const result = await translator(text);
+      outputEl.innerHTML = `<strong>翻译结果：</strong><br>${result[0].translation_text}`;
+      statusEl.textContent = "✅ 翻译完成";
+    } catch (err) {
+      statusEl.textContent = "❌ 翻译出错：" + err.message;
+    }
+  };
+</script>
