@@ -618,6 +618,8 @@
                 });
         }
 
+        let transIdxCounter = 0;
+
         function renderDict(data) {
             if (!data || !data[0] || !data[0].meanings) {
                 document.getElementById("learn-detail").innerHTML = '<span style="color:#ccc;">暂无在线例句</span>';
@@ -638,56 +640,84 @@
                 learnAudioUrl = audioUrl;
             }
             let word = data[0].word.toLowerCase();
-            let html = "";
-            let meanings = data[0].meanings;
-            let transIdx = 0;
-            let transQueue = [];
-            meanings.forEach(m => {
-                html += `<div style="margin-bottom:10px;">`;
-                html += `<div style="color:#34a853;font-weight:bold;margin-bottom:4px;">${m.partOfSpeech}</div>`;
-                let defs = m.definitions.slice(0, 3);
-                defs.forEach((d, i) => {
-                    html += `<div style="margin-bottom:6px;padding-left:8px;">`;
-                    html += `<div>${i + 1}. ${d.definition}<span id="trans-${transIdx}" style="color:#999;font-size:12px;margin-left:4px;"></span></div>`;
-                    transQueue.push({ text: d.definition, idx: transIdx });
-                    transIdx++;
-                    if (d.example) {
-                        let highlighted = highlightWord(d.example, word);
-                        html += `<div style="color:#888;font-style:italic;padding-left:12px;align-items:center;gap:6px;">"${highlighted}"<span class="speak-example" style="cursor:pointer;font-style:normal;font-size:16px;" onclick="speakExample(this)" data-text="${escAttr(d.example)}">🔊</span></div>`;
-                    }
-                    html += `</div>`;
+            let container = document.getElementById("learn-detail");
+            container.innerHTML = "";
+            transIdxCounter = 0;
+            let allItems = [];
+            data[0].meanings.forEach(m => {
+                m.definitions.slice(0, 3).forEach((d, i) => {
+                    allItems.push({ pos: m.partOfSpeech, def: d, defIdx: i, word: word });
                 });
-                html += `</div>`;
             });
-            document.getElementById("learn-detail").innerHTML = html || '<span style="color:#ccc;">暂无在线例句</span>';
-            transQueue.forEach(item => translateDef(item.text, item.idx));
+            streamItems(container, allItems, 0);
         }
 
+        function streamItems(container, items, i) {
+            if (i >= items.length) return;
+            let item = items[i];
+            let idx = transIdxCounter++;
+            let isNewPos = (i === 0) || (items[i].pos !== items[i - 1].pos);
+            let html = "";
+            if (isNewPos) {
+                html += `<div style="color:#34a853;font-weight:bold;margin-bottom:4px;margin-top:${i > 0 ? '10px' : '0'};">${item.pos}</div>`;
+            }
+            html += `<div style="margin-bottom:6px;padding-left:8px;">`;
+            html += `<div>${item.defIdx + 1}. ${item.def.definition}<span id="trans-${idx}" style="color:#999;font-size:12px;margin-left:4px;"></span></div>`;
+            if (item.def.example) {
+                let highlighted = highlightWord(item.def.example, item.word);
+                html += `<div style="color:#888;font-style:italic;padding-left:12px;align-items:center;gap:6px;">"${highlighted}"<span class="speak-example" style="cursor:pointer;font-style:normal;font-size:16px;" onclick="speakExample(this)" data-text="${escAttr(item.def.example)}">🔊</span></div>`;
+            }
+            html += `</div>`;
+            container.insertAdjacentHTML("beforeend", html);
+            translateDef(item.def.definition, idx);
+            requestAnimationFrame(() => streamItems(container, items, i + 1));
+        }
+
+        let transQueue = [];
+        let transRunning = false;
+
         function translateDef(text, idx) {
+            transQueue.push({ text, idx });
+            processTransQueue();
+        }
+
+        async function processTransQueue() {
+            if (transRunning || transQueue.length === 0) return;
+            transRunning = true;
+            let { text, idx } = transQueue.shift();
+            let el = document.getElementById("trans-" + idx);
             if (transCache[text]) {
-                let el = document.getElementById("trans-" + idx);
                 if (el) el.innerText = transCache[text];
+                transRunning = false;
+                processTransQueue();
                 return;
             }
             if (!hfTranslator) {
-                let el = document.getElementById("trans-" + idx);
                 if (el) el.innerText = "（翻译模型加载中…）";
+                transRunning = false;
+                processTransQueue();
                 return;
             }
-            let el = document.getElementById("trans-" + idx);
-            if (!el) return;
+            if (!el) {
+                transRunning = false;
+                processTransQueue();
+                return;
+            }
             el.innerText = "（翻译中…）";
-            hfTranslator(text).then(result => {
+            try {
+                let result = await hfTranslator(text);
                 let zh = result[0].translation_text || "";
                 if (zh) {
                     transCache[text] = "（" + zh + "）";
-                    if (el) el.innerText = "（" + zh + "）";
+                    el.innerText = "（" + zh + "）";
                 } else {
-                    if (el) el.innerText = "";
+                    el.innerText = "";
                 }
-            }).catch(() => {
-                if (el) el.innerText = "（翻译失败）";
-            });
+            } catch {
+                el.innerText = "（翻译失败）";
+            }
+            transRunning = false;
+            processTransQueue();
         }
 
         async function initTranslator() {
