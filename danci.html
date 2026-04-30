@@ -641,6 +641,7 @@
             let html = "";
             let meanings = data[0].meanings;
             let transIdx = 0;
+            let transQueue = [];
             meanings.forEach(m => {
                 html += `<div style="margin-bottom:10px;">`;
                 html += `<div style="color:#34a853;font-weight:bold;margin-bottom:4px;">${m.partOfSpeech}</div>`;
@@ -648,7 +649,7 @@
                 defs.forEach((d, i) => {
                     html += `<div style="margin-bottom:6px;padding-left:8px;">`;
                     html += `<div>${i + 1}. ${d.definition}<span id="trans-${transIdx}" style="color:#999;font-size:12px;margin-left:4px;"></span></div>`;
-                    translateDef(d.definition, transIdx);
+                    transQueue.push({ text: d.definition, idx: transIdx });
                     transIdx++;
                     if (d.example) {
                         let highlighted = highlightWord(d.example, word);
@@ -659,6 +660,7 @@
                 html += `</div>`;
             });
             document.getElementById("learn-detail").innerHTML = html || '<span style="color:#ccc;">暂无在线例句</span>';
+            transQueue.forEach(item => translateDef(item.text, item.idx));
         }
 
         function translateDef(text, idx) {
