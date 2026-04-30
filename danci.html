@@ -579,6 +579,7 @@
         }
 
         let dictCache = {};
+        let hfTranslator = null;
         let transCache = {};
 
         function openLearnModal(idx) {
@@ -650,7 +651,7 @@
                     transIdx++;
                     if (d.example) {
                         let highlighted = highlightWord(d.example, word);
-                        html += `<div style="color:#888;font-style:italic;padding-left:12px;display:flex;align-items:center;gap:6px;">"${highlighted}"<span class="speak-example" style="cursor:pointer;font-style:normal;font-size:16px;" onclick="speakExample(this)" data-text="${escAttr(d.example)}">🔊</span></div>`;
+                        html += `<div style="color:#888;font-style:italic;padding-left:12px;align-items:center;gap:6px;">"${highlighted}"<span class="speak-example" style="cursor:pointer;font-style:normal;font-size:16px;" onclick="speakExample(this)" data-text="${escAttr(d.example)}">🔊</span></div>`;
                     }
                     html += `</div>`;
                 });
@@ -665,28 +666,27 @@
                 if (el) el.innerText = transCache[text];
                 return;
             }
-            fetch("https://libretranslate.com/translate", {
-                method: "POST",
-                body: JSON.stringify({
-                    q: text,
-                    source: "en",
-                    target: "zh",
-                    format: "text",
-                    api_key: ""
-                }),
-                headers: { "Content-Type": "application/json" }
-            })
-            .then(r => r.json())
-            .then(d => {
-                let zh = d.translatedText || "";
+            if (!hfTranslator) return;
+            let el = document.getElementById("trans-" + idx);
+            if (!el) return;
+            hfTranslator(text).then(result => {
+                let zh = result[0].translation_text || "";
                 if (zh) {
-                    transCache[text] = zh;
-                    let el = document.getElementById("trans-" + idx);
+                    transCache[text] = "（" + zh + "）";
                     if (el) el.innerText = "（" + zh + "）";
                 }
-            })
-            .catch(() => {});
+            }).catch(() => {});
         }
+
+        async function initTranslator() {
+            try {
+                let { pipeline } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2");
+                hfTranslator = await pipeline('translation_en_to_zh', 'Xenova/opus-mt-en-zh', { quantized: true });
+            } catch (e) {
+                console.warn("翻译模型加载失败:", e);
+            }
+        }
+        initTranslator();
 
         function highlightWord(text, word) {
             let re = new RegExp('(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
