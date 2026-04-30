@@ -388,7 +388,8 @@
             <div id="learn-word" style="font-size:32px;font-weight:bold;margin-bottom:8px;"></div>
             <div id="learn-phonetic" style="font-size:14px;color:#666;margin-bottom:8px;"></div>
             <div id="learn-meaning" style="font-size:20px;line-height:1.8;margin-bottom:8px;"></div>
-            <div id="learn-meta" style="font-size:13px;color:#999;margin-bottom:15px;"></div>
+            <div id="learn-meta" style="font-size:13px;color:#999;margin-bottom:10px;"></div>
+            <div id="learn-detail" style="text-align:left;margin-bottom:15px;font-size:14px;line-height:1.8;color:#444;"></div>
             <div>
                 <button class="btn btn-blue" onclick="addToReview()">加入复习</button>
                 <button class="btn btn-gray" onclick="speakWord()">🔊 朗读</button>
@@ -403,6 +404,7 @@
         let mode = 1;
         let curr = null;
         let learnIdx = null;
+        let learnAudioUrl = "";
         let currCollins = "";
         let currExam = "";
         let selectedDate = null;
@@ -574,6 +576,8 @@
             }
         }
 
+        let dictCache = {};
+
         function openLearnModal(idx) {
             let w = getWords()[idx];
             learnIdx = idx;
@@ -581,12 +585,76 @@
             document.getElementById("learn-meaning").innerText = w.meaning;
             let examHtml = w.exam.split(" ").map(t => EXAM_LABELS[t] || t).join("、");
             document.getElementById("learn-meta").innerHTML = `柯林斯 ${"★".repeat(w.collins)} | ${examHtml}`;
+            document.getElementById("learn-detail").innerHTML = '<span style="color:#999;">加载例句中...</span>';
             document.getElementById("learn-modal").style.display = "flex";
+            fetchDict(w.word);
+        }
+
+        function fetchDict(word) {
+            if (dictCache[word]) {
+                renderDict(dictCache[word]);
+                return;
+            }
+            fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word))
+                .then(res => {
+                    if (!res.ok) throw new Error();
+                    return res.json();
+                })
+                .then(data => {
+                    dictCache[word] = data;
+                    if (learnIdx !== null && getWords()[learnIdx].word === word) {
+                        renderDict(data);
+                    }
+                })
+                .catch(() => {
+                    if (learnIdx !== null && getWords()[learnIdx].word === word) {
+                        document.getElementById("learn-detail").innerHTML = '<span style="color:#ccc;">暂无在线例句</span>';
+                    }
+                });
+        }
+
+        function renderDict(data) {
+            if (!data || !data[0] || !data[0].meanings) {
+                document.getElementById("learn-detail").innerHTML = '<span style="color:#ccc;">暂无在线例句</span>';
+                return;
+            }
+            let phonetic = "";
+            let audioUrl = "";
+            if (data[0].phonetics) {
+                for (let p of data[0].phonetics) {
+                    if (p.text && !phonetic) phonetic = p.text;
+                    if (p.audio && !audioUrl) audioUrl = p.audio;
+                }
+            }
+            if (phonetic) {
+                document.getElementById("learn-phonetic").innerText = phonetic;
+            }
+            if (audioUrl) {
+                learnAudioUrl = audioUrl;
+            }
+            let html = "";
+            let meanings = data[0].meanings;
+            meanings.forEach(m => {
+                html += `<div style="margin-bottom:10px;">`;
+                html += `<div style="color:#34a853;font-weight:bold;margin-bottom:4px;">${m.partOfSpeech}</div>`;
+                let defs = m.definitions.slice(0, 3);
+                defs.forEach((d, i) => {
+                    html += `<div style="margin-bottom:6px;padding-left:8px;">`;
+                    html += `<div>${i + 1}. ${d.definition}</div>`;
+                    if (d.example) {
+                        html += `<div style="color:#888;font-style:italic;padding-left:12px;">"${d.example}"</div>`;
+                    }
+                    html += `</div>`;
+                });
+                html += `</div>`;
+            });
+            document.getElementById("learn-detail").innerHTML = html || '<span style="color:#ccc;">暂无在线例句</span>';
         }
 
         function closeLearnModal() {
             document.getElementById("learn-modal").style.display = "none";
             learnIdx = null;
+            learnAudioUrl = "";
         }
 
         function addToReview() {
@@ -607,6 +675,10 @@
 
         function speakWord() {
             if (learnIdx === null) return;
+            if (learnAudioUrl) {
+                new Audio(learnAudioUrl).play();
+                return;
+            }
             let w = getWords()[learnIdx];
             let utter = new SpeechSynthesisUtterance(w.word);
             utter.lang = 'en-US';
