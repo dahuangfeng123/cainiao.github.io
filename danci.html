@@ -694,7 +694,7 @@
             let statusEl = document.getElementById("trans-status");
             try {
                 if (statusEl) statusEl.innerText = "⏳ 首次加载翻译模型，请耐心等待...";
-                let { pipeline } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2");
+                let { pipeline } = await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2");
                 hfTranslator = await pipeline('translation_en_to_zh', 'Xenova/opus-mt-en-zh', { quantized: true });
                 if (statusEl) statusEl.innerText = "✅ 翻译模型已就绪";
                 setTimeout(() => { if (statusEl) statusEl.innerText = ""; }, 3000);
