@@ -599,7 +599,10 @@
             <div class="card" id="exam-progress" style="display:none;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <h2 style="margin-bottom:0;">📝 考试进行中</h2>
-                    <span style="color:#666;font-size:14px;">进度：<span id="exam-current">0</span> / <span id="exam-total">100</span></span>
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <span style="color:#666;font-size:14px;">⏱ <span id="exam-timer">00:00</span></span>
+                        <span style="color:#666;font-size:14px;">进度：<span id="exam-current">0</span> / <span id="exam-total">100</span></span>
+                    </div>
                 </div>
                 <div style="background:#f1f3f4;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden;">
                     <div id="exam-bar" style="background:#34a853;height:100%;border-radius:8px;transition:width 0.3s;width:0%;"></div>
@@ -622,6 +625,7 @@
                 <div style="text-align:center;padding:20px 0;">
                     <div style="font-size:48px;font-weight:bold;" id="exam-score">0</div>
                     <div style="color:#666;font-size:14px;margin-top:4px;">得分（满分100分）</div>
+                    <div style="color:#999;font-size:13px;margin-top:6px;">用时：<span id="exam-duration">0</span></div>
                 </div>
                 <div style="display:flex;justify-content:center;gap:30px;margin-bottom:20px;">
                     <div style="text-align:center;">
@@ -1151,6 +1155,7 @@
             });
             if (curr) renderQ();
             renderTodayList();
+            renderExamPool();
         }
 
         function renderQ() {
@@ -1882,8 +1887,84 @@
         let examIndex = 0;
         let examAnswers = [];
         let examSubmitted = false;
+        let examStartTime = 0;
+        let examTimerInterval = null;
 
         const MODE_LABELS = { 1: "看词写义", 2: "看义写词", 3: "听写单词" };
+
+        function similarity(a, b) {
+            if (!a || !b) return 0;
+            a = a.toLowerCase();
+            b = b.toLowerCase();
+            if (a === b) return 1;
+            let la = a.length, lb = b.length;
+            if (la === 0 || lb === 0) return 0;
+            let dp = [];
+            for (let i = 0; i <= la; i++) {
+                dp[i] = [i];
+            }
+            for (let j = 0; j <= lb; j++) {
+                dp[0][j] = j;
+            }
+            for (let i = 1; i <= la; i++) {
+                for (let j = 1; j <= lb; j++) {
+                    let cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+                }
+            }
+            let dist = dp[la][lb];
+            return 1 - dist / Math.max(la, lb);
+        }
+
+        function charSetSim(a, b) {
+            if (!a || !b) return 0;
+            let sa = new Set(a), sb = new Set(b);
+            let common = 0;
+            for (let c of sa) { if (sb.has(c)) common++; }
+            return (2 * common) / (sa.size + sb.size);
+        }
+
+        function checkExamAnswer(input, word) {
+            let ans = input.trim();
+            if (!ans) return { correct: false, score: 0 };
+            if (mode === 1) {
+                let meanings = word.meaning.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
+                let ansParts = ans.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
+                let bestScore = 0;
+                for (let ap of ansParts) {
+                    for (let m of meanings) {
+                        let edSim = similarity(ap, m);
+                        let csSim = charSetSim(ap, m);
+                        let s = Math.max(edSim, csSim);
+                        if (s > bestScore) bestScore = s;
+                    }
+                }
+                return { correct: bestScore >= 0.6, score: bestScore };
+            } else {
+                let s = similarity(ans, word.word);
+                return { correct: s >= 0.85, score: s };
+            }
+        }
+
+        function formatDuration(ms) {
+            let totalSec = Math.floor(ms / 1000);
+            let min = Math.floor(totalSec / 60);
+            let sec = totalSec % 60;
+            if (min >= 60) {
+                let hr = Math.floor(min / 60);
+                min = min % 60;
+                return `${hr}时${String(min).padStart(2, '0')}分${String(sec).padStart(2, '0')}秒`;
+            }
+            return `${min}分${String(sec).padStart(2, '0')}秒`;
+        }
+
+        function updateExamTimer() {
+            let elapsed = Date.now() - examStartTime;
+            let totalSec = Math.floor(elapsed / 1000);
+            let min = Math.floor(totalSec / 60);
+            let sec = totalSec % 60;
+            document.getElementById("exam-timer").innerText = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+        }
 
         function getExamPool() {
             let u = safeUser(getUser());
@@ -1921,6 +2002,9 @@
             examIndex = 0;
             examAnswers = [];
             examSubmitted = false;
+            examStartTime = Date.now();
+            if (examTimerInterval) clearInterval(examTimerInterval);
+            examTimerInterval = setInterval(updateExamTimer, 1000);
             document.getElementById("exam-total").innerText = examWords.length;
             document.getElementById("exam-setup").style.display = "none";
             document.getElementById("exam-progress").style.display = "block";
@@ -1964,39 +2048,23 @@
             speechSynthesis.speak(utter);
         }
 
-        function checkExamAnswer(input, word) {
-            let ans = input.trim();
-            if (!ans) return false;
-            if (mode === 1) {
-                let meanings = word.meaning.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
-                let ansParts = ans.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
-                for (let ap of ansParts) {
-                    for (let m of meanings) {
-                        if (ap === m || ap.includes(m) || m.includes(ap)) return true;
-                    }
-                }
-                return false;
-            } else {
-                return ans.toLowerCase() === word.word.toLowerCase();
-            }
-        }
-
         function submitExamAnswer() {
             if (examSubmitted || examIndex >= examWords.length) return;
             let input = document.getElementById("exam-answer").value;
             let w = examWords[examIndex].word;
-            let correct = checkExamAnswer(input, w);
-            examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: input.trim(), correct: correct, skipped: false });
+            let result = checkExamAnswer(input, w);
+            let scorePct = Math.round(result.score * 100);
+            examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: input.trim(), correct: result.correct, simScore: scorePct, skipped: false });
             let fb = document.getElementById("exam-feedback");
             fb.style.display = "block";
-            if (correct) {
+            if (result.correct) {
                 fb.style.background = "#e6f4ea";
                 fb.style.color = "#1e7e34";
-                fb.innerHTML = `✅ 正确！`;
+                fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
             } else {
                 fb.style.background = "#fce8e6";
                 fb.style.color = "#c5221f";
-                fb.innerHTML = `❌ 错误！正确答案：<strong>${mode === 1 ? w.meaning : w.word}</strong>`;
+                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? w.meaning : w.word}</strong>`;
             }
             document.getElementById("exam-answer").disabled = true;
             setTimeout(() => {
@@ -2008,13 +2076,15 @@
         function skipExamAnswer() {
             if (examSubmitted || examIndex >= examWords.length) return;
             let w = examWords[examIndex].word;
-            examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: "", correct: false, skipped: true });
+            examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: "", correct: false, simScore: 0, skipped: true });
             examIndex++;
             renderExamQuestion();
         }
 
         function finishExam() {
             examSubmitted = true;
+            if (examTimerInterval) { clearInterval(examTimerInterval); examTimerInterval = null; }
+            let duration = Date.now() - examStartTime;
             let correctCount = examAnswers.filter(a => a.correct).length;
             let wrongCount = examAnswers.filter(a => !a.correct && !a.skipped).length;
             let skipCount = examAnswers.filter(a => a.skipped).length;
@@ -2024,23 +2094,27 @@
             document.getElementById("exam-correct").innerText = correctCount;
             document.getElementById("exam-wrong").innerText = wrongCount;
             document.getElementById("exam-skip").innerText = skipCount;
-            let html = `<div style="margin-bottom:10px;color:#666;font-size:13px;">考试模式：${MODE_LABELS[mode]} | 题目数量：${examWords.length}</div>`;
+            document.getElementById("exam-duration").innerText = formatDuration(duration);
+            let html = `<div style="margin-bottom:10px;color:#666;font-size:13px;">考试模式：${MODE_LABELS[mode]} | 题目数量：${examWords.length} | 用时：${formatDuration(duration)}</div>`;
             html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
                 <thead><tr style="background:#f1f3f4;">
                     <th style="padding:8px;border:1px solid #eee;text-align:left;width:30px;">#</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:left;">单词</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:left;">释义</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:left;">你的答案</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;width:60px;">匹配度</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:center;width:60px;">结果</th>
                 </tr></thead><tbody>`;
             examAnswers.forEach((a, i) => {
                 let bg = i % 2 === 0 ? '#fff' : '#fafafa';
                 let resultIcon = a.skipped ? '⏭️' : (a.correct ? '✅' : '❌');
+                let simColor = a.simScore >= 80 ? '#34a853' : a.simScore >= 60 ? '#fbbc04' : '#ea4335';
                 html += `<tr style="background:${bg};">
                     <td style="padding:6px 8px;border:1px solid #eee;">${i + 1}</td>
                     <td style="padding:6px 8px;border:1px solid #eee;font-weight:bold;">${a.word.word}</td>
                     <td style="padding:6px 8px;border:1px solid #eee;color:#666;">${a.word.meaning}</td>
                     <td style="padding:6px 8px;border:1px solid #eee;">${a.skipped ? '<span style="color:#999;">跳过</span>' : a.input}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;color:${simColor};">${a.skipped ? '-' : a.simScore + '%'}</td>
                     <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${resultIcon}</td>
                 </tr>`;
             });
@@ -2048,10 +2122,10 @@
             document.getElementById("exam-detail-list").innerHTML = html;
             document.getElementById("exam-progress").style.display = "none";
             document.getElementById("exam-result").style.display = "block";
-            saveExamScore(score, correctCount, examWords.length, mode);
+            saveExamScore(score, correctCount, examWords.length, mode, duration);
         }
 
-        function saveExamScore(score, correct, total, m) {
+        function saveExamScore(score, correct, total, m, duration) {
             let u = safeUser(getUser());
             if (!u.examScores) u.examScores = [];
             u.examScores.push({
@@ -2060,6 +2134,7 @@
                 total: total,
                 mode: m,
                 modeLabel: MODE_LABELS[m],
+                duration: duration,
                 date: new Date().toLocaleString('zh-CN')
             });
             if (u.examScores.length > 10) u.examScores = u.examScores.slice(-10);
@@ -2087,15 +2162,18 @@
                     <th style="padding:8px;border:1px solid #eee;text-align:left;">时间</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:center;">模式</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:center;">正确/总数</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;">用时</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:center;">得分</th>
                 </tr></thead><tbody>`;
             scores.slice().reverse().forEach((s, i) => {
                 let bg = i % 2 === 0 ? '#fff' : '#fafafa';
                 let scoreColor = s.score >= 80 ? '#34a853' : s.score >= 60 ? '#fbbc04' : '#ea4335';
+                let dur = s.duration ? formatDuration(s.duration) : '-';
                 html += `<tr style="background:${bg};">
                     <td style="padding:6px 8px;border:1px solid #eee;">${s.date}</td>
                     <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${s.modeLabel}</td>
                     <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${s.correct}/${s.total}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${dur}</td>
                     <td style="padding:6px 8px;border:1px solid #eee;text-align:center;font-weight:bold;color:${scoreColor};">${s.score}</td>
                 </tr>`;
             });
