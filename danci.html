@@ -627,6 +627,7 @@
         // 单词列表
         // ==============================
         let lastFilterKey = "";
+        let wordLoadedCount = 0;
 
         function renderWordList(forceReset) {
             let all = getWords();
@@ -638,19 +639,20 @@
             if (forceReset || filterKey !== lastFilterKey) {
                 filteredList = list;
                 wordPage = 0;
+                wordLoadedCount = 0;
                 lastFilterKey = filterKey;
-                document.getElementById("word-list").innerHTML = "";
             }
             document.getElementById("word-count").innerText = filteredList.length;
-            appendWords();
+            document.getElementById("word-list").innerHTML = "";
+            renderWordsUpTo(wordLoadedCount || wordPageSize);
         }
-        function appendWords() {
+
+        function renderWordsUpTo(count) {
             let all = getWords();
             let u = safeUser(getUser());
-            let start = wordPage * wordPageSize;
-            let end = Math.min(start + wordPageSize, filteredList.length);
+            let end = Math.min(count, filteredList.length);
             let html = "";
-            for (let i = start; i < end; i++) {
+            for (let i = 0; i < end; i++) {
                 let w = filteredList[i];
                 let realIdx = all.indexOf(w);
                 let learned = u.learn.includes(realIdx);
@@ -672,16 +674,16 @@
             </div>
         </div>`;
             }
-            document.getElementById("word-list").insertAdjacentHTML("beforeend", html);
-            let shown = Math.min(end, filteredList.length);
-            document.getElementById("word-shown").innerText = shown;
+            document.getElementById("word-list").innerHTML = html;
+            document.getElementById("word-shown").innerText = end;
             document.getElementById("word-total2").innerText = filteredList.length;
             let moreEl = document.getElementById("word-more");
-            moreEl.style.display = shown < filteredList.length ? "block" : "none";
+            moreEl.style.display = end < filteredList.length ? "block" : "none";
         }
+
         function loadMoreWords() {
-            wordPage++;
-            appendWords();
+            wordLoadedCount += wordPageSize;
+            renderWordsUpTo(wordLoadedCount);
         }
 
         function toggleSkilled(idx) {
