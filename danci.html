@@ -445,7 +445,7 @@
                 <h2>📈 我的学习数据</h2>
                 <p>已学习：<span id="my-total">0</span> 个 <span style="color:#999;font-size:12px;">（点击过"学习/复习"的单词总数）</span></p>
                 <p>待复习：<span id="my-wait">0</span> 个 <span style="color:#999;font-size:12px;">（已学习但未完成全部复习周期，且下次复习时间≤今日的单词）</span></p>
-                <p>已掌握：<span id="my-done">0</span> 个 <span style="color:#999;font-size:12px;">（完成全部7次艾宾浩斯复习周期的单词）</span></p>
+                <p>已掌握：<span id="my-done">0</span> 个 <span style="color:#999;font-size:12px;">（完成全部艾宾浩斯复习周期（1/2/4/7/15/30天）的单词）</span></p>
             </div>
             <div class="card">
                 <h2>� 近30天学习统计</h2>
@@ -1016,7 +1016,8 @@
             todayStart.setHours(0, 0, 0, 0);
             if (!u.learn.includes(idx)) {
                 u.learn.push(idx);
-                u.log[idx] = { t: now, c: 0, next: todayStart.getTime() };
+                let nextTs = nextDate(now, 1);
+                u.log[idx] = { t: now, c: 1, next: nextTs };
                 setUser(u);
                 recordDaily('learn');
             }
