@@ -588,13 +588,8 @@
             <div class="card" id="exam-setup">
                 <h2>📝 单词考试</h2>
                 <p style="color:#666;font-size:13px;margin-bottom:16px;">从已学习和已复习的单词中随机抽取100个组成试卷，完成后自动打分</p>
-                <div style="margin-bottom:16px;">
-                    <div style="color:#666;font-size:13px;margin-bottom:8px;">选择考试模式：</div>
-                    <div class="mode-bar" style="background:#fff;height:auto;padding:8px 0;">
-                        <button class="mbtn on" onclick="setExamMode(1)" id="exam-mode-1">看词写义</button>
-                        <button class="mbtn" onclick="setExamMode(2)" id="exam-mode-2">看义写词</button>
-                        <button class="mbtn" onclick="setExamMode(3)" id="exam-mode-3">听写单词</button>
-                    </div>
+                <div style="margin-bottom:16px;color:#666;font-size:13px;">
+                    当前考试模式：<span id="exam-mode-label" style="font-weight:bold;color:#34a853;">看词写义</span>（使用顶部全局模式）
                 </div>
                 <div style="margin-bottom:16px;color:#666;font-size:13px;">
                     可用单词池：<span id="exam-pool-count" style="font-weight:bold;color:#34a853;">0</span> 个（已学习 + 已掌握的单词）
@@ -1883,18 +1878,12 @@
         // ==============================
         // 考试功能
         // ==============================
-        let examMode = 1;
         let examWords = [];
         let examIndex = 0;
         let examAnswers = [];
         let examSubmitted = false;
 
-        function setExamMode(m) {
-            examMode = m;
-            document.querySelectorAll("#exam-setup .mbtn").forEach((b, i) => {
-                b.classList.toggle("on", i === m - 1);
-            });
-        }
+        const MODE_LABELS = { 1: "看词写义", 2: "看义写词", 3: "听写单词" };
 
         function getExamPool() {
             let u = safeUser(getUser());
@@ -1910,6 +1899,7 @@
         function renderExamPool() {
             let pool = getExamPool();
             document.getElementById("exam-pool-count").innerText = pool.length;
+            document.getElementById("exam-mode-label").innerText = MODE_LABELS[mode];
             let btn = document.getElementById("exam-start-btn");
             if (pool.length < 1) {
                 btn.disabled = true;
@@ -1952,13 +1942,13 @@
             document.getElementById("exam-answer").value = "";
             document.getElementById("exam-feedback").style.display = "none";
             document.getElementById("exam-answer").disabled = false;
-            if (examMode === 1) {
+            if (mode === 1) {
                 qEl.innerHTML = `单词：<span style="font-size:28px;color:#34a853;">${w.word}</span><br><span style="font-size:14px;color:#999;">请写出中文释义</span>`;
                 speakBtn.style.display = "block";
-            } else if (examMode === 2) {
+            } else if (mode === 2) {
                 qEl.innerHTML = `释义：<span style="font-size:18px;color:#333;">${w.meaning}</span><br><span style="font-size:14px;color:#999;">请写出英文单词</span>`;
                 speakBtn.style.display = "none";
-            } else if (examMode === 3) {
+            } else if (mode === 3) {
                 qEl.innerHTML = `<span style="font-size:14px;color:#999;">请听写单词（点击朗读按钮播放）</span>`;
                 speakBtn.style.display = "block";
             }
@@ -1977,7 +1967,7 @@
         function checkExamAnswer(input, word) {
             let ans = input.trim();
             if (!ans) return false;
-            if (examMode === 1) {
+            if (mode === 1) {
                 let meanings = word.meaning.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
                 let ansParts = ans.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
                 for (let ap of ansParts) {
@@ -2006,7 +1996,7 @@
             } else {
                 fb.style.background = "#fce8e6";
                 fb.style.color = "#c5221f";
-                fb.innerHTML = `❌ 错误！正确答案：<strong>${examMode === 1 ? w.meaning : w.word}</strong>`;
+                fb.innerHTML = `❌ 错误！正确答案：<strong>${mode === 1 ? w.meaning : w.word}</strong>`;
             }
             document.getElementById("exam-answer").disabled = true;
             setTimeout(() => {
@@ -2034,8 +2024,7 @@
             document.getElementById("exam-correct").innerText = correctCount;
             document.getElementById("exam-wrong").innerText = wrongCount;
             document.getElementById("exam-skip").innerText = skipCount;
-            let modeLabels = { 1: "看词写义", 2: "看义写词", 3: "听写单词" };
-            let html = `<div style="margin-bottom:10px;color:#666;font-size:13px;">考试模式：${modeLabels[examMode]} | 题目数量：${examWords.length}</div>`;
+            let html = `<div style="margin-bottom:10px;color:#666;font-size:13px;">考试模式：${MODE_LABELS[mode]} | 题目数量：${examWords.length}</div>`;
             html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
                 <thead><tr style="background:#f1f3f4;">
                     <th style="padding:8px;border:1px solid #eee;text-align:left;width:30px;">#</th>
@@ -2059,19 +2048,18 @@
             document.getElementById("exam-detail-list").innerHTML = html;
             document.getElementById("exam-progress").style.display = "none";
             document.getElementById("exam-result").style.display = "block";
-            saveExamScore(score, correctCount, examWords.length, examMode);
+            saveExamScore(score, correctCount, examWords.length, mode);
         }
 
-        function saveExamScore(score, correct, total, mode) {
+        function saveExamScore(score, correct, total, m) {
             let u = safeUser(getUser());
             if (!u.examScores) u.examScores = [];
-            let modeLabels = { 1: "看词写义", 2: "看义写词", 3: "听写单词" };
             u.examScores.push({
                 score: score,
                 correct: correct,
                 total: total,
-                mode: mode,
-                modeLabel: modeLabels[mode],
+                mode: m,
+                modeLabel: MODE_LABELS[m],
                 date: new Date().toLocaleString('zh-CN')
             });
             if (u.examScores.length > 10) u.examScores = u.examScores.slice(-10);
