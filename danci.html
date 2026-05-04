@@ -296,6 +296,7 @@
             <a href="javascript:show('home')">首页</a>
             <a href="javascript:show('plan')">复习计划</a>
             <a href="javascript:show('lib')">单词库</a>
+            <a href="javascript:show('relation')">关系查询</a>
             <a href="javascript:show('mine')">个人中心</a>
         </div>
         <div class="user">
@@ -494,6 +495,50 @@
             </div>
             <div class="card" style="text-align:center;">
                 <button class="btn btn-blue" onclick="downloadXlsx()">📥 下载所有单词（xlsx）</button>
+            </div>
+        </div>
+
+        <!-- 关系查询 -->
+        <div class="page" id="page-relation">
+            <div class="card">
+                <h2>🔗 单词关系查询</h2>
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                    <input type="text" id="rel-search" placeholder="输入单词搜索关系..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:15px;" oninput="relSearch(this.value)">
+                    <button class="btn btn-blue" onclick="relSearch(document.getElementById('rel-search').value)">搜索</button>
+                </div>
+                <div id="rel-suggestions" style="max-height:150px;overflow-y:auto;margin-bottom:10px;display:none;"></div>
+                <div id="rel-result"></div>
+            </div>
+            <div class="card">
+                <h2>🎛️ 筛选与排序</h2>
+                <div style="margin-bottom:10px;">
+                    <div style="color:#666;font-size:13px;margin-bottom:6px;">按关系类型筛选：</div>
+                    <div id="rel-type-filters" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <button class="btn btn-gray" onclick="relSortAZ()" id="rel-sort-btn">排序 A→Z</button>
+                    <span style="color:#999;font-size:13px;" id="rel-count-info"></span>
+                </div>
+            </div>
+            <div class="card">
+                <h2>📖 字母索引浏览</h2>
+                <div id="rel-alpha-index" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;"></div>
+                <div id="rel-alpha-list" style="max-height:300px;overflow-y:auto;"></div>
+            </div>
+            <div class="card">
+                <h2>📂 数据管理</h2>
+                <p style="color:#666;font-size:13px;margin-bottom:10px;">上传自定义数据替换当前词库和关系表，无需刷新页面</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-blue" onclick="document.getElementById('upload-words').click()">上传 JSON 单词库</button>
+                    <input type="file" id="upload-words" accept=".json" style="display:none;" onchange="uploadWordsFile(event)">
+                    <button class="btn btn-green" onclick="document.getElementById('upload-relations').click()">上传 CSV 关系表</button>
+                    <input type="file" id="upload-relations" accept=".csv" style="display:none;" onchange="uploadRelationsFile(event)">
+                </div>
+                <div style="margin-top:10px;color:#999;font-size:12px;">
+                    <p>单词库格式：JSON数组，每项含 word / collins / exam / meaning</p>
+                    <p>关系表格式：CSV，表头 原词,关系类型,目标词</p>
+                    <p>关系类型：相似 / 同义词 / 同音词 / 部分同音 / 近义词 / 反义词 / 同词不同性 / 词形变化</p>
+                </div>
             </div>
         </div>
     </div>
@@ -1257,6 +1302,336 @@
         }
 
         // ==============================
+        // 关系查询系统
+        // ==============================
+        const REL_TYPES = ['相似', '同义词', '同音词', '部分同音', '近义词', '反义词', '同词不同性', '词形变化'];
+        const REL_TYPE_COLORS = {
+            '相似': '#8e44ad', '同义词': '#2980b9', '同音词': '#e67e22', '部分同音': '#d35400',
+            '近义词': '#27ae60', '反义词': '#c0392b', '同词不同性': '#16a085', '词形变化': '#7f8c8d'
+        };
+        let relIndex = new Map();
+        let relWordMap = new Map();
+        let relAlphaMap = new Map();
+        let relCurrentWord = "";
+        let relCurrentData = null;
+        let relActiveTypes = new Set(REL_TYPES);
+        let relSortAsc = true;
+
+        const REL_EXAMPLE_DATA = [
+            { word: "affect", collins: 4, exam: "cet4 cet6", meaning: "v. 影响；感动" },
+            { word: "effect", collins: 4, exam: "cet4 cet6", meaning: "n. 效果；影响 v. 引起" },
+            { word: "big", collins: 5, exam: "zk", meaning: "adj. 大的；重要的" },
+            { word: "large", collins: 5, exam: "zk gk", meaning: "adj. 大的；大量的" },
+            { word: "to", collins: 5, exam: "zk", meaning: "prep. 到；向" },
+            { word: "two", collins: 5, exam: "zk", meaning: "num. 二" },
+            { word: "write", collins: 4, exam: "zk", meaning: "v. 写；书写" },
+            { word: "right", collins: 5, exam: "zk", meaning: "adj. 正确的；右边的 n. 权利" },
+            { word: "happy", collins: 5, exam: "zk", meaning: "adj. 快乐的；幸福的" },
+            { word: "joyful", collins: 3, exam: "", meaning: "adj. 快乐的；高兴的" },
+            { word: "hot", collins: 5, exam: "zk", meaning: "adj. 热的；辣的" },
+            { word: "cold", collins: 5, exam: "zk", meaning: "adj. 冷的 n. 感冒" },
+            { word: "record", collins: 4, exam: "cet4", meaning: "n. 记录；唱片 v. 记录；录音" },
+            { word: "run", collins: 5, exam: "zk", meaning: "v. 跑；运转 n. 跑步" },
+            { word: "runs", collins: 0, exam: "", meaning: "v. 跑（第三人称单数）" },
+            { word: "running", collins: 0, exam: "", meaning: "n. 跑步 adj. 流动的" },
+            { word: "ran", collins: 0, exam: "", meaning: "v. 跑（过去式）" },
+            { word: "no", collins: 5, exam: "zk", meaning: "adv. 不 adj. 没有的" },
+            { word: "know", collins: 5, exam: "zk", meaning: "v. 知道；了解" },
+            { word: "here", collins: 5, exam: "zk", meaning: "adv. 这里" },
+            { word: "hear", collins: 4, exam: "zk gk", meaning: "v. 听见；听到" },
+            { word: "big", collins: 5, exam: "zk", meaning: "adj. 大的；重要的" },
+            { word: "small", collins: 5, exam: "zk", meaning: "adj. 小的；少的" },
+            { word: "good", collins: 5, exam: "zk", meaning: "adj. 好的；擅长的" },
+            { word: "bad", collins: 5, exam: "zk", meaning: "adj. 坏的；不好的" }
+        ];
+
+        const REL_EXAMPLE_RELATIONS = [
+            "原词,关系类型,目标词",
+            "affect,相似,effect",
+            "big,同义词,large",
+            "to,同音词,two",
+            "write,部分同音,right",
+            "happy,近义词,joyful",
+            "hot,反义词,cold",
+            "record,同词不同性,record(n.)|record(v.)",
+            "run,词形变化,runs",
+            "run,词形变化,running",
+            "run,词形变化,ran",
+            "no,同音词,know",
+            "here,同音词,hear",
+            "big,反义词,small",
+            "good,反义词,bad"
+        ].join("\n");
+
+        function buildRelIndex(csvText) {
+            relIndex.clear();
+            let lines = csvText.trim().split("\n");
+            if (lines.length < 2) return;
+            for (let i = 1; i < lines.length; i++) {
+                let parts = lines[i].split(",");
+                if (parts.length < 3) continue;
+                let w1 = parts[0].trim();
+                let rtype = parts[1].trim();
+                let w2 = parts.slice(2).join(",").trim();
+                if (!w1 || !w2 || !REL_TYPES.includes(rtype)) continue;
+                let key = w1.toLowerCase();
+                if (!relIndex.has(key)) relIndex.set(key, new Map());
+                let group = relIndex.get(key);
+                if (!group.has(rtype)) group.set(rtype, new Set());
+                group.get(rtype).add(w2);
+                let key2 = w2.toLowerCase();
+                if (!relIndex.has(key2)) relIndex.set(key2, new Map());
+                let group2 = relIndex.get(key2);
+                if (!group2.has(rtype)) group2.set(rtype, new Set());
+                group2.get(rtype).add(w1);
+            }
+            relAlphaMap.clear();
+            for (let [key, group] of relIndex) {
+                let letter = key.charAt(0).toUpperCase();
+                if (!relAlphaMap.has(letter)) relAlphaMap.set(letter, []);
+                relAlphaMap.get(letter).push({ word: key, group: group });
+            }
+        }
+
+        function buildRelWordMap() {
+            relWordMap.clear();
+            let words = getWords();
+            for (let w of words) {
+                relWordMap.set(w.word.toLowerCase(), w);
+            }
+        }
+
+        function loadRelations() {
+            fetch("relations.csv")
+                .then(r => r.text())
+                .then(text => {
+                    buildRelIndex(text);
+                    buildRelWordMap();
+                    renderRelAlphaIndex();
+                    renderRelTypeFilters();
+                })
+                .catch(() => {
+                    buildRelIndex(REL_EXAMPLE_RELATIONS);
+                    buildRelWordMap();
+                    renderRelAlphaIndex();
+                    renderRelTypeFilters();
+                });
+        }
+
+        function getWordInfo(word) {
+            let key = word.toLowerCase();
+            if (relWordMap.has(key)) return relWordMap.get(key);
+            let w = getWords().find(w => w.word.toLowerCase() === key);
+            return w || null;
+        }
+
+        function relSearch(query) {
+            query = query.trim();
+            if (!query) {
+                document.getElementById("rel-result").innerHTML = '<div style="color:#999;text-align:center;padding:30px;">请输入单词开始搜索</div>';
+                document.getElementById("rel-suggestions").style.display = "none";
+                document.getElementById("rel-count-info").textContent = "";
+                return;
+            }
+            let q = query.toLowerCase();
+            let exact = relIndex.has(q);
+            let matches = [];
+            let firstLetter = q.charAt(0).toUpperCase();
+            if (relAlphaMap.has(firstLetter)) {
+                for (let e of relAlphaMap.get(firstLetter)) {
+                    if (e.word.includes(q)) matches.push(e.word);
+                    if (matches.length >= 20) break;
+                }
+            }
+            if (matches.length < 20) {
+                for (let [key] of relIndex) {
+                    if (!key.startsWith(firstLetter.toLowerCase()) && key.includes(q) && !matches.includes(key)) {
+                        matches.push(key);
+                        if (matches.length >= 20) break;
+                    }
+                }
+            }
+            let sugEl = document.getElementById("rel-suggestions");
+            if (!exact && matches.length > 0 && matches[0] !== q) {
+                let html = matches.map(m => {
+                    let info = getWordInfo(m);
+                    let meaning = info ? info.meaning.split(";")[0] : "";
+                    let safeM = m.replace(/'/g, "\\'");
+                    return `<div style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;" onclick="relSearch('${safeM}');document.getElementById('rel-search').value='${safeM}'">${m}${meaning ? ' <span style="color:#999;font-size:12px;">' + meaning + '</span>' : ''}</div>`;
+                }).join("");
+                sugEl.innerHTML = html;
+                sugEl.style.display = "block";
+            } else {
+                sugEl.style.display = "none";
+            }
+            if (!exact) {
+                let wordMatches = [];
+                for (let w of getWords()) {
+                    if (w.word.toLowerCase().includes(q)) wordMatches.push(w.word);
+                    if (wordMatches.length >= 20) break;
+                }
+                if (wordMatches.length > 0) {
+                    let html = '<div style="color:#999;margin-bottom:8px;">未找到关系数据，相似单词：</div>';
+                    html += wordMatches.map(w => { let sw = w.replace(/'/g, "\\'"); return `<span style="display:inline-block;padding:4px 10px;margin:3px;background:#f0f0f0;border-radius:12px;cursor:pointer;font-size:13px;" onclick="relSearch('${sw}');document.getElementById('rel-search').value='${sw}'">${w}</span>`; }).join("");
+                    document.getElementById("rel-result").innerHTML = html;
+                } else {
+                    document.getElementById("rel-result").innerHTML = '<div style="color:#999;text-align:center;padding:30px;">未找到匹配的单词</div>';
+                }
+                document.getElementById("rel-count-info").textContent = "";
+                return;
+            }
+            relCurrentWord = q;
+            relCurrentData = relIndex.get(q);
+            renderRelResult();
+        }
+
+        function renderRelResult() {
+            if (!relCurrentData) return;
+            let info = getWordInfo(relCurrentWord);
+            let html = '<div style="background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:16px;">';
+            html += `<div style="font-size:28px;font-weight:bold;margin-bottom:4px;">${relCurrentWord}</div>`;
+            if (info) {
+                html += `<div style="font-size:16px;color:#333;margin-bottom:4px;">${info.meaning}</div>`;
+                html += `<div style="font-size:13px;color:#999;">柯林斯等级：${info.collins || 'N/A'}`;
+                if (info.exam) {
+                    let tags = info.exam.split(" ").map(t => EXAM_LABELS[t] || t).filter(Boolean);
+                    if (tags.length) html += ' | ' + tags.map(t => `<span style="background:#e8f5e9;padding:2px 6px;border-radius:4px;font-size:11px;">${t}</span>`).join(" ");
+                }
+                html += '</div>';
+            } else {
+                html += '<div style="font-size:13px;color:#999;">词库中无此单词详细信息</div>';
+            }
+            html += '</div>';
+
+            let totalRels = 0;
+            let filteredTypes = [...relCurrentData.keys()].filter(t => relActiveTypes.has(t));
+            for (let type of filteredTypes) {
+                let targets = [...relCurrentData.get(type)].filter(t => t.toLowerCase() !== relCurrentWord);
+                if (targets.length === 0) continue;
+                if (relSortAsc) targets.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+                else targets.sort((a, b) => b.toLowerCase().localeCompare(a.toLowerCase()));
+                totalRels += targets.length;
+                let color = REL_TYPE_COLORS[type] || '#666';
+                html += `<div style="margin-bottom:14px;">`;
+                html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">`;
+                html += `<span style="display:inline-block;width:4px;height:18px;background:${color};border-radius:2px;"></span>`;
+                html += `<span style="font-weight:bold;font-size:15px;color:${color};">${type}</span>`;
+                html += `<span style="font-size:12px;color:#999;">（${targets.length}）</span>`;
+                html += `</div>`;
+                html += `<div style="display:flex;flex-wrap:wrap;gap:6px;padding-left:10px;">`;
+                for (let t of targets) {
+                    let tInfo = getWordInfo(t);
+                    let tip = tInfo ? tInfo.meaning.split(";")[0].replace(/"/g, '&quot;') : "";
+                    let display = t;
+                    let searchKey = t.split('(')[0].trim().replace(/'/g, "\\'");
+                    if (type === '同词不同性' && t.includes('|')) {
+                        let parts = t.split('|');
+                        display = parts.join(' / ');
+                    }
+                    html += `<span style="display:inline-block;padding:5px 12px;background:#fff;border:1px solid ${color}33;border-radius:16px;cursor:pointer;font-size:13px;color:${color};transition:all 0.2s;" title="${tip}" onclick="relSearch('${searchKey}');document.getElementById('rel-search').value='${searchKey}'" onmouseover="this.style.background='${color}';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='${color}'">${display}</span>`;
+                }
+                html += `</div></div>`;
+            }
+            if (totalRels === 0) {
+                html += '<div style="color:#999;text-align:center;padding:20px;">当前筛选条件下无关系数据</div>';
+            }
+            document.getElementById("rel-result").innerHTML = html;
+            document.getElementById("rel-count-info").textContent = `共 ${totalRels} 条关系`;
+        }
+
+        function renderRelTypeFilters() {
+            let html = "";
+            for (let t of REL_TYPES) {
+                let color = REL_TYPE_COLORS[t] || '#666';
+                let active = relActiveTypes.has(t);
+                html += `<button style="padding:4px 10px;border-radius:14px;font-size:12px;cursor:pointer;border:1px solid ${active ? color : '#ddd'};background:${active ? color : '#fff'};color:${active ? '#fff' : color};transition:all 0.2s;" onclick="toggleRelType('${t}')">${t}</button>`;
+            }
+            document.getElementById("rel-type-filters").innerHTML = html;
+        }
+
+        function toggleRelType(type) {
+            if (relActiveTypes.has(type)) relActiveTypes.delete(type);
+            else relActiveTypes.add(type);
+            renderRelTypeFilters();
+            if (relCurrentData) renderRelResult();
+        }
+
+        function relSortAZ() {
+            relSortAsc = !relSortAsc;
+            document.getElementById("rel-sort-btn").textContent = relSortAsc ? "排序 A→Z" : "排序 Z→A";
+            if (relCurrentData) renderRelResult();
+        }
+
+        function renderRelAlphaIndex() {
+            let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+            let indexHtml = "";
+            for (let l of letters) {
+                let count = relAlphaMap.has(l) ? relAlphaMap.get(l).length : 0;
+                indexHtml += `<button style="width:32px;height:32px;border-radius:6px;font-size:13px;font-weight:bold;cursor:pointer;border:1px solid #e0e0e0;background:${count > 0 ? '#fff' : '#f5f5f5'};color:${count > 0 ? '#333' : '#ccc'};transition:all 0.15s;" onclick="showRelAlpha('${l}')" ${count === 0 ? 'disabled' : ''} title="${count} 个单词">${l}</button>`;
+            }
+            document.getElementById("rel-alpha-index").innerHTML = indexHtml;
+        }
+
+        function showRelAlpha(letter) {
+            let entries = relAlphaMap.get(letter) || [];
+            let words = entries.map(e => {
+                let info = getWordInfo(e.word);
+                return { word: e.word, count: e.group.size, meaning: info ? info.meaning.split(";")[0] : "" };
+            }).sort((a, b) => a.word.localeCompare(b.word));
+            let html = `<div style="color:#666;margin-bottom:8px;">${letter} 开头的单词（${words.length} 个）</div>`;
+            html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+            for (let w of words) {
+                let sw = w.word.replace(/'/g, "\\'");
+                html += `<span style="display:inline-block;padding:4px 10px;background:#f0f4ff;border-radius:10px;cursor:pointer;font-size:13px;" title="${w.meaning}" onclick="relSearch('${sw}');document.getElementById('rel-search').value='${sw}'">${w.word}<span style="color:#999;font-size:11px;margin-left:2px;">${w.count}</span></span>`;
+            }
+            html += '</div>';
+            document.getElementById("rel-alpha-list").innerHTML = html;
+        }
+
+        function uploadWordsFile(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = JSON.parse(e.target.result);
+                    if (!Array.isArray(data)) throw new Error("不是数组格式");
+                    ALL_WORDS = data;
+                    localStorage.setItem("ALL_WORDS_DATA", JSON.stringify(data));
+                    buildRelWordMap();
+                    renderAll();
+                    alert("单词库已更新，共 " + data.length + " 个单词");
+                } catch (err) {
+                    alert("文件解析失败：" + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = "";
+        }
+
+        function uploadRelationsFile(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let text = e.target.result;
+                    buildRelIndex(text);
+                    renderRelAlphaIndex();
+                    renderRelTypeFilters();
+                    if (relCurrentWord) relSearch(relCurrentWord);
+                    let count = 0;
+                    for (let [, g] of relIndex) for (let [, s] of g) count += s.size;
+                    alert("关系表已更新，共 " + relIndex.size + " 个词，" + count + " 条关系");
+                } catch (err) {
+                    alert("文件解析失败：" + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = "";
+        }
+
+        // ==============================
         // 渲染全部
         // ==============================
         function renderAll() {
@@ -1272,6 +1647,7 @@
 
         window.onload = function () {
             loadWords();
+            loadRelations();
             show("home");
         };
     </script>
