@@ -1081,12 +1081,17 @@
             return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
-        function speakExample(el) {
-            let text = el.getAttribute('data-text');
+        function speak(text) {
+            speechSynthesis.cancel();
             let utter = new SpeechSynthesisUtterance(text);
             utter.lang = 'en-US';
             utter.rate = 0.8;
             speechSynthesis.speak(utter);
+        }
+
+        function speakExample(el) {
+            let text = el.getAttribute('data-text');
+            speak(text);
         }
 
         function closeLearnModal() {
@@ -1119,19 +1124,11 @@
                 new Audio(learnAudioUrl).play();
                 return;
             }
-            let w = getWords()[learnIdx];
-            let utter = new SpeechSynthesisUtterance(w.word);
-            utter.lang = 'en-US';
-            utter.rate = 0.8;
-            speechSynthesis.speak(utter);
+            speak(getWords()[learnIdx].word);
         }
 
         function speakWordBy(idx) {
-            let w = getWords()[idx];
-            let utter = new SpeechSynthesisUtterance(w.word);
-            utter.lang = 'en-US';
-            utter.rate = 0.8;
-            speechSynthesis.speak(utter);
+            speak(getWords()[idx].word);
         }
 
         // ==============================
@@ -1175,10 +1172,7 @@
 
         function speakCurrWord() {
             if (!curr) return;
-            let utter = new SpeechSynthesisUtterance(curr.item.word);
-            utter.lang = 'en-US';
-            utter.rate = 0.8;
-            speechSynthesis.speak(utter);
+            speak(curr.item.word);
         }
 
         function showAns() {
@@ -2044,11 +2038,7 @@
 
         function speakExamWord() {
             if (examIndex >= examWords.length) return;
-            let w = examWords[examIndex].word;
-            let utter = new SpeechSynthesisUtterance(w.word);
-            utter.lang = 'en-US';
-            utter.rate = 0.8;
-            speechSynthesis.speak(utter);
+            speak(examWords[examIndex].word.word);
         }
 
         function submitExamAnswer() {
