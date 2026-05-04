@@ -1102,7 +1102,8 @@
             let log = u.log[idx];
             if (!log) { closeModal(); return; }
             log.c += 1;
-            let next = nextDate(log.t, log.c);
+            let now = Date.now();
+            let next = nextDate(now, log.c);
             if (!next) {
                 if (!u.done.includes(idx)) u.done.push(idx);
                 log.next = null;
