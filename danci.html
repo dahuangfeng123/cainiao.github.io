@@ -483,6 +483,14 @@
                 <h2>⚙️ 数据管理</h2>
                 <button class="btn btn-red" onclick="resetUser()">重置我的所有学习记录</button>
                 <p style="margin-top:10px;color:#999;font-size:13px;">只清空当前用户，不影响对方</p>
+                <hr style="margin:15px 0;border:none;border-top:1px solid #eee;">
+                <h3 style="margin-bottom:10px;">📦 数据导出 / 导入</h3>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-blue" onclick="exportData()">📤 导出学习数据</button>
+                    <button class="btn btn-green" onclick="document.getElementById('import-file').click()">📥 导入学习数据</button>
+                    <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)">
+                </div>
+                <p style="margin-top:10px;color:#999;font-size:13px;">导出为JSON文件，可在另一台电脑上导入恢复学习进度</p>
             </div>
             <div class="card" style="text-align:center;">
                 <button class="btn btn-blue" onclick="downloadXlsx()">📥 下载所有单词（xlsx）</button>
@@ -1200,6 +1208,50 @@
             if (!confirm("确定重置当前用户的所有学习记录？")) return;
             localStorage.removeItem("wuser" + user);
             renderAll();
+        }
+
+        function exportData() {
+            let u = safeUser(getUser());
+            let exportObj = {
+                version: 1,
+                user: user,
+                data: u,
+                exportTime: new Date().toISOString()
+            };
+            let json = JSON.stringify(exportObj, null, 2);
+            let blob = new Blob([json], { type: "application/json" });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = `单词学习数据_同学${user}_${new Date().toLocaleDateString().replace(/\//g, "-")}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let obj = JSON.parse(e.target.result);
+                    if (!obj.data || !obj.data.learn) {
+                        alert("文件格式不正确，请选择正确的导出文件");
+                        return;
+                    }
+                    let srcUser = obj.user || "A";
+                    let msg = `检测到导出数据来自「同学${srcUser}」，将导入到当前「同学${user}」\n\n导出时间：${obj.exportTime ? new Date(obj.exportTime).toLocaleString() : "未知"}\n已学习：${obj.data.learn ? obj.data.learn.length : 0} 个\n\n确定导入？此操作会覆盖当前用户的所有数据！`;
+                    if (!confirm(msg)) return;
+                    let imported = safeUser(obj.data);
+                    setUser(imported);
+                    renderAll();
+                    alert("导入成功！");
+                } catch (err) {
+                    alert("文件解析失败：" + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = "";
         }
 
         // ==============================
