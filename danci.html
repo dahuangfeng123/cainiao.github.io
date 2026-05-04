@@ -652,7 +652,9 @@
             }
             document.getElementById("word-count").innerText = filteredList.length;
             document.getElementById("word-list").innerHTML = "";
-            renderWordsUpTo(wordLoadedCount || wordPageSize);
+            let count = wordLoadedCount || wordPageSize;
+            wordLoadedCount = count;
+            renderWordsUpTo(count);
         }
 
         function renderWordsUpTo(count) {
