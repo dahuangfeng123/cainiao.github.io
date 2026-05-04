@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <title>单词复习工具 - 艾宾浩斯双用户版</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -447,7 +448,17 @@
                 <p>已掌握：<span id="my-done">0</span> 个 <span style="color:#999;font-size:12px;">（完成全部7次艾宾浩斯复习周期的单词）</span></p>
             </div>
             <div class="card">
-                <h2>📚 英语词性速查表</h2>
+                <h2>� 近30天学习统计</h2>
+                <div style="display:flex;gap:6px;margin-bottom:12px;">
+                    <button class="btn btn-blue" onclick="renderDailyChart('A')" id="chart-btn-A">同学A</button>
+                    <button class="btn btn-gray" onclick="renderDailyChart('B')" id="chart-btn-B">同学B</button>
+                </div>
+                <div style="position:relative;height:280px;">
+                    <canvas id="daily-chart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2>� 英语词性速查表</h2>
                 <p style="margin-bottom:12px;color:#666;font-size:13px;">英语主要分为八大词性（Eight Parts of Speech），包括名词、代词、动词、形容词、副词、介词、连词和感叹词，部分分类会将冠词单独列出或加上数词。它们决定了单词在句子中的位置（如形容词修饰名词）和形式变化（如动词时态）。</p>
                 <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;font-size:14px;">
@@ -697,8 +708,22 @@
         }
 
         function safeUser(u) {
-            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false };
-            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate };
+            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {} };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {} };
+        }
+
+        function todayKey() {
+            let d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function recordDaily(type) {
+            let u = safeUser(getUser());
+            let key = todayKey();
+            if (!u.dailyLog[key]) u.dailyLog[key] = { learn: 0, review: 0 };
+            if (type === 'learn') u.dailyLog[key].learn++;
+            else if (type === 'review') u.dailyLog[key].review++;
+            setUser(u);
         }
 
         // ==============================
@@ -993,6 +1018,7 @@
                 u.learn.push(idx);
                 u.log[idx] = { t: now, c: 0, next: todayStart.getTime() };
                 setUser(u);
+                recordDaily('learn');
             }
             closeLearnModal();
             renderAll();
@@ -1084,6 +1110,7 @@
                 log.next = next;
             }
             setUser(u);
+            recordDaily('review');
             closeModal();
             renderAll();
         }
@@ -1744,6 +1771,115 @@
         // ==============================
         // 渲染全部
         // ==============================
+        let dailyChartInstance = null;
+
+        function renderDailyChart(which) {
+            document.getElementById("chart-btn-A").className = which === 'A' ? 'btn btn-blue' : 'btn btn-gray';
+            document.getElementById("chart-btn-B").className = which === 'B' ? 'btn btn-blue' : 'btn btn-gray';
+            let u = safeUser(JSON.parse(localStorage.getItem("wuser" + which) || "null"));
+            let labels = [];
+            let learnData = [];
+            let reviewData = [];
+            let now = new Date();
+            for (let i = 29; i >= 0; i--) {
+                let d = new Date(now);
+                d.setDate(d.getDate() - i);
+                let key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
+                let dl = u.dailyLog[key] || { learn: 0, review: 0 };
+                learnData.push(dl.learn);
+                reviewData.push(dl.review);
+            }
+            if (dailyChartInstance) dailyChartInstance.destroy();
+            let ctx = document.getElementById("daily-chart").getContext("2d");
+            dailyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '学习',
+                            data: learnData,
+                            backgroundColor: 'rgba(52, 168, 83, 0.6)',
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            order: 2
+                        },
+                        {
+                            label: '复习',
+                            data: reviewData,
+                            backgroundColor: 'rgba(66, 133, 244, 0.6)',
+                            borderColor: 'rgba(66, 133, 244, 1)',
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            order: 3
+                        },
+                        {
+                            label: '学习趋势',
+                            data: learnData,
+                            type: 'line',
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false,
+                            order: 0
+                        },
+                        {
+                            label: '复习趋势',
+                            data: reviewData,
+                            type: 'line',
+                            borderColor: 'rgba(66, 133, 244, 1)',
+                            backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false,
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { usePointStyle: true, padding: 12, font: { size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(items) { return '同学' + which + ' ' + items[0].label; }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                maxRotation: 45,
+                                font: { size: 10 },
+                                callback: function(val, idx) { return idx % 3 === 0 ? this.getLabelForValue(val) : ''; }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, font: { size: 11 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        }
+                    }
+                }
+            });
+        }
+
         function renderAll() {
             renderExam();
             renderCollins();
@@ -1753,6 +1889,7 @@
             renderTodayList();
             renderCalendar();
             renderExamSetting();
+            renderDailyChart(user);
         }
 
         window.onload = function () {
