@@ -1181,6 +1181,7 @@
             now.setHours(0, 0, 0, 0);
             let isToday = !selectedDate;
             let isPast = selectedDate && targetDate < now;
+            let isFuture = selectedDate && targetDate > now;
             let tasks = isToday ? getTodayTasks() : getTasksByDate(targetDate);
             let dateStr = isToday ? "今日" : `${targetDate.getMonth() + 1}月${targetDate.getDate()}日`;
             document.getElementById("review-date-label").innerText = dateStr;
@@ -1218,10 +1219,24 @@
                 if (isPast) {
                     html += `<p style='margin-bottom:10px;color:#c0392b;font-size:13px;'>⚠ ${dateStr}有 ${tasks.length} 个过期未复习的单词，请尽快复习</p>`;
                 }
+                if (isFuture) {
+                    html += `<p style='margin-bottom:10px;color:#666;font-size:13px;'>📅 ${dateStr}待复习单词预览</p>`;
+                }
                 tasks.forEach(t => {
                     let hideWord = (mode == 2 || mode == 3);
                     let hideMeaning = (mode == 1);
-                    if (isToday || isPast) {
+                    if (isFuture) {
+                        html += `
+        <div class="word-item" style="opacity:0.7;">
+            <div>
+                <span class="word-text">${t.word.word}</span>
+                <div class="word-meaning">${t.word.meaning}</div>
+            </div>
+            <div>
+                <button class="btn btn-gray" onclick="speakWordBy(${t.idx})">🔊</button>
+            </div>
+        </div>`;
+                    } else if (isToday || isPast) {
                         html += `
         <div class="word-item${isPast ? ' overdue-item' : ''}">
             <div>
@@ -1230,17 +1245,6 @@
             </div>
             <div>
                 <button class="btn btn-blue" onclick="start(${t.idx})">复习</button>
-                <button class="btn btn-gray" onclick="speakWordBy(${t.idx})">🔊</button>
-            </div>
-        </div>`;
-                    } else {
-                        html += `
-        <div class="word-item" style="opacity:0.7;">
-            <div>
-                <span class="word-text">${t.word.word}</span>
-                <div class="word-meaning">${t.word.meaning}</div>
-            </div>
-            <div>
                 <button class="btn btn-gray" onclick="speakWordBy(${t.idx})">🔊</button>
             </div>
         </div>`;
@@ -1343,7 +1347,7 @@
                 } else if (taskDays[d]) {
                     label = `<br><span style="font-size:11px;">${taskDays[d]}个</span>`;
                 }
-                let clickable = !isFuture || (isCurrentMonth && d == todayDate);
+                let clickable = true;
                 html += `<div class="${cls}" ${clickable ? `onclick="selectDate(${year},${month},${d})" style="cursor:pointer;"` : 'style="opacity:0.4;"'}>${d}${label}</div>`;
             }
             document.getElementById("calendar").innerHTML = html;
