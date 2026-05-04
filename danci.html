@@ -465,7 +465,7 @@
                 <div id="exam-scores-list"></div>
             </div>
             <div class="card">
-                <h2>� 近30天学习统计</h2>
+                <h2>📊 近30天学习统计</h2>
                 <div style="display:flex;gap:6px;margin-bottom:12px;">
                     <button class="btn btn-blue" onclick="renderDailyChart('A')" id="chart-btn-A">同学A</button>
                     <button class="btn btn-gray" onclick="renderDailyChart('B')" id="chart-btn-B">同学B</button>
@@ -475,7 +475,7 @@
                 </div>
             </div>
             <div class="card">
-                <h2>� 英语词性速查表</h2>
+                <h2>📝 英语词性速查表</h2>
                 <p style="margin-bottom:12px;color:#666;font-size:13px;">英语主要分为八大词性（Eight Parts of Speech），包括名词、代词、动词、形容词、副词、介词、连词和感叹词，部分分类会将冠词单独列出或加上数词。它们决定了单词在句子中的位置（如形容词修饰名词）和形式变化（如动词时态）。</p>
                 <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;font-size:14px;">
@@ -1931,18 +1931,21 @@
                 let meanings = word.meaning.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
                 let ansParts = ans.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
                 let bestScore = 0;
+                let containMatch = false;
                 for (let ap of ansParts) {
                     for (let m of meanings) {
                         let edSim = similarity(ap, m);
                         let csSim = charSetSim(ap, m);
                         let s = Math.max(edSim, csSim);
                         if (s > bestScore) bestScore = s;
+                        if (ans.includes(m) || m.includes(ans)) containMatch = true;
                     }
                 }
-                return { correct: bestScore >= 0.6, score: bestScore };
+                return { correct: bestScore >= 0.2 || containMatch, score: bestScore };
             } else {
                 let s = similarity(ans, word.word);
-                return { correct: s >= 0.85, score: s };
+                let containMatch = ans.toLowerCase().includes(word.word.toLowerCase()) || word.word.toLowerCase().includes(ans.toLowerCase());
+                return { correct: s >= 0.2 || containMatch, score: s };
             }
         }
 
