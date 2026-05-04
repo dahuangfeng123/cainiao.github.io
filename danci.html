@@ -230,24 +230,47 @@
             border: 1px solid #eee;
             border-radius: 6px;
             background: #fafafa;
-        }
-
-        .calendar-day.today {
-            background: #ff0000;
-            color: #fff;
+            color: #333;
+            text-align: center;
+            transition: all 0.15s;
         }
 
         .calendar-day.has-task {
-            background: #306a41;
+            background: #e6f4ea;
+            color: #1e7e34;
+        }
+
+        .calendar-day.has-task span {
+            color: #34a853;
+        }
+
+        .calendar-day.today {
+            background: #fff3e0;
+            color: #e65100;
+            font-weight: bold;
+        }
+
+        .calendar-day.today.has-task {
+            background: #e6f4ea;
+            color: #1e7e34;
+            font-weight: bold;
+            border: 2px solid #e65100;
         }
 
         .calendar-day.selected {
             background: #34a853;
             color: #fff;
+            font-weight: bold;
         }
 
         .calendar-day.selected span {
+            color: #c8e6c9;
+        }
+
+        .calendar-day.selected.today {
+            background: #34a853;
             color: #fff;
+            border: 2px solid #e65100;
         }
 
         .collins-star {
@@ -589,7 +612,7 @@
         function filterCollins(c) {
             currCollins = c;
             renderCollins();
-            renderWordList();
+            renderWordList(true);
         }
 
         function filterExam(e) {
@@ -597,22 +620,28 @@
             currCollins = "";
             renderExam();
             renderCollins();
-            renderWordList();
+            renderWordList(true);
         }
 
         // ==============================
         // 单词列表
         // ==============================
-        function renderWordList() {
+        let lastFilterKey = "";
+
+        function renderWordList(forceReset) {
             let all = getWords();
             let u = safeUser(getUser());
             let list = all;
             if (currExam) list = list.filter(w => w.exam.split(" ").includes(currExam));
             if (currCollins) list = list.filter(w => w.collins == currCollins);
-            filteredList = list;
-            wordPage = 0;
-            document.getElementById("word-count").innerText = list.length;
-            document.getElementById("word-list").innerHTML = "";
+            let filterKey = currExam + "|" + currCollins;
+            if (forceReset || filterKey !== lastFilterKey) {
+                filteredList = list;
+                wordPage = 0;
+                lastFilterKey = filterKey;
+                document.getElementById("word-list").innerHTML = "";
+            }
+            document.getElementById("word-count").innerText = filteredList.length;
             appendWords();
         }
         function appendWords() {
@@ -1040,7 +1069,8 @@
                 tasks.forEach(t => {
                     let hideWord = (mode == 2 || mode == 3);
                     let hideMeaning = (mode == 1);
-                    html += `
+                    if (isToday) {
+                        html += `
         <div class="word-item">
             <div>
                 <span class="word-text">${hideWord ? '____' : t.word.word}</span>
@@ -1051,6 +1081,18 @@
                 <button class="btn btn-gray" onclick="speakWordBy(${t.idx})">🔊</button>
             </div>
         </div>`;
+                    } else {
+                        html += `
+        <div class="word-item" style="opacity:0.7;">
+            <div>
+                <span class="word-text">${t.word.word}</span>
+                <div class="word-meaning">${t.word.meaning}</div>
+            </div>
+            <div>
+                <button class="btn btn-gray" onclick="speakWordBy(${t.idx})">🔊</button>
+            </div>
+        </div>`;
+                    }
                 });
             }
             document.getElementById("today-list").innerHTML = html;
