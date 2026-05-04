@@ -273,6 +273,63 @@
             border: 2px solid #e65100;
         }
 
+        .calendar-day.overdue {
+            background: #fde8e8;
+            color: #c0392b;
+        }
+
+        .calendar-day.overdue span {
+            color: #e74c3c;
+        }
+
+        .calendar-day.overdue.today {
+            background: #e6f4ea;
+            color: #1e7e34;
+            font-weight: bold;
+            border: 2px solid #e65100;
+        }
+
+        .calendar-day.selected.overdue {
+            background: #c0392b;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .calendar-day.selected.overdue span {
+            color: #f5b7b1;
+        }
+
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .calendar-nav button {
+            padding: 4px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.15s;
+        }
+
+        .calendar-nav button:hover {
+            background: #f0f0f0;
+        }
+
+        .calendar-nav .cal-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .overdue-item {
+            border-left: 3px solid #e74c3c !important;
+        }
+
         .collins-star {
             color: #fbbc04;
         }
@@ -585,6 +642,8 @@
         let currCollins = "";
         let currExam = "";
         let selectedDate = null;
+        let calYear = new Date().getFullYear();
+        let calMonth = new Date().getMonth();
         let ALL_WORDS = [];
         let filteredList = [];
         let wordPageSize = 30;
@@ -624,6 +683,9 @@
             document.querySelectorAll(".page").forEach(el => el.classList.remove("active"));
             document.getElementById("page-" + p).classList.add("active");
             selectedDate = null;
+            let now = new Date();
+            calYear = now.getFullYear();
+            calMonth = now.getMonth();
             renderAll();
         }
 
@@ -1088,7 +1150,10 @@
         function renderTodayList() {
             let targetDate = selectedDate || new Date();
             targetDate.setHours(0, 0, 0, 0);
+            let now = new Date();
+            now.setHours(0, 0, 0, 0);
             let isToday = !selectedDate;
+            let isPast = selectedDate && targetDate < now;
             let tasks = isToday ? getTodayTasks() : getTasksByDate(targetDate);
             let dateStr = isToday ? "今日" : `${targetDate.getMonth() + 1}月${targetDate.getDate()}日`;
             document.getElementById("review-date-label").innerText = dateStr;
@@ -1123,12 +1188,15 @@
             } else if (tasks.length === 0 && !isToday) {
                 html = `<p style='color:#666;'>${dateStr}暂无待复习单词</p>`;
             } else {
+                if (isPast) {
+                    html += `<p style='margin-bottom:10px;color:#c0392b;font-size:13px;'>⚠ ${dateStr}有 ${tasks.length} 个过期未复习的单词，请尽快复习</p>`;
+                }
                 tasks.forEach(t => {
                     let hideWord = (mode == 2 || mode == 3);
                     let hideMeaning = (mode == 1);
-                    if (isToday) {
+                    if (isToday || isPast) {
                         html += `
-        <div class="word-item">
+        <div class="word-item${isPast ? ' overdue-item' : ''}">
             <div>
                 <span class="word-text">${hideWord ? '____' : t.word.word}</span>
                 <div class="word-meaning">${hideMeaning ? '' : t.word.meaning}</div>
@@ -1198,34 +1266,76 @@
         function renderCalendar() {
             let u = safeUser(getUser());
             let now = new Date();
-            let year = now.getFullYear();
-            let month = now.getMonth();
+            let year = calYear;
+            let month = calMonth;
             let firstDay = new Date(year, month, 1).getDay();
             let daysInMonth = new Date(year, month + 1, 0).getDate();
-            let today = now.getDate();
+            let todayDate = now.getDate();
+            let todayMonth = now.getMonth();
+            let todayYear = now.getFullYear();
+            let isCurrentMonth = (year === todayYear && month === todayMonth);
+            let todayTs = new Date(todayYear, todayMonth, todayDate).getTime();
             let taskDays = {};
+            let overdueDays = {};
             u.learn.forEach(i => {
                 if (u.done.includes(i)) return;
                 if (!u.log[i] || !u.log[i].next) return;
-                let d = new Date(u.log[i].next);
+                let nt = u.log[i].next;
+                let d = new Date(nt);
                 if (d.getFullYear() == year && d.getMonth() == month) {
                     let day = d.getDate();
                     if (!taskDays[day]) taskDays[day] = 0;
                     taskDays[day]++;
+                    if (nt < todayTs) {
+                        if (!overdueDays[day]) overdueDays[day] = 0;
+                        overdueDays[day]++;
+                    }
                 }
             });
-            let html = "";
+            let navHtml = `<div class="calendar-nav">
+                <button onclick="calPrev()">◀ 上月</button>
+                <span class="cal-title">${year}年${month + 1}月</span>
+                <button onclick="calNext()">下月 ▶</button>
+            </div>`;
+            let html = navHtml;
             let weekNames = ["日", "一", "二", "三", "四", "五", "六"];
             weekNames.forEach(w => { html += `<div style="font-weight:bold;padding:8px;text-align:center;">${w}</div>`; });
             for (let i = 0; i < firstDay; i++) { html += `<div class="calendar-day"></div>`; }
             for (let d = 1; d <= daysInMonth; d++) {
                 let cls = "calendar-day";
-                if (d == today) cls += " today";
+                let isToday = isCurrentMonth && d == todayDate;
+                let isOverdue = !!overdueDays[d];
+                let isFuture = !isCurrentMonth ? (year > todayYear || (year === todayYear && month > todayMonth)) : d > todayDate;
+                if (isToday) cls += " today";
                 if (taskDays[d]) cls += " has-task";
+                if (isOverdue && !isToday) cls += " overdue";
                 if (selectedDate && selectedDate.getFullYear() == year && selectedDate.getMonth() == month && selectedDate.getDate() == d) cls += " selected";
-                html += `<div class="${cls}" onclick="selectDate(${year},${month},${d})" style="cursor:pointer;">${d}${taskDays[d] ? `<br><span style="font-size:11px;">${taskDays[d]}个</span>` : ""}</div>`;
+                let label = "";
+                if (overdueDays[d] && !isToday) {
+                    label = `<br><span style="font-size:11px;">⚠${overdueDays[d]}</span>`;
+                } else if (taskDays[d]) {
+                    label = `<br><span style="font-size:11px;">${taskDays[d]}个</span>`;
+                }
+                let clickable = !isFuture || (isCurrentMonth && d == todayDate);
+                html += `<div class="${cls}" ${clickable ? `onclick="selectDate(${year},${month},${d})" style="cursor:pointer;"` : 'style="opacity:0.4;"'}>${d}${label}</div>`;
             }
             document.getElementById("calendar").innerHTML = html;
+        }
+
+        function calPrev() {
+            calMonth--;
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            selectedDate = null;
+            renderCalendar();
+            renderTodayList();
+        }
+
+        function calNext() {
+            calMonth++;
+            if (calMonth > 11) { calMonth = 0; calYear++; }
+            selectedDate = null;
+            renderCalendar();
+            renderTodayList();
         }
 
         function selectDate(y, m, d) {
