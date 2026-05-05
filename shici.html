@@ -1066,11 +1066,15 @@
             } else if (tasks.length === 0 && !isToday) {
                 html = `<p style='color:#666;'>${dateStr}暂无待复习诗词</p>`;
             } else {
+                let todayTs = new Date();
+                todayTs.setHours(0, 0, 0, 0);
+                let todayEnd = todayTs.getTime() + 86400000;
                 tasks.forEach(t => {
+                    let isDue = t.nextTime >= todayTs.getTime() && t.nextTime < todayEnd;
                     html += `
         <div class="poem-item">
             ${hideInfo ? `<div class="poem-content">${t.poem.cont}</div>` : `<div class="poem-title">${t.poem.title}</div><div class="poem-author">${authorLabel(t.poem)}</div>`}
-            <button class="btn btn-blue" onclick="start(${t.idx})">开始复习</button>
+            ${isDue ? `<button class="btn btn-blue" onclick="start(${t.idx})">开始复习</button>` : ''}
         </div>`;
                 });
             }
