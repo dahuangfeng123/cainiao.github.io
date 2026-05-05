@@ -1442,7 +1442,7 @@
                 alert("暂无已学习的诗词，请先学习一些诗词再考试");
                 return;
             }
-            let countInput = parseInt(document.getElementById("exam-count-input").value) || 100;
+            let countInput = parseInt(document.getElementById("exam-count-input").value) || 10;
             countInput = Math.max(1, Math.min(countInput, pool.length));
             let shuffled = pool.sort(() => Math.random() - 0.5);
             examWords = shuffled.slice(0, countInput);
