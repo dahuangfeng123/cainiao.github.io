@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>单词复习工具 - 艾宾浩斯双用户版</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
@@ -355,24 +356,201 @@
         .overdue-item {
             background: #fff8f0;
         }
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .nav-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 998;
+        }
+        .nav-overlay.active {
+            display: block;
+        }
+        .nav-drawer {
+            position: fixed;
+            top: 0;
+            left: -260px;
+            width: 260px;
+            height: 100%;
+            background: #2d8a4e;
+            z-index: 999;
+            transition: left 0.3s ease;
+            padding: 20px 0;
+        }
+        .nav-drawer.active {
+            left: 0;
+        }
+        .nav-drawer a {
+            display: block;
+            color: #fff;
+            text-decoration: none;
+            padding: 14px 24px;
+            font-size: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+        .nav-drawer a:active {
+            background: rgba(255,255,255,0.1);
+        }
+        .nav-drawer-close {
+            text-align: right;
+            padding: 0 16px 10px;
+        }
+        .nav-drawer-close button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .top {
+                height: 50px;
+                padding: 0 12px;
+            }
+            .nav a {
+                display: none;
+            }
+            .hamburger {
+                display: block;
+            }
+            .user {
+                font-size: 13px;
+            }
+            .user button {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            .mode-bar {
+                height: 36px;
+                gap: 4px;
+                padding: 0 8px;
+            }
+            .mode-bar .mbtn {
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+            .container {
+                width: 96%;
+                padding: 12px 0;
+            }
+            .card {
+                padding: 14px;
+                margin-bottom: 12px;
+                border-radius: 8px;
+            }
+            h2 {
+                font-size: 17px;
+                margin-bottom: 10px;
+            }
+            .btn {
+                padding: 6px 10px;
+                font-size: 13px;
+                margin: 3px;
+            }
+            .flex {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .tag {
+                padding: 4px 8px;
+                font-size: 12px;
+                margin: 2px;
+            }
+            .word-item {
+                padding: 10px;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .word-text {
+                font-size: 16px;
+            }
+            .word-meaning {
+                font-size: 12px;
+            }
+            .modal-body {
+                width: 95%;
+                padding: 16px;
+                border-radius: 8px;
+                max-height: 90vh;
+            }
+            .calendar-day {
+                padding: 6px 2px;
+                font-size: 12px;
+            }
+            .calendar {
+                gap: 4px;
+            }
+            textarea {
+                height: 80px;
+                font-size: 14px;
+            }
+            .exam-tag {
+                font-size: 10px;
+                padding: 1px 4px;
+            }
+            #exam-answer {
+                font-size: 16px;
+                padding: 10px 12px;
+            }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .container {
+                width: 94%;
+                max-width: 960px;
+            }
+            .nav a {
+                margin: 0 10px;
+                font-size: 14px;
+            }
+            .modal-body {
+                width: 90%;
+                max-width: 600px;
+            }
+        }
     </style>
 </head>
 
 <body>
 
     <div class="top">
-        <div class="nav">
-            <a href="javascript:show('home')">首页</a>
-            <a href="javascript:show('plan')">复习计划</a>
-            <a href="javascript:show('lib')">单词库</a>
-            <a href="javascript:show('exam')">考试</a>
-            <a href="javascript:show('relation')">关系查询</a>
-            <a href="javascript:show('mine')">个人中心</a>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <button class="hamburger" onclick="openNav()">☰</button>
+            <div class="nav">
+                <a href="javascript:show('home')">首页</a>
+                <a href="javascript:show('plan')">复习计划</a>
+                <a href="javascript:show('lib')">单词库</a>
+                <a href="javascript:show('exam')">考试</a>
+                <a href="javascript:show('relation')">关系查询</a>
+                <a href="javascript:show('mine')">个人中心</a>
+            </div>
         </div>
         <div class="user">
             当前：<span id="show-user">同学A</span>
             <button onclick="toggleUser()">切换 A/B</button>
         </div>
+    </div>
+
+    <div class="nav-overlay" id="nav-overlay" onclick="closeNav()"></div>
+    <div class="nav-drawer" id="nav-drawer">
+        <div class="nav-drawer-close"><button onclick="closeNav()">✕</button></div>
+        <a href="javascript:navTo('home')">🏠 首页</a>
+        <a href="javascript:navTo('plan')">📅 复习计划</a>
+        <a href="javascript:navTo('lib')">📚 单词库</a>
+        <a href="javascript:navTo('exam')">📝 考试</a>
+        <a href="javascript:navTo('relation')">🔗 关系查询</a>
+        <a href="javascript:navTo('mine')">👤 个人中心</a>
     </div>
 
     <div class="mode-bar">
@@ -795,6 +973,21 @@
                 document.getElementById("exam-result").style.display = "none";
             }
             renderAll();
+        }
+
+        function openNav() {
+            document.getElementById("nav-drawer").classList.add("active");
+            document.getElementById("nav-overlay").classList.add("active");
+        }
+
+        function closeNav() {
+            document.getElementById("nav-drawer").classList.remove("active");
+            document.getElementById("nav-overlay").classList.remove("active");
+        }
+
+        function navTo(p) {
+            closeNav();
+            show(p);
         }
 
         function toggleUser() {
@@ -2125,7 +2318,7 @@
             document.getElementById("exam-skip").innerText = skipCount;
             document.getElementById("exam-duration").innerText = formatDuration(duration);
             let html = `<div style="margin-bottom:10px;color:#666;font-size:13px;">考试模式：${MODE_LABELS[mode]} | 题目数量：${examWords.length} | 用时：${formatDuration(duration)}</div>`;
-            html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+            html += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
                 <thead><tr style="background:#f1f3f4;">
                     <th style="padding:8px;border:1px solid #eee;text-align:left;width:30px;">#</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:left;">单词</th>
@@ -2147,7 +2340,7 @@
                     <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${resultIcon}</td>
                 </tr>`;
             });
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
             document.getElementById("exam-detail-list").innerHTML = html;
             document.getElementById("exam-progress").style.display = "none";
             document.getElementById("exam-result").style.display = "block";
@@ -2186,7 +2379,7 @@
                 el.innerHTML = '<p style="color:#999;font-size:13px;">暂无考试记录，去考试页面参加考试吧</p>';
                 return;
             }
-            let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+            let html = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
                 <thead><tr style="background:#f1f3f4;">
                     <th style="padding:8px;border:1px solid #eee;text-align:left;">时间</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:center;">模式</th>
@@ -2206,7 +2399,7 @@
                     <td style="padding:6px 8px;border:1px solid #eee;text-align:center;font-weight:bold;color:${scoreColor};">${s.score}</td>
                 </tr>`;
             });
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
             el.innerHTML = html;
         }
 
