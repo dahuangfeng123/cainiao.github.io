@@ -167,6 +167,16 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 10px;
+        }
+        .word-item > div:first-child {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .word-item > div:last-child {
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .word-item:last-child {
@@ -182,6 +192,7 @@
             color: #666;
             font-size: 13px;
             margin-top: 4px;
+            word-break: break-all;
         }
 
         .word-meta {
