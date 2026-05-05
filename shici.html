@@ -966,12 +966,14 @@
             let log = u.log[idx];
             if (!log) { closeModal(); return; }
             log.c += 1;
-            let next = nextDate(log.t, log.c);
-            if (!next) {
+            if (log.c >= PERIOD.length) {
                 if (!u.done.includes(idx)) u.done.push(idx);
                 log.next = null;
             } else {
-                log.next = next;
+                let interval = PERIOD[log.c] - PERIOD[log.c - 1];
+                let d = new Date();
+                d.setDate(d.getDate() + interval);
+                log.next = d.getTime();
             }
             setUser(u);
             recordDaily('review');
