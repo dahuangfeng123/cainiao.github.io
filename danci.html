@@ -454,6 +454,15 @@
                 <p style="margin-top:8px;color:#999;font-size:13px;">开启后，学习弹窗中的英文释义会自动翻译为中文</p>
             </div>
             <div class="card">
+                <h2>🔊 朗读声音配置</h2>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;" id="voice-setting">
+                    <button class="btn btn-green" onclick="setVoice('local')" id="voice-local">本地</button>
+                    <button class="btn btn-gray" onclick="setVoice('us')" id="voice-us">🇺🇸 美音</button>
+                    <button class="btn btn-gray" onclick="setVoice('en')" id="voice-en">🇬🇧 英音</button>
+                </div>
+                <p style="margin-top:8px;color:#999;font-size:13px;">本地使用浏览器内置语音，美音/英音使用有道词典在线发音</p>
+            </div>
+            <div class="card">
                 <h2>📈 我的学习数据</h2>
                 <p>已学习：<span id="my-total">0</span> 个 <span style="color:#999;font-size:12px;">（点击过"学习/复习"的单词总数）</span></p>
                 <p>待复习：<span id="my-wait">0</span> 个 <span style="color:#999;font-size:12px;">（已学习但未完成全部复习周期，且下次复习时间≤今日的单词）</span></p>
@@ -796,8 +805,8 @@
         }
 
         function safeUser(u) {
-            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [] };
-            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [] };
+            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local" };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local" };
         }
 
         function todayKey() {
@@ -1082,11 +1091,18 @@
         }
 
         function speak(text) {
-            speechSynthesis.cancel();
-            let utter = new SpeechSynthesisUtterance(text);
-            utter.lang = 'en-US';
-            utter.rate = 0.8;
-            speechSynthesis.speak(utter);
+            let u = safeUser(getUser());
+            let voice = u.voice || 'local';
+            if (voice === 'local') {
+                speechSynthesis.cancel();
+                let utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'en-US';
+                utter.rate = 0.8;
+                speechSynthesis.speak(utter);
+            } else {
+                let type = voice === 'us' ? 0 : 1;
+                new Audio(`http://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(text)}`).play();
+            }
         }
 
         function speakExample(el) {
@@ -1225,6 +1241,22 @@
             let u = safeUser(getUser());
             u.translate = document.getElementById("translate-toggle").checked;
             setUser(u);
+        }
+
+        function setVoice(v) {
+            let u = safeUser(getUser());
+            u.voice = v;
+            setUser(u);
+            renderVoiceSetting();
+        }
+
+        function renderVoiceSetting() {
+            let u = safeUser(getUser());
+            let v = u.voice || 'local';
+            ['local', 'us', 'en'].forEach(id => {
+                let btn = document.getElementById('voice-' + id);
+                if (btn) btn.className = id === v ? 'btn btn-green' : 'btn btn-gray';
+            });
         }
 
         function setMyExam(e) {
@@ -2297,6 +2329,9 @@
             renderDailyChart(user);
             renderExamPool();
             renderExamScores();
+            renderVoiceSetting();
+            let u = safeUser(getUser());
+            document.getElementById("translate-toggle").checked = !!u.translate;
         }
 
         window.onload = function () {
