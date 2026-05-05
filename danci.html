@@ -1107,7 +1107,11 @@
 
         function speakExample(el) {
             let text = el.getAttribute('data-text');
-            speak(text);
+            speechSynthesis.cancel();
+            let utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'en-US';
+            utter.rate = 0.8;
+            speechSynthesis.speak(utter);
         }
 
         function closeLearnModal() {
