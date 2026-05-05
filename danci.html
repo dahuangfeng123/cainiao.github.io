@@ -2280,6 +2280,7 @@
 
         function submitExamAnswer() {
             if (examSubmitted || examIndex >= examWords.length) return;
+            if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
             let input = document.getElementById("exam-answer").value;
             let w = examWords[examIndex].word;
             let result = checkExamAnswer(input, w);
@@ -2305,6 +2306,7 @@
 
         function skipExamAnswer() {
             if (examSubmitted || examIndex >= examWords.length) return;
+            if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
             let w = examWords[examIndex].word;
             examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: "", correct: false, simScore: 0, skipped: true });
             examIndex++;
