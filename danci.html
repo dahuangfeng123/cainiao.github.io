@@ -2238,7 +2238,10 @@
             renderExamQuestion();
         }
 
+        let examAutoSpeakTimer = null;
+
         function renderExamQuestion() {
+            if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
             if (examIndex >= examWords.length) {
                 finishExam();
                 return;
@@ -2259,8 +2262,13 @@
                 qEl.innerHTML = `释义：<span style="font-size:18px;color:#333;">${w.meaning}</span><br><span style="font-size:14px;color:#999;">请写出英文单词</span>`;
                 speakBtn.style.display = "none";
             } else if (mode === 3) {
-                qEl.innerHTML = `<span style="font-size:14px;color:#999;">请听写单词（点击朗读按钮播放）</span>`;
+                qEl.innerHTML = `<span style="font-size:14px;color:#999;">请听写单词（自动朗读2次，也可手动点击朗读）</span>`;
                 speakBtn.style.display = "block";
+                speak(examWords[examIndex].word.word);
+                examAutoSpeakTimer = setTimeout(() => {
+                    speak(examWords[examIndex].word.word);
+                    examAutoSpeakTimer = null;
+                }, 3000);
             }
             document.getElementById("exam-answer").focus();
         }
