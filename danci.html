@@ -919,6 +919,7 @@
             <div style="border-top:1px solid #eee;padding-top:12px;flex-shrink:0;">
                 <button class="btn btn-blue" onclick="addToReview()">加入复习</button>
                 <button class="btn btn-gray" onclick="speakWord()">🔊 朗读单词</button>
+                <button class="btn btn-gray" onclick="openIciba()">📖 金山词霸</button>
                 <button class="btn" onclick="closeLearnModal()">关闭</button>
             </div>
         </div>
@@ -1342,6 +1343,11 @@
             renderAll();
         }
 
+        function openIciba() {
+            if (learnIdx === null) return;
+            let word = ALL_WORDS[learnIdx].word;
+            window.open('https://www.iciba.com/word?w=' + encodeURIComponent(word), '_blank');
+        }
         function speakWord() {
             if (learnIdx === null) return;
             if (learnAudioUrl) {
