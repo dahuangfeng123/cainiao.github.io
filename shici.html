@@ -929,6 +929,9 @@
         function openModal(idx) {
             curr = { idx, item: getPoems()[idx] };
             document.getElementById("modal").style.display = "flex";
+            document.getElementById("ans-show").innerText = "";
+            let reviewBtn = document.querySelector("#modal .btn-blue");
+            if (reviewBtn) reviewBtn.disabled = false;
             renderQ();
         }
         function closeModal() {
@@ -962,8 +965,6 @@
         }
         function doneReview() {
             if (!curr) return;
-            let btn = event.target;
-            if (btn) btn.disabled = true;
             let u = safeUser(getUser());
             let idx = curr.idx;
             let log = u.log[idx];
