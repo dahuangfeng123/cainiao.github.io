@@ -490,6 +490,9 @@
             </div>
             <div class="card">
                 <h2>📚 诗词题库（<span id="poem-count">0</span> 首）</h2>
+                <div style="margin:10px 0;">
+                    <input type="text" id="poem-search" placeholder="搜索诗人、诗名或内容..." oninput="renderPoemList()" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                </div>
                 <div id="poem-list" style="margin-top:15px;"></div>
             </div>
         </div>
@@ -760,6 +763,14 @@
             let list = all;
             if (currGrade) list = list.filter(i => i.grade == currGrade);
             if (currCate) list = list.filter(i => i.cate == currCate);
+            let kw = (document.getElementById("poem-search").value || "").trim().toLowerCase();
+            if (kw) {
+                list = list.filter(p => {
+                    let dy = getDynasty(p.author);
+                    let authorStr = dy ? dy + p.author : p.author;
+                    return p.title.toLowerCase().includes(kw) || authorStr.toLowerCase().includes(kw) || p.cont.toLowerCase().includes(kw);
+                });
+            }
             document.getElementById("poem-count").innerText = list.length;
             let html = "";
             list.forEach((p, i) => {
