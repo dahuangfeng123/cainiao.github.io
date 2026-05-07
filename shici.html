@@ -771,7 +771,7 @@
                 let btnClass = learned ? "btn-blue" : "btn-green";
                 html += `
         <div class="poem-item" style="${skilled ? 'opacity:0.5;' : ''}">
-            <div class="poem-title">${p.title} <span style="font-size:14px;color:#333">[${p.cate}]</span></div>
+            <div class="poem-title">${p.title} <span style="font-size:12px;color:#929292">[${p.cate}]</span></div>
             <div class="poem-author">${authorLabel(p)}</div>
             <div style="margin-top:8px;">
                 ${skilled ? '' : `<button class="btn ${btnClass}" onclick="start(${realIdx})">${btnText}</button>`}
@@ -1059,11 +1059,11 @@
                 });
                 let shuffled = pool.sort(() => Math.random() - 0.5);
                 let picks = shuffled.slice(0, Math.min(5, pool.length));
-                html = `<p style='margin-bottom:12px;color:#666;'>今日暂无待复习，随机推荐${u.grade ? u.grade : ''}5首：</p>`;
+                html = `<p style='margin-bottom:12px;color:#666;'>今日暂无待复习，<b>随机推荐${u.grade ? u.grade : ''}5首</b>：</p>`;
                 picks.forEach(x => {
                     html += `
         <div class="poem-item">
-            ${hideInfo ? `<div class="poem-content">${x.p.cont}</div>` : `<div class="poem-title">${x.p.title}</div><div class="poem-author">${authorLabel(x.p)}</div>`}
+            ${hideInfo ? `<div class="poem-content">${x.p.cont}</div>` : `<div class="poem-title">${x.p.title} <span style="font-size:12px;color:#929292">[${x.p.cate}]</span></div><div class="poem-author">${authorLabel(x.p)}</div>`}
             <button class="btn btn-green" onclick="start(${x.i})">学习</button>
         </div>`;
                 });
@@ -1077,7 +1077,7 @@
                     let isDue = t.nextTime >= todayTs.getTime() && t.nextTime < todayEnd;
                     html += `
         <div class="poem-item">
-            ${hideInfo ? `<div class="poem-content">${t.poem.cont}</div>` : `<div class="poem-title">${t.poem.title}</div><div class="poem-author">${authorLabel(t.poem)}</div>`}
+            ${hideInfo ? `<div class="poem-content">${t.poem.cont}</div>` : `<div class="poem-title">${t.poem.title} <span style="font-size:12px;color:#929292">[${t.p.cate}]</span></div><div class="poem-author">${authorLabel(t.poem)}</div>`}
             ${isDue ? `<button class="btn btn-blue" onclick="start(${t.idx})">开始复习</button>` : ''}
         </div>`;
                 });
