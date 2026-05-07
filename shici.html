@@ -771,7 +771,7 @@
                 let btnClass = learned ? "btn-blue" : "btn-green";
                 html += `
         <div class="poem-item" style="${skilled ? 'opacity:0.5;' : ''}">
-            <div class="poem-title">${p.title}</div>
+            <div class="poem-title">${p.title} <span style="font-size:14px;color:#333">[${p.cate}]</span></div>
             <div class="poem-author">${authorLabel(p)}</div>
             <div style="margin-top:8px;">
                 ${skilled ? '' : `<button class="btn ${btnClass}" onclick="start(${realIdx})">${btnText}</button>`}
