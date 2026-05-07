@@ -1077,7 +1077,7 @@
                     let isDue = t.nextTime >= todayTs.getTime() && t.nextTime < todayEnd;
                     html += `
         <div class="poem-item">
-            ${hideInfo ? `<div class="poem-content">${t.poem.cont}</div>` : `<div class="poem-title">${t.poem.title} <span style="font-size:12px;color:#929292">[${t.p.cate}]</span></div><div class="poem-author">${authorLabel(t.poem)}</div>`}
+            ${hideInfo ? `<div class="poem-content">${t.poem.cont}</div>` : `<div class="poem-title">${t.poem.title} <span style="font-size:12px;color:#929292">[${t.poem.cate}]</span></div><div class="poem-author">${authorLabel(t.poem)}</div>`}
             ${isDue ? `<button class="btn btn-blue" onclick="start(${t.idx})">开始复习</button>` : ''}
         </div>`;
                 });
