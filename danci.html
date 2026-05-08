@@ -947,7 +947,7 @@
             </div>
             <div id="review-passed-info" style="margin-bottom:10px;font-size:12px;"></div>
             <div id="q-text" style="font-size:17px;line-height:1.7;margin-bottom:15px;"></div>
-            <input type="text" id="input-ans" placeholder="请输入答案..." style="width:100%;padding:10px 14px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')submitReviewAnswer()">
+            <input type="text" id="input-ans" placeholder="请输入答案..." style="width:100%;padding:10px 14px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')reviewKeyEnter()">
             <div style="margin-top:10px;display:flex;gap:8px;">
                 <button class="btn btn-blue" onclick="submitReviewAnswer()" id="btn-submit-review">提交答案</button>
                 <button class="btn btn-gray" onclick="viewReviewAns()" id="btn-view-ans">查看答案</button>
@@ -1479,6 +1479,15 @@
             document.getElementById("btn-view-ans").disabled = false;
             document.getElementById("btn-skip-review").className = 'btn btn-gray';
             document.getElementById("input-ans").focus();
+        }
+
+        function reviewKeyEnter() {
+            let submitBtn = document.getElementById("btn-submit-review");
+            if (!submitBtn.disabled) {
+                submitReviewAnswer();
+            } else {
+                skipReviewWord();
+            }
         }
 
         function submitReviewAnswer() {
