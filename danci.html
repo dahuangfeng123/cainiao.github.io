@@ -857,6 +857,34 @@
                     <button class="btn btn-gray" onclick="show('mine')">查看成绩记录</button>
                 </div>
             </div>
+            <div class="card" id="wrong-pool-card">
+                <h2>🔄 错题重考</h2>
+                <p style="color:#666;font-size:13px;margin-bottom:12px;">考试中匹配度低于100%的单词自动进入错题库，连续答对3次即可移除</p>
+                <div style="margin-bottom:12px;color:#666;font-size:13px;">
+                    错题数量：<span id="wrong-pool-count" style="font-weight:bold;color:#ea4335;">0</span> 个
+                </div>
+                <div id="wrong-pool-list" style="margin-bottom:16px;"></div>
+                <button class="btn btn-blue" onclick="startWrongExam()" id="wrong-exam-btn">开始错题重考</button>
+            </div>
+            <div class="card" id="wrong-exam-progress" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <h2 style="margin-bottom:0;">🔄 错题重考</h2>
+                    <span style="color:#666;font-size:14px;">进度：<span id="wrong-current">0</span> / <span id="wrong-total">0</span></span>
+                </div>
+                <div style="background:#f1f3f4;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden;">
+                    <div id="wrong-bar" style="background:#ea4335;height:100%;border-radius:8px;transition:width 0.3s;width:0%;"></div>
+                </div>
+                <div id="wrong-question" style="font-size:20px;font-weight:bold;margin-bottom:16px;text-align:center;"></div>
+                <div id="wrong-speak-btn" style="text-align:center;margin-bottom:16px;display:none;">
+                    <button class="btn btn-gray" onclick="speakWrongWord()">🔊 朗读单词</button>
+                </div>
+                <input type="text" id="wrong-answer" placeholder="请输入答案..." style="width:100%;padding:12px 16px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;" onkeydown="if(event.key==='Enter')submitWrongAnswer()">
+                <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+                    <button class="btn btn-blue" onclick="submitWrongAnswer()">提交答案</button>
+                    <button class="btn btn-gray" onclick="skipWrongAnswer()">跳过</button>
+                </div>
+                <div id="wrong-feedback" style="margin-top:16px;padding:12px;border-radius:8px;display:none;"></div>
+            </div>
         </div>
 
         <!-- 关系查询 -->
@@ -995,6 +1023,8 @@
                 document.getElementById("exam-setup").style.display = "block";
                 document.getElementById("exam-progress").style.display = "none";
                 document.getElementById("exam-result").style.display = "none";
+                document.getElementById("wrong-pool-card").style.display = "block";
+                document.getElementById("wrong-exam-progress").style.display = "none";
             }
             renderAll();
         }
@@ -1022,8 +1052,8 @@
         }
 
         function safeUser(u) {
-            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local" };
-            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local" };
+            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {} };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local", wrongPool: u.wrongPool || {} };
         }
 
         function todayKey() {
@@ -2227,9 +2257,10 @@
                 // ✅ 修复：包含匹配只允许完全相等，或答案是单词的合理前缀（长度至少覆盖80%）
                 let containMatch = ansLower === wordLower ||
                     (ansLower.length >= Math.floor(wordLower.length * 0.8) && wordLower.startsWith(ansLower));
-
+                //短词（≤ 4个字母）阈值提高到 80%
+                const threshold = wordLower.length <= 4 ? 0.8 : 0.6;
                 return {
-                    correct: s >= 0.6 || containMatch,
+                    correct: s >= threshold || containMatch,
                     score: Math.min(Math.max(s, 0), 1)
                 };
             }
@@ -2418,6 +2449,13 @@
             document.getElementById("exam-progress").style.display = "none";
             document.getElementById("exam-result").style.display = "block";
             saveExamScore(score, correctCount, examWords.length, mode, duration);
+            let u = safeUser(getUser());
+            examAnswers.forEach(a => {
+                if (!a.skipped && a.simScore < 100) {
+                    u.wrongPool[a.idx] = { c: 0, date: Date.now() };
+                }
+            });
+            setUser(u);
         }
 
         function saveExamScore(score, correct, total, m, duration) {
@@ -2441,6 +2479,158 @@
             document.getElementById("exam-progress").style.display = "none";
             document.getElementById("exam-result").style.display = "none";
             renderExamPool();
+        }
+
+        let wrongExamList = [];
+        let wrongExamIndex = 0;
+        let wrongExamAnswers = [];
+
+        const WRONG_STATUS = ['学习中', '初步掌握', '已掌握'];
+
+        function renderWrongPool() {
+            let u = safeUser(getUser());
+            let words = getWords();
+            let pool = u.wrongPool || {};
+            let keys = Object.keys(pool);
+            document.getElementById("wrong-pool-count").innerText = keys.length;
+            let btn = document.getElementById("wrong-exam-btn");
+            btn.style.display = keys.length > 0 ? '' : 'none';
+            if (keys.length === 0) {
+                document.getElementById("wrong-pool-list").innerHTML = '<p style="color:#999;font-size:13px;">暂无错题，继续加油！</p>';
+                return;
+            }
+            let html = '';
+            keys.forEach(idx => {
+                let w = words[idx];
+                if (!w) return;
+                let info = pool[idx];
+                let statusText = WRONG_STATUS[Math.min(info.c, 2)];
+                let statusColor = info.c === 0 ? '#ea4335' : info.c === 1 ? '#fbbc04' : '#34a853';
+                html += `<div class="word-item">
+                    <div>
+                        <span class="word-text">${w.word}</span>
+                        <span class="word-meaning">${w.meaning}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:12px;color:${statusColor};font-weight:bold;">${statusText}(${info.c}/3)</span>
+                        <button class="btn btn-gray" style="padding:3px 8px;font-size:11px;" onclick="removeWrong(${idx})">移除</button>
+                    </div>
+                </div>`;
+            });
+            document.getElementById("wrong-pool-list").innerHTML = html;
+        }
+
+        function removeWrong(idx) {
+            let u = safeUser(getUser());
+            delete u.wrongPool[idx];
+            setUser(u);
+            renderWrongPool();
+        }
+
+        function startWrongExam() {
+            let u = safeUser(getUser());
+            let words = getWords();
+            let pool = u.wrongPool || {};
+            let keys = Object.keys(pool);
+            if (keys.length === 0) { alert('暂无错题'); return; }
+            wrongExamList = keys.map(idx => ({ idx: parseInt(idx), word: words[idx] })).filter(x => x.word);
+            wrongExamList.sort(() => Math.random() - 0.5);
+            wrongExamIndex = 0;
+            wrongExamAnswers = [];
+            document.getElementById("wrong-total").innerText = wrongExamList.length;
+            document.getElementById("wrong-pool-card").style.display = 'none';
+            document.getElementById("wrong-exam-progress").style.display = 'block';
+            renderWrongQuestion();
+        }
+
+        function renderWrongQuestion() {
+            if (wrongExamIndex >= wrongExamList.length) {
+                finishWrongExam();
+                return;
+            }
+            let w = wrongExamList[wrongExamIndex].word;
+            document.getElementById("wrong-current").innerText = wrongExamIndex + 1;
+            let pct = (wrongExamIndex / wrongExamList.length * 100).toFixed(1);
+            document.getElementById("wrong-bar").style.width = pct + '%';
+            let q = '';
+            if (mode === 1) q = `${w.word}`;
+            else if (mode === 2) q = `${w.meaning}`;
+            else if (mode === 3) q = '🔊 听写单词（点击朗读）';
+            document.getElementById("wrong-question").innerText = q;
+            document.getElementById("wrong-answer").value = '';
+            document.getElementById("wrong-answer").disabled = false;
+            document.getElementById("wrong-feedback").style.display = 'none';
+            let speakBtn = document.getElementById("wrong-speak-btn");
+            speakBtn.style.display = mode === 3 ? '' : 'none';
+            if (mode === 3) speak(wrongExamList[wrongExamIndex].word.word);
+            document.getElementById("wrong-answer").focus();
+        }
+
+        function speakWrongWord() {
+            if (wrongExamIndex < wrongExamList.length) {
+                speak(wrongExamList[wrongExamIndex].word.word);
+            }
+        }
+
+        function submitWrongAnswer() {
+            if (wrongExamIndex >= wrongExamList.length) return;
+            let input = document.getElementById("wrong-answer").value;
+            let item = wrongExamList[wrongExamIndex];
+            let result = checkExamAnswer(input, item.word);
+            let scorePct = Math.round(result.score * 100);
+            wrongExamAnswers.push({ idx: item.idx, word: item.word, input: input.trim(), correct: result.correct, simScore: scorePct });
+            let fb = document.getElementById("wrong-feedback");
+            fb.style.display = 'block';
+            let u = safeUser(getUser());
+            if (result.correct) {
+                let info = u.wrongPool[item.idx];
+                if (info) {
+                    info.c += 1;
+                    if (info.c >= 3) {
+                        delete u.wrongPool[item.idx];
+                        fb.style.background = '#e6f4ea';
+                        fb.style.color = '#1e7e34';
+                        fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，连续答对3次，已从错题库移除！`;
+                    } else {
+                        fb.style.background = '#e6f4ea';
+                        fb.style.color = '#1e7e34';
+                        fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，状态：${WRONG_STATUS[Math.min(info.c, 2)]}(${info.c}/3)`;
+                    }
+                }
+            } else {
+                let info = u.wrongPool[item.idx];
+                if (info) info.c = 0;
+                fb.style.background = '#fce8e6';
+                fb.style.color = '#c5221f';
+                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? item.word.meaning : item.word.word}</strong>，计数已重置`;
+            }
+            setUser(u);
+            document.getElementById("wrong-answer").disabled = true;
+            setTimeout(() => {
+                wrongExamIndex++;
+                renderWrongQuestion();
+            }, 1500);
+        }
+
+        function skipWrongAnswer() {
+            if (wrongExamIndex >= wrongExamList.length) return;
+            let item = wrongExamList[wrongExamIndex];
+            let u = safeUser(getUser());
+            let info = u.wrongPool[item.idx];
+            if (info) info.c = 0;
+            setUser(u);
+            wrongExamAnswers.push({ idx: item.idx, word: item.word, input: '', correct: false, simScore: 0 });
+            wrongExamIndex++;
+            renderWrongQuestion();
+        }
+
+        function finishWrongExam() {
+            document.getElementById("wrong-exam-progress").style.display = 'none';
+            document.getElementById("wrong-pool-card").style.display = 'block';
+            let correctCount = wrongExamAnswers.filter(a => a.correct).length;
+            let total = wrongExamAnswers.length;
+            alert(`错题重考完成！正确 ${correctCount}/${total}`);
+            renderWrongPool();
         }
 
         function renderExamScores() {
@@ -2599,6 +2789,7 @@
             renderDailyChart(user);
             renderExamPool();
             renderExamScores();
+            renderWrongPool();
             renderVoiceSetting();
             let u = safeUser(getUser());
             document.getElementById("translate-toggle").checked = !!u.translate;
