@@ -1013,6 +1013,10 @@
             setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
         }
 
+        function playSound(name) {
+            try { new Audio(name + '.mp3').play(); } catch(e) {}
+        }
+
         const PERIOD = [0, 1, 2, 4, 7, 15, 30];
         let user = "A";
         let mode = 1;
@@ -1539,6 +1543,7 @@
             let fb = document.getElementById("review-feedback");
             fb.style.display = 'block';
             if (result.correct) {
+                playSound('correct');
                 fb.style.background = '#e6f4ea';
                 fb.style.color = '#1e7e34';
                 fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
@@ -1553,6 +1558,7 @@
                     renderReviewWord();
                 }, 1000);
             } else {
+                playSound('wrong');
                 fb.style.background = '#fce8e6';
                 fb.style.color = '#c5221f';
                 fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${reviewRound === 1 ? w.meaning : w.word}</strong>`;
@@ -1627,6 +1633,7 @@
             closeModal();
             renderAll();
             if (reviewed.length > 0) {
+                playSound('victory');
                 toast(`复习完成！${reviewed.length} 个单词已通过三轮复习`, 'success');
             } else {
                 toast('本轮无单词通过全部三轮复习', 'warning');
@@ -2581,10 +2588,12 @@
             let fb = document.getElementById("exam-feedback");
             fb.style.display = "block";
             if (result.correct) {
+                playSound('correct');
                 fb.style.background = "#e6f4ea";
                 fb.style.color = "#1e7e34";
                 fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
             } else {
+                playSound('wrong');
                 fb.style.background = "#fce8e6";
                 fb.style.color = "#c5221f";
                 fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? w.meaning : w.word}</strong>`;
@@ -2612,6 +2621,7 @@
 
         function finishExam() {
             examSubmitted = true;
+            playSound('victory');
             if (examTimerInterval) { clearInterval(examTimerInterval); examTimerInterval = null; }
             let duration = Date.now() - examStartTime;
             let correctCount = examAnswers.filter(a => a.correct).length;
@@ -2782,6 +2792,7 @@
             fb.style.display = 'block';
             let u = safeUser(getUser());
             if (result.correct) {
+                playSound('correct');
                 let info = u.wrongPool[item.idx];
                 if (info) {
                     info.c += 1;
@@ -2797,6 +2808,7 @@
                     }
                 }
             } else {
+                playSound('wrong');
                 let info = u.wrongPool[item.idx];
                 if (info) info.c = 0;
                 fb.style.background = '#fce8e6';
@@ -2824,6 +2836,7 @@
         }
 
         function finishWrongExam() {
+            playSound('victory');
             document.getElementById("wrong-exam-progress").style.display = 'none';
             document.getElementById("wrong-pool-card").style.display = 'block';
             let correctCount = wrongExamAnswers.filter(a => a.correct).length;
