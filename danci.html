@@ -1841,8 +1841,8 @@
         }
 
         function safeUser(u) {
-            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0 };
-            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local", wrongPool: u.wrongPool || {}, stars: u.stars || 0, combo: u.combo || 0, learnMilestone: u.learnMilestone || 0 };
+            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0, lastTodayMilestone: {} };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local", wrongPool: u.wrongPool || {}, stars: u.stars || 0, combo: u.combo || 0, learnMilestone: u.learnMilestone || 0, lastTodayMilestone: u.lastTodayMilestone || {} };
         }
 
         function todayKey() {
@@ -2167,17 +2167,23 @@
             let now = Date.now();
             let todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
+            let today = todayKey();
             if (!u.learn.includes(idx)) {
                 u.learn.push(idx);
                 let nextTs = nextDate(now, 1);
                 u.log[idx] = { t: now, c: 1, next: nextTs };
                 setUser(u);
                 recordDaily('learn');
-                let newMilestone = Math.floor(u.learn.length / 10);
-                if (newMilestone > (u.learnMilestone || 0)) {
-                    u.learnMilestone = newMilestone;
+                
+                // 检查今日学习是否达到10个的倍数
+                let todayLearn = (u.dailyLog[today]?.learn || 0);
+                let todayMilestone = Math.floor(todayLearn / 10);
+                let lastTodayMilestone = u.lastTodayMilestone || {};
+                if (todayMilestone > (lastTodayMilestone[today] || 0)) {
+                    if (!u.lastTodayMilestone) u.lastTodayMilestone = {};
+                    u.lastTodayMilestone[today] = todayMilestone;
                     setUser(u);
-                    addStars(30, '学习' + (newMilestone * 10) + '个单词！');
+                    addStars(30, '今天学习' + (todayMilestone * 10) + '个单词！');
                 }
             }
             closeLearnModal();
