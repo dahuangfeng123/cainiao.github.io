@@ -3596,7 +3596,11 @@
         }
 
         function finishWrongExam() {
-            playSound('victory');
+            let u = safeUser(getUser());
+            let remainingWrongCount = Object.keys(u.wrongPool || {}).length;
+            if (remainingWrongCount === 0) {
+                playSound('victory');
+            }
             document.getElementById("wrong-exam-progress").style.display = 'none';
             document.getElementById("wrong-pool-card").style.display = 'block';
             let correctCount = wrongExamAnswers.filter(a => a.correct).length;
