@@ -631,6 +631,7 @@
                 <button class="btn btn-gray" id="btn-pinyin" onclick="togglePinyin()">拼音</button>
                 <button class="btn btn-gray" id="btn-draw" onclick="toggleDraw()">笔画</button>
                 <button class="btn btn-gray" onclick="speakPoem()">朗读</button>
+                <button class="btn btn-gray" onclick="openBaiduHanyu()">📖 百度汉语</button>
                 <button class="btn" onclick="closeLearnModal()">关闭</button>
             </div>
         </div>
@@ -889,6 +890,12 @@
             } catch (e) {
                 container.innerText = "笔画绘制加载失败";
             }
+        }
+        function openBaiduHanyu() {
+            if (learnIdx === null) return;
+            let p = getPoems()[learnIdx];
+            let wd = encodeURIComponent(`《${p.title}》${p.author}`);
+            window.open(`https://hanyu.baidu.com/s?wd=${wd}&from=poem`, '_blank');
         }
         function speakPoem() {
             if (learnIdx === null) return;
