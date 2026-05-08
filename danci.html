@@ -2183,25 +2183,50 @@
         function checkExamAnswer(input, word) {
             let ans = input.trim();
             if (!ans) return { correct: false, score: 0 };
+
             if (mode === 1) {
                 let meanings = word.meaning.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
                 let ansParts = ans.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
+                
                 let bestScore = 0;
                 let containMatch = false;
+
                 for (let ap of ansParts) {
                     for (let m of meanings) {
                         let edSim = similarity(ap, m);
                         let csSim = charSetSim(ap, m);
                         let s = Math.max(edSim, csSim);
                         if (s > bestScore) bestScore = s;
-                        if (ans.includes(m) || m.includes(ans)) containMatch = true;
+
+                        // ✅ 修复：用 ap 而不是 ans，且要求长度足够才允许包含匹配
+                        if (ap.length >= 2 && m.length >= 2) {
+                            if (ap === m || ap.includes(m) || m.includes(ap)) {
+                                containMatch = true;
+                            }
+                        }
                     }
                 }
-                return { correct: bestScore >= 0.2 || containMatch, score: bestScore };
+
+                // ✅ 修复：阈值提高到 0.6
+                return {
+                    correct: bestScore >= 0.6 || containMatch,
+                    score: Math.min(Math.max(bestScore, 0), 1)
+                };
+
             } else {
-                let s = similarity(ans, word.word);
-                let containMatch = ans.toLowerCase().includes(word.word.toLowerCase()) || word.word.toLowerCase().includes(ans.toLowerCase());
-                return { correct: s >= 0.2 || containMatch, score: s };
+                let ansLower = ans.toLowerCase();
+                let wordLower = word.word.toLowerCase();
+
+                let s = similarity(ansLower, wordLower);
+
+                // ✅ 修复：包含匹配只允许完全相等，或答案是单词的合理前缀（长度至少覆盖80%）
+                let containMatch = ansLower === wordLower ||
+                    (ansLower.length >= Math.floor(wordLower.length * 0.8) && wordLower.startsWith(ansLower));
+
+                return {
+                    correct: s >= 0.6 || containMatch,
+                    score: Math.min(Math.max(s, 0), 1)
+                };
             }
         }
 
