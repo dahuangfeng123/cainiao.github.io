@@ -947,7 +947,7 @@
             </div>
             <div id="review-passed-info" style="margin-bottom:10px;font-size:12px;"></div>
             <div id="q-text" style="font-size:17px;line-height:1.7;margin-bottom:15px;"></div>
-            <input type="text" id="input-ans" placeholder="请输入答案..." style="width:100%;padding:10px 14px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')reviewKeyEnter()">
+            <input type="text" id="input-ans" placeholder="请输入答案..." style="width:100%;padding:10px 14px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;box-sizing:border-box;">
             <div style="margin-top:10px;display:flex;gap:8px;">
                 <button class="btn btn-blue" onclick="submitReviewAnswer()" id="btn-submit-review">提交答案</button>
                 <button class="btn btn-gray" onclick="viewReviewAns()" id="btn-view-ans">查看答案</button>
@@ -1482,6 +1482,8 @@
         }
 
         function reviewKeyEnter() {
+            let modal = document.getElementById("modal");
+            if (modal.style.display !== "flex") return;
             let submitBtn = document.getElementById("btn-submit-review");
             if (!submitBtn.disabled) {
                 submitReviewAnswer();
@@ -1489,6 +1491,10 @@
                 skipReviewWord();
             }
         }
+
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") reviewKeyEnter();
+        });
 
         function submitReviewAnswer() {
             if (reviewIndex >= reviewQueue.length) return;
