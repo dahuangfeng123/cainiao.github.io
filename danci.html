@@ -1527,8 +1527,8 @@
 
         function skipReviewWord() {
             if (reviewIndex >= reviewQueue.length) return;
-            reviewQueue.push(reviewQueue[reviewIndex]);
-            reviewIndex++;
+            let idx = reviewQueue.splice(reviewIndex, 1)[0];
+            reviewQueue.push(idx);
             renderReviewWord();
         }
 
