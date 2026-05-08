@@ -613,6 +613,7 @@
             <div style="margin-top:10px;">
                 <button class="btn btn-gray" onclick="showAns()">查看答案</button>
                 <button class="btn btn-blue" onclick="doneReview()">已复习</button>
+                <button class="btn btn-gray" onclick="openBaiduHanyu()">📖 百度汉语</button>
                 <button class="btn" onclick="closeModal()">关闭</button>
             </div>
             <div id="ans-show" style="margin-top:18px;line-height:1.7;color:#333;"></div>
@@ -892,8 +893,8 @@
             }
         }
         function openBaiduHanyu() {
-            if (learnIdx === null) return;
-            let p = getPoems()[learnIdx];
+            let p = curr ? curr.item : (learnIdx !== null ? getPoems()[learnIdx] : null);
+            if (!p) return;
             let wd = encodeURIComponent(`《${p.title}》${p.author}`);
             window.open(`https://hanyu.baidu.com/s?wd=${wd}&from=poem`, '_blank');
         }
