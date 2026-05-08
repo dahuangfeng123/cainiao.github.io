@@ -2185,8 +2185,13 @@
             if (!ans) return { correct: false, score: 0 };
 
             if (mode === 1) {
-                let meanings = word.meaning.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
+                let meanings = word.meaning.split(/[;；,，、\n]/).map(s => s.replace(/[（(][^）)]*[）)]/g, '').trim()).filter(s => s.length > 0);// 去除括号内容
                 let ansParts = ans.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
+                // 如果用户没有用分隔符，额外把每个字也当一个候选
+                if (ansParts.length === 1 && /^[\u4e00-\u9fa5]+$/.test(ans)) {
+                    let chars = ans.split('');
+                    ansParts = [...ansParts, ...chars];
+                }
                 
                 let bestScore = 0;
                 let containMatch = false;
