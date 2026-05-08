@@ -951,7 +951,7 @@
             <div style="margin-top:10px;display:flex;gap:8px;">
                 <button class="btn btn-blue" onclick="submitReviewAnswer()" id="btn-submit-review">提交答案</button>
                 <button class="btn btn-gray" onclick="viewReviewAns()" id="btn-view-ans">查看答案</button>
-                <button class="btn btn-gray" onclick="skipReviewWord()">跳过</button>
+                <button class="btn btn-gray" onclick="skipReviewWord()" id="btn-skip-review">跳过</button>
                 <button class="btn" onclick="closeModal()">关闭</button>
             </div>
             <div id="ans-show" style="margin-top:18px;line-height:1.7;color:#333;"></div>
@@ -1475,7 +1475,9 @@
             document.getElementById("ans-show").innerText = '';
             document.getElementById("review-feedback").style.display = 'none';
             document.getElementById("btn-submit-review").disabled = false;
+            document.getElementById("btn-submit-review").className = 'btn btn-blue';
             document.getElementById("btn-view-ans").disabled = false;
+            document.getElementById("btn-skip-review").className = 'btn btn-gray';
             document.getElementById("input-ans").focus();
         }
 
@@ -1505,8 +1507,10 @@
                 fb.style.background = '#fce8e6';
                 fb.style.color = '#c5221f';
                 fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${reviewRound === 1 ? w.meaning : w.word}</strong>`;
-                document.getElementById("input-ans").value = '';
-                document.getElementById("input-ans").focus();
+                document.getElementById("input-ans").disabled = true;
+                document.getElementById("btn-submit-review").disabled = true;
+                document.getElementById("btn-submit-review").className = 'btn btn-gray';
+                document.getElementById("btn-skip-review").className = 'btn btn-blue';
             }
         }
 
@@ -1515,7 +1519,9 @@
             let w = curr.item;
             document.getElementById("ans-show").innerText = `${w.word}\n${w.meaning}`;
             document.getElementById("btn-submit-review").disabled = true;
+            document.getElementById("btn-submit-review").className = 'btn btn-gray';
             document.getElementById("input-ans").disabled = true;
+            document.getElementById("btn-skip-review").className = 'btn btn-blue';
             reviewViewedAns = true;
         }
 
