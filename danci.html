@@ -940,15 +940,22 @@
 
     <!-- 答题弹窗 -->
     <div class="modal" id="modal">
-        <div class="modal-body">
+        <div class="modal-body" style="max-width:600px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div id="review-round-info" style="font-size:14px;color:#666;"></div>
+                <div id="review-progress-info" style="font-size:13px;color:#999;"></div>
+            </div>
+            <div id="review-passed-info" style="margin-bottom:10px;font-size:12px;"></div>
             <div id="q-text" style="font-size:17px;line-height:1.7;margin-bottom:15px;"></div>
-            <textarea id="input-ans" placeholder="请输入答案..."></textarea>
-            <div style="margin-top:10px;">
-                <button class="btn btn-gray" onclick="showAns()">查看答案</button>
-                <button class="btn btn-blue" onclick="doneReview()">已复习</button>
+            <input type="text" id="input-ans" placeholder="请输入答案..." style="width:100%;padding:10px 14px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')submitReviewAnswer()">
+            <div style="margin-top:10px;display:flex;gap:8px;">
+                <button class="btn btn-blue" onclick="submitReviewAnswer()" id="btn-submit-review">提交答案</button>
+                <button class="btn btn-gray" onclick="viewReviewAns()" id="btn-view-ans">查看答案</button>
+                <button class="btn btn-gray" onclick="skipReviewWord()">跳过</button>
                 <button class="btn" onclick="closeModal()">关闭</button>
             </div>
             <div id="ans-show" style="margin-top:18px;line-height:1.7;color:#333;"></div>
+            <div id="review-feedback" style="margin-top:12px;padding:12px;border-radius:8px;display:none;"></div>
         </div>
     </div>
 
@@ -1416,10 +1423,171 @@
         // ==============================
         // 答题弹窗
         // ==============================
+        let reviewRound = 0;
+        let reviewQueue = [];
+        let reviewIndex = 0;
+        let reviewPassed = {};
+        let reviewViewedAns = false;
+
+        function startReviewSession() {
+            let tasks = getTodayTasks();
+            if (tasks.length === 0) { alert('今日暂无待复习单词'); return; }
+            reviewRound = 1;
+            reviewQueue = tasks.map(t => t.idx);
+            reviewIndex = 0;
+            reviewPassed = {};
+            reviewViewedAns = false;
+            setMode(1);
+            document.getElementById("modal").style.display = "flex";
+            renderReviewWord();
+        }
+
+        function renderReviewWord() {
+            if (reviewIndex >= reviewQueue.length) {
+                finishReviewRound();
+                return;
+            }
+            let idx = reviewQueue[reviewIndex];
+            let w = getWords()[idx];
+            curr = { idx, item: w };
+            reviewViewedAns = false;
+            document.getElementById("review-round-info").innerHTML = `第${reviewRound}轮 · ${MODE_LABELS[reviewRound]}`;
+            document.getElementById("review-progress-info").innerText = `${reviewIndex + 1} / ${reviewQueue.length}`;
+            let passedInfo = reviewPassed[idx] || [];
+            let roundLabels = ['看词写义', '看义写词', '听写单词'];
+            let passedHtml = roundLabels.map((label, i) => {
+                let done = passedInfo.includes(i + 1);
+                return `<span style="color:${done ? '#34a853' : '#ccc'};margin-right:8px;">${done ? '✅' : '⬜'}${label}</span>`;
+            }).join('');
+            document.getElementById("review-passed-info").innerHTML = passedHtml;
+            let t = '';
+            if (reviewRound === 1) {
+                t = `单词：<strong style="font-size:22px;">${w.word}</strong><br>请写出中文释义`;
+            } else if (reviewRound === 2) {
+                t = `释义：${w.meaning}<br>请写出英文单词`;
+            } else if (reviewRound === 3) {
+                t = `请听写单词（点击朗读按钮播放）<br><button class="btn btn-gray" onclick="speakCurrWord()">🔊 朗读</button>`;
+                speak(w.word);
+            }
+            document.getElementById("q-text").innerHTML = t;
+            document.getElementById("input-ans").value = '';
+            document.getElementById("input-ans").disabled = false;
+            document.getElementById("ans-show").innerText = '';
+            document.getElementById("review-feedback").style.display = 'none';
+            document.getElementById("btn-submit-review").disabled = false;
+            document.getElementById("btn-view-ans").disabled = false;
+            document.getElementById("input-ans").focus();
+        }
+
+        function submitReviewAnswer() {
+            if (reviewIndex >= reviewQueue.length) return;
+            let input = document.getElementById("input-ans").value;
+            let w = curr.item;
+            let result = checkExamAnswer(input, w);
+            let scorePct = Math.round(result.score * 100);
+            let fb = document.getElementById("review-feedback");
+            fb.style.display = 'block';
+            if (result.correct) {
+                fb.style.background = '#e6f4ea';
+                fb.style.color = '#1e7e34';
+                fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
+                if (!reviewPassed[curr.idx]) reviewPassed[curr.idx] = [];
+                if (!reviewPassed[curr.idx].includes(reviewRound)) {
+                    reviewPassed[curr.idx].push(reviewRound);
+                }
+                document.getElementById("input-ans").disabled = true;
+                document.getElementById("btn-submit-review").disabled = true;
+                setTimeout(() => {
+                    reviewIndex++;
+                    renderReviewWord();
+                }, 1000);
+            } else {
+                fb.style.background = '#fce8e6';
+                fb.style.color = '#c5221f';
+                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${reviewRound === 1 ? w.meaning : w.word}</strong>`;
+                document.getElementById("input-ans").value = '';
+                document.getElementById("input-ans").focus();
+            }
+        }
+
+        function viewReviewAns() {
+            if (!curr) return;
+            let w = curr.item;
+            document.getElementById("ans-show").innerText = `${w.word}\n${w.meaning}`;
+            document.getElementById("btn-submit-review").disabled = true;
+            document.getElementById("input-ans").disabled = true;
+            reviewViewedAns = true;
+        }
+
+        function skipReviewWord() {
+            if (reviewIndex >= reviewQueue.length) return;
+            reviewQueue.push(reviewQueue[reviewIndex]);
+            reviewIndex++;
+            renderReviewWord();
+        }
+
+        function finishReviewRound() {
+            if (reviewRound < 3) {
+                reviewRound++;
+                let nextQueue = reviewQueue.filter(idx => {
+                    let p = reviewPassed[idx] || [];
+                    return p.includes(reviewRound - 1);
+                });
+                if (nextQueue.length === 0) {
+                    finishReviewAll();
+                    return;
+                }
+                reviewQueue = nextQueue;
+                reviewIndex = 0;
+                setMode(reviewRound);
+                renderReviewWord();
+            } else {
+                finishReviewAll();
+            }
+        }
+
+        function finishReviewAll() {
+            let u = safeUser(getUser());
+            let reviewed = Object.keys(reviewPassed).filter(idx => {
+                let p = reviewPassed[idx];
+                return p.includes(1) && p.includes(2) && p.includes(3);
+            });
+            reviewed.forEach(idx => {
+                let i = parseInt(idx);
+                let log = u.log[i];
+                if (!log) return;
+                log.c += 1;
+                let interval = PERIOD[log.c] - PERIOD[log.c - 1];
+                if (log.c >= PERIOD.length) {
+                    if (!u.done.includes(i)) u.done.push(i);
+                    log.next = null;
+                } else {
+                    let d = new Date();
+                    d.setDate(d.getDate() + interval);
+                    log.next = d.getTime();
+                }
+            });
+            setUser(u);
+            if (reviewed.length > 0) recordDaily('review');
+            closeModal();
+            renderAll();
+            if (reviewed.length > 0) {
+                alert(`复习完成！${reviewed.length} 个单词已通过三轮复习`);
+            } else {
+                alert('本轮无单词通过全部三轮复习');
+            }
+        }
+
         function openModal(idx) {
             curr = { idx, item: getWords()[idx] };
+            reviewRound = 1;
+            reviewQueue = [idx];
+            reviewIndex = 0;
+            reviewPassed = {};
+            reviewViewedAns = false;
+            setMode(1);
             document.getElementById("modal").style.display = "flex";
-            renderQ();
+            renderReviewWord();
         }
 
         function closeModal() {
@@ -1432,54 +1600,13 @@
             document.querySelectorAll(".mode-bar .mbtn").forEach((b, i) => {
                 b.classList.toggle("on", i === m - 1);
             });
-            if (curr) renderQ();
             renderTodayList();
             renderExamPool();
-        }
-
-        function renderQ() {
-            let w = curr.item;
-            let t = "";
-            if (mode == 1) {
-                t = `单词：<strong style="font-size:22px;">${w.word}</strong><br>请写出中文释义`;
-            } else if (mode == 2) {
-                t = `释义：${w.meaning}<br>请写出英文单词`;
-            } else if (mode == 3) {
-                t = `请听写单词（点击朗读按钮播放）<br><button class="btn btn-gray" onclick="speakCurrWord()">🔊 朗读</button>`;
-            }
-            document.getElementById("q-text").innerHTML = t;
-            document.getElementById("input-ans").value = "";
-            document.getElementById("ans-show").innerText = "";
         }
 
         function speakCurrWord() {
             if (!curr) return;
             speak(curr.item.word);
-        }
-
-        function showAns() {
-            let w = curr.item;
-            document.getElementById("ans-show").innerText = `${w.word}\n${w.meaning}`;
-        }
-
-        function doneReview() {
-            let u = safeUser(getUser());
-            let idx = curr.idx;
-            let log = u.log[idx];
-            if (!log) { closeModal(); return; }
-            log.c += 1;
-            let now = Date.now();
-            let next = nextDate(now, log.c);
-            if (!next) {
-                if (!u.done.includes(idx)) u.done.push(idx);
-                log.next = null;
-            } else {
-                log.next = next;
-            }
-            setUser(u);
-            recordDaily('review');
-            closeModal();
-            renderAll();
         }
 
         function nextDate(st, count) {
@@ -1605,6 +1732,9 @@
                 if (isFuture) {
                     html += `<p style='margin-bottom:10px;color:#666;font-size:13px;'>📅 ${dateStr}待复习单词预览</p>`;
                 }
+                if (isToday || isPast) {
+                    html += `<div style="margin-bottom:12px;"><button class="btn btn-blue" onclick="startReviewSession()">开始复习（${tasks.length}个单词，三轮模式）</button></div>`;
+                }
                 tasks.forEach(t => {
                     let hideWord = (mode == 2 || mode == 3);
                     let hideMeaning = (mode == 1);
@@ -1627,7 +1757,6 @@
                 <div class="word-meaning">${hideMeaning ? '' : t.word.meaning}</div>
             </div>
             <div>
-                <button class="btn btn-blue" onclick="start(${t.idx})">复习</button>
                 <button class="btn btn-gray" onclick="speakWordBy(${t.idx})">🔊</button>
             </div>
         </div>`;
