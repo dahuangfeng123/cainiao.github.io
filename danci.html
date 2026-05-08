@@ -12,22 +12,36 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft YaHei", sans-serif;
+            font-family: "Comic Sans MS", "Chalkboard SE", "Microsoft YaHei", sans-serif;
         }
 
         body {
-            background: #f8f9fa;
-            color: #222;
+            background: linear-gradient(135deg, #fff9c4 0%, #e1f5fe 50%, #f3e5f5 100%);
+            color: #333;
+            min-height: 100vh;
         }
 
         .top {
             height: 60px;
-            background: #34a853;
+            background: linear-gradient(135deg, #ff6f91, #ff9671, #ffc75f);
             color: #fff;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 25px;
+            box-shadow: 0 4px 15px rgba(255, 111, 145, 0.3);
+            position: relative;
+            z-index: 10;
+        }
+
+        .top::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: repeating-linear-gradient(90deg, #ff6f91 0, #ff6f91 10px, #ffc75f 10px, #ffc75f 20px, #00c9a7 20px, #00c9a7 30px, #845ec2 30px, #845ec2 40px);
         }
 
         .nav a {
@@ -35,40 +49,63 @@
             text-decoration: none;
             margin: 0 16px;
             font-size: 15px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .nav a:hover {
+            transform: scale(1.1);
         }
 
         .mode-bar {
-            height: 40px;
-            background: #e6f4ea;
+            height: 44px;
+            background: linear-gradient(90deg, #e8f5e9, #fff3e0, #fce4ec);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            border-bottom: 3px dashed #ffc75f;
         }
 
         .mode-bar .mbtn {
-            padding: 5px 16px;
-            border: none;
-            border-radius: 20px;
+            padding: 6px 18px;
+            border: 2px solid #ffc75f;
+            border-radius: 25px;
             background: #fff;
-            color: #34a853;
+            color: #ff6f91;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 2px 2px 0px #ffc75f;
+        }
+
+        .mode-bar .mbtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 3px 3px 0px #ffc75f;
         }
 
         .mode-bar .mbtn.on {
-            background: #34a853;
+            background: linear-gradient(135deg, #ff6f91, #ffc75f);
             color: #fff;
+            border-color: #ff6f91;
+            box-shadow: 2px 2px 0px #ff6f91;
         }
 
         .user button {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            background: #fff;
-            color: #34a853;
+            padding: 6px 14px;
+            border: 2px solid #fff;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.3);
+            color: #fff;
             font-weight: bold;
             cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .user button:hover {
+            background: rgba(255,255,255,0.5);
+            transform: scale(1.05);
         }
 
         .container {
@@ -79,50 +116,79 @@
         }
 
         .card {
-            background: #fff;
-            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
             padding: 22px;
             margin-bottom: 18px;
-            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.06);
+            box-shadow: 4px 4px 0px #ffc75f, 0 4px 15px rgba(0,0,0,0.06);
+            border: 3px solid #ffc75f;
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
         }
 
         h2 {
-            color: #34a853;
+            color: #ff6f91;
             margin-bottom: 14px;
             font-size: 20px;
+            text-shadow: 1px 1px 0px #ffc75f;
+        }
+
+        h3 {
+            color: #845ec2;
         }
 
         .btn {
-            padding: 8px 14px;
-            border: none;
-            border-radius: 6px;
+            padding: 8px 16px;
+            border: 2px solid transparent;
+            border-radius: 25px;
             cursor: pointer;
             margin: 4px;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 3px 3px 0px rgba(0,0,0,0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0px);
+            box-shadow: 1px 1px 0px rgba(0,0,0,0.1);
         }
 
         .btn-blue {
-            background: #4285f4;
+            background: linear-gradient(135deg, #4fc3f7, #29b6f6);
             color: #fff;
+            border-color: #29b6f6;
         }
 
         .btn-gray {
-            background: #f1f3f4;
-            color: #333;
+            background: #f5f5f5;
+            color: #666;
+            border-color: #ddd;
         }
 
         .btn-red {
-            background: #ea4335;
+            background: linear-gradient(135deg, #ef5350, #e53935);
             color: #fff;
+            border-color: #e53935;
         }
 
         .btn-green {
-            background: #34a853;
+            background: linear-gradient(135deg, #66bb6a, #43a047);
             color: #fff;
+            border-color: #43a047;
         }
 
         .btn-orange {
-            background: #fbbc04;
-            color: #333;
+            background: linear-gradient(135deg, #ffa726, #fb8c00);
+            color: #fff;
+            border-color: #fb8c00;
         }
 
         .hide {
@@ -135,6 +201,12 @@
 
         .page.active {
             display: block;
+            animation: pageIn 0.4s ease;
+        }
+
+        @keyframes pageIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .flex {
@@ -148,32 +220,48 @@
 
         .tag {
             display: inline-block;
-            padding: 5px 11px;
-            background: #e6f4ea;
-            border-radius: 20px;
+            padding: 5px 14px;
+            background: linear-gradient(135deg, #fff9c4, #fff3e0);
+            border-radius: 25px;
             margin: 4px;
             cursor: pointer;
             font-size: 14px;
+            border: 2px solid #ffc75f;
+            transition: all 0.3s;
+            font-weight: bold;
+            color: #ff6f91;
+        }
+
+        .tag:hover {
+            transform: scale(1.05);
         }
 
         .tag.on {
-            background: #34a853;
+            background: linear-gradient(135deg, #ff6f91, #ffc75f);
             color: #fff;
+            border-color: #ff6f91;
         }
 
         .word-item {
             padding: 14px;
-            border-bottom: 1px solid #f1f1f1;
+            border-bottom: 2px dashed #f0f0f0;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 10px;
+            transition: background 0.2s;
         }
+
+        .word-item:hover {
+            background: rgba(255, 199, 95, 0.1);
+        }
+
         .word-item > div:first-child {
             flex: 1;
             min-width: 0;
             overflow: hidden;
         }
+
         .word-item > div:last-child {
             flex-shrink: 0;
             white-space: nowrap;
@@ -186,6 +274,7 @@
         .word-text {
             font-weight: bold;
             font-size: 18px;
+            color: #845ec2;
         }
 
         .word-meaning {
@@ -203,10 +292,18 @@
         textarea {
             width: 100%;
             height: 100px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            padding: 12px;
+            border: 3px solid #ffc75f;
+            border-radius: 15px;
             font-size: 15px;
+            font-family: inherit;
+            background: #fffde7;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #ff6f91;
+            box-shadow: 0 0 0 3px rgba(255, 111, 145, 0.2);
         }
 
         .modal {
@@ -225,10 +322,12 @@
         .modal-body {
             width: 650px;
             background: #fff;
-            border-radius: 10px;
+            border-radius: 25px;
             padding: 30px;
             max-height: 85vh;
             overflow: auto;
+            border: 4px solid #ffc75f;
+            box-shadow: 6px 6px 0px #ff6f91, 0 8px 30px rgba(0,0,0,0.15);
         }
 
         .calendar {
@@ -240,76 +339,86 @@
 
         .calendar-day {
             padding: 10px;
-            border: 1px solid #eee;
-            border-radius: 6px;
-            background: #fafafa;
+            border: 2px solid #ffc75f;
+            border-radius: 12px;
+            background: #fffde7;
             color: #333;
             text-align: center;
-            transition: all 0.15s;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .calendar-day:hover {
+            transform: scale(1.05);
         }
 
         .calendar-day.has-task {
-            background: #e6f4ea;
+            background: #c8e6c9;
             color: #1e7e34;
+            border-color: #66bb6a;
         }
 
         .calendar-day.has-task span {
-            color: #34a853;
+            color: #43a047;
         }
 
         .calendar-day.today {
-            background: #fff3e0;
-            color: #e65100;
+            background: #fff9c4;
+            color: #f57f17;
             font-weight: bold;
+            border-color: #ffa726;
         }
 
         .calendar-day.today.has-task {
-            background: #e6f4ea;
+            background: #c8e6c9;
             color: #1e7e34;
             font-weight: bold;
-            border: 2px solid #e65100;
+            border: 3px solid #ffa726;
         }
 
         .calendar-day.selected {
-            background: #34a853;
+            background: linear-gradient(135deg, #ff6f91, #ffc75f);
             color: #fff;
             font-weight: bold;
+            border-color: #ff6f91;
         }
 
         .calendar-day.selected span {
-            color: #c8e6c9;
+            color: #fff;
         }
 
         .calendar-day.selected.today {
-            background: #34a853;
+            background: linear-gradient(135deg, #ff6f91, #ffc75f);
             color: #fff;
-            border: 2px solid #e65100;
+            border: 3px solid #ffa726;
         }
 
         .calendar-day.overdue {
-            background: #fde8e8;
-            color: #c0392b;
+            background: #ffcdd2;
+            color: #c62828;
+            border-color: #ef5350;
         }
 
         .calendar-day.overdue span {
-            color: #e74c3c;
+            color: #e53935;
         }
 
         .calendar-day.overdue.today {
-            background: #e6f4ea;
+            background: #c8e6c9;
             color: #1e7e34;
             font-weight: bold;
-            border: 2px solid #e65100;
+            border: 3px solid #ffa726;
         }
 
         .calendar-day.selected.overdue {
-            background: #c0392b;
+            background: linear-gradient(135deg, #ef5350, #e53935);
             color: #fff;
             font-weight: bold;
+            border-color: #c62828;
         }
 
         .calendar-day.selected.overdue span {
-            color: #f5b7b1;
+            color: #ffcdd2;
         }
 
         .calendar-nav {
@@ -320,53 +429,60 @@
         }
 
         .calendar-nav button {
-            padding: 4px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            padding: 6px 16px;
+            border: 2px solid #ffc75f;
+            border-radius: 20px;
             background: #fff;
             cursor: pointer;
             font-size: 14px;
-            transition: all 0.15s;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: #ff6f91;
         }
 
         .calendar-nav button:hover {
-            background: #f0f0f0;
+            background: #fff9c4;
+            transform: scale(1.05);
         }
 
         .calendar-nav .cal-title {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
-            color: #333;
+            color: #845ec2;
         }
 
         .overdue-item {
-            border-left: 3px solid #e74c3c !important;
+            border-left: 4px solid #ef5350 !important;
+            background: #fff8f0;
         }
 
         .collins-star {
-            color: #fbbc04;
+            color: #ffc75f;
+            text-shadow: 0 0 3px rgba(255, 199, 95, 0.5);
         }
 
         .exam-tag {
             display: inline-block;
-            padding: 2px 6px;
-            background: #e6f4ea;
-            border-radius: 4px;
+            padding: 2px 8px;
+            background: linear-gradient(135deg, #e1f5fe, #b3e5fc);
+            border-radius: 10px;
             font-size: 11px;
-            color: #34a853;
+            color: #0288d1;
             margin: 1px;
+            border: 1px solid #4fc3f7;
+            font-weight: bold;
         }
+
         #exam-answer:focus {
-            border-color: #34a853;
-            box-shadow: 0 0 0 2px rgba(52, 168, 83, 0.2);
+            border-color: #ff6f91;
+            box-shadow: 0 0 0 3px rgba(255, 111, 145, 0.2);
         }
+
         #exam-answer:disabled {
             background: #f5f5f5;
             color: #999;
         }
-        .overdue-item {
-            background: #fff8f0;
-        }
+
         .hamburger {
             display: none;
             background: none;
@@ -376,6 +492,7 @@
             cursor: pointer;
             padding: 4px 8px;
         }
+
         .nav-overlay {
             display: none;
             position: fixed;
@@ -386,38 +503,52 @@
             background: rgba(0,0,0,0.4);
             z-index: 998;
         }
+
         .nav-overlay.active {
             display: block;
         }
+
         .nav-drawer {
             position: fixed;
             top: 0;
             left: -260px;
             width: 260px;
             height: 100%;
-            background: #2d8a4e;
+            background: linear-gradient(180deg, #ff6f91, #ffc75f);
             z-index: 999;
             transition: left 0.3s ease;
             padding: 20px 0;
         }
+
         .nav-drawer.active {
             left: 0;
         }
+
         .nav-drawer a {
             display: block;
             color: #fff;
             text-decoration: none;
             padding: 14px 24px;
             font-size: 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.15);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.2s;
+            font-weight: bold;
         }
+
+        .nav-drawer a:hover {
+            background: rgba(255,255,255,0.2);
+            padding-left: 30px;
+        }
+
         .nav-drawer a:active {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.3);
         }
+
         .nav-drawer-close {
             text-align: right;
             padding: 0 16px 10px;
         }
+
         .nav-drawer-close button {
             background: none;
             border: none;
@@ -425,6 +556,29 @@
             font-size: 22px;
             cursor: pointer;
         }
+
+        .star-fly {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff6f91;
+            z-index: 10001;
+            pointer-events: none;
+            animation: starFly 2s ease forwards;
+            text-shadow: 2px 2px 0px #ffc75f, 0 0 10px rgba(255, 199, 95, 0.5);
+            white-space: nowrap;
+        }
+
+        @keyframes starFly {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+            40% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -120%) scale(1.2); }
+        }
+
         @media (max-width: 768px) {
             .top {
                 height: 50px;
@@ -437,14 +591,14 @@
                 display: block;
             }
             .user {
-                font-size: 13px;
+                font-size: 12px;
             }
             .user button {
                 padding: 4px 8px;
-                font-size: 12px;
+                font-size: 11px;
             }
             .mode-bar {
-                height: 36px;
+                height: 38px;
                 gap: 4px;
                 padding: 0 8px;
             }
@@ -459,14 +613,15 @@
             .card {
                 padding: 14px;
                 margin-bottom: 12px;
-                border-radius: 8px;
+                border-radius: 16px;
+                border-width: 2px;
             }
             h2 {
                 font-size: 17px;
                 margin-bottom: 10px;
             }
             .btn {
-                padding: 6px 10px;
+                padding: 6px 12px;
                 font-size: 13px;
                 margin: 3px;
             }
@@ -475,7 +630,7 @@
                 gap: 12px;
             }
             .tag {
-                padding: 4px 8px;
+                padding: 4px 10px;
                 font-size: 12px;
                 margin: 2px;
             }
@@ -493,7 +648,7 @@
             .modal-body {
                 width: 95%;
                 padding: 16px;
-                border-radius: 8px;
+                border-radius: 20px;
                 max-height: 90vh;
             }
             .calendar-day {
@@ -516,6 +671,7 @@
                 padding: 10px 12px;
             }
         }
+
         @media (min-width: 769px) and (max-width: 1024px) {
             .container {
                 width: 94%;
@@ -530,29 +686,70 @@
                 max-width: 600px;
             }
         }
+
         .toast-item {
             pointer-events: auto;
             padding: 12px 24px;
-            border-radius: 8px;
+            border-radius: 20px;
             font-size: 14px;
             color: #fff;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            box-shadow: 3px 3px 0px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.1);
+            animation: toastIn 0.4s ease, toastOut 0.3s ease 2.7s forwards;
             max-width: 90vw;
             text-align: center;
             line-height: 1.5;
+            font-weight: bold;
+            border: 2px solid rgba(255,255,255,0.3);
         }
-        .toast-success { background: #34a853; }
-        .toast-error { background: #ea4335; }
-        .toast-info { background: #4285f4; }
-        .toast-warning { background: #fbbc04; color: #333; }
+
+        .toast-success { background: linear-gradient(135deg, #66bb6a, #43a047); }
+        .toast-error { background: linear-gradient(135deg, #ef5350, #e53935); }
+        .toast-info { background: linear-gradient(135deg, #4fc3f7, #29b6f6); }
+        .toast-warning { background: linear-gradient(135deg, #ffa726, #fb8c00); color: #fff; }
+
         @keyframes toastIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(-20px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
+
         @keyframes toastOut {
             from { opacity: 1; }
             to { opacity: 0; }
+        }
+
+        input[type="text"], input[type="search"] {
+            border: 3px solid #ffc75f !important;
+            border-radius: 15px !important;
+            font-family: inherit !important;
+            transition: all 0.3s !important;
+        }
+
+        input[type="text"]:focus, input[type="search"]:focus {
+            border-color: #ff6f91 !important;
+            box-shadow: 0 0 0 3px rgba(255, 111, 145, 0.2) !important;
+            outline: none !important;
+        }
+
+        table {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        table th {
+            background: linear-gradient(135deg, #fff9c4, #fff3e0) !important;
+            color: #845ec2 !important;
+            font-weight: bold;
+        }
+
+        table td {
+            border-color: #ffc75f33 !important;
+        }
+
+        select {
+            border: 3px solid #ffc75f;
+            border-radius: 15px;
+            padding: 6px 12px;
+            font-family: inherit;
         }
     </style>
 </head>
@@ -573,6 +770,8 @@
             </div>
         </div>
         <div class="user">
+            ⭐<span id="star-count">0</span>
+            <span id="combo-display" style="display:none;"> 🔥<span id="combo-count">0</span></span>
             当前：<span id="show-user">同学A</span>
             <button onclick="toggleUser()">切换 A/B</button>
         </div>
@@ -611,12 +810,14 @@
                         <p>已学：<span id="a-total">0</span></p>
                         <p>待复习：<span id="a-wait">0</span></p>
                         <p>已掌握：<span id="a-done">0</span></p>
+                        <p>⭐ 星星：<span id="a-stars" style="font-weight:bold;color:#fbbc04;">0</span></p>
                     </div>
                     <div class="col card">
                         <h3>同学B</h3>
                         <p>已学：<span id="b-total">0</span></p>
                         <p>待复习：<span id="b-wait">0</span></p>
                         <p>已掌握：<span id="b-done">0</span></p>
+                        <p>⭐ 星星：<span id="b-stars" style="font-weight:bold;color:#fbbc04;">0</span></p>
                     </div>
                 </div>
             </div>
@@ -706,7 +907,7 @@
                 <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;font-size:14px;">
                         <thead>
-                            <tr style="background:#e6f4ea;">
+                            <tr style="background:#fff9c4;">
                                 <th style="padding:10px;border:1px solid #ddd;text-align:left;">词性</th>
                                 <th style="padding:10px;border:1px solid #ddd;text-align:left;">缩写</th>
                                 <th style="padding:10px;border:1px solid #ddd;text-align:left;">定义</th>
@@ -765,7 +966,7 @@
                         </tbody>
                     </table>
                 </div>
-                <h3 style="margin-top:15px;margin-bottom:10px;color:#34a853;font-size:16px;">补充词性（常见版本）</h3>
+                <h3 style="margin-top:15px;margin-bottom:10px;color:#845ec2;font-size:16px;">补充词性（常见版本）</h3>
                 <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;font-size:14px;">
                         <tbody>
@@ -799,7 +1000,7 @@
                         </tbody>
                     </table>
                 </div>
-                <h3 style="margin-top:15px;margin-bottom:10px;color:#34a853;font-size:16px;">掌握词性的重要性</h3>
+                <h3 style="margin-top:15px;margin-bottom:10px;color:#845ec2;font-size:16px;">掌握词性的重要性</h3>
                 <div style="background:#f8f9fa;padding:12px;border-radius:6px;font-size:13px;line-height:1.8;">
                     <p><strong>位置：</strong>例如形容词放在名词前（a <em>fast</em> car），副词修饰动词（runs <em>fast</em>）</p>
                     <p><strong>形状：</strong>如名词变形容词（fashion → fashionable）</p>
@@ -830,10 +1031,10 @@
                 <h2>📝 单词考试</h2>
                 <p style="color:#666;font-size:13px;margin-bottom:16px;">从已学习和已复习的单词中随机抽取100个组成试卷，完成后自动打分</p>
                 <div style="margin-bottom:16px;color:#666;font-size:13px;">
-                    当前考试模式：<span id="exam-mode-label" style="font-weight:bold;color:#34a853;">看词写义</span>（使用顶部全局模式）
+                    当前考试模式：<span id="exam-mode-label" style="font-weight:bold;color:#ff6f91;">看词写义</span>（使用顶部全局模式）
                 </div>
                 <div style="margin-bottom:16px;color:#666;font-size:13px;">
-                    可用单词池：<span id="exam-pool-count" style="font-weight:bold;color:#34a853;">0</span> 个（已学习 + 已掌握的单词）
+                    可用单词池：<span id="exam-pool-count" style="font-weight:bold;color:#ff6f91;">0</span> 个（已学习 + 已掌握的单词）
                 </div>
                 <button class="btn btn-green" onclick="startExam()" id="exam-start-btn">开始考试</button>
             </div>
@@ -845,15 +1046,15 @@
                         <span style="color:#666;font-size:14px;">进度：<span id="exam-current">0</span> / <span id="exam-total">100</span></span>
                     </div>
                 </div>
-                <div style="background:#f1f3f4;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden;">
-                    <div id="exam-bar" style="background:#34a853;height:100%;border-radius:8px;transition:width 0.3s;width:0%;"></div>
+                <div style="background:#fff9c4;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden;">
+                    <div id="exam-bar" style="background:linear-gradient(90deg,#ff6f91,#ffc75f);height:100%;border-radius:8px;transition:width 0.3s;width:0%;"></div>
                 </div>
                 <div id="exam-question-area" style="min-height:200px;">
                     <div id="exam-question" style="font-size:20px;font-weight:bold;margin-bottom:16px;text-align:center;"></div>
                     <div id="exam-speak-btn" style="text-align:center;margin-bottom:16px;display:none;">
                         <button class="btn btn-gray" onclick="speakExamWord()">🔊 朗读单词</button>
                     </div>
-                    <input type="text" id="exam-answer" placeholder="请输入答案..." style="width:100%;padding:12px 16px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;" onkeydown="if(event.key==='Enter')submitExamAnswer()">
+                    <input type="text" id="exam-answer" placeholder="请输入答案..." style="width:100%;padding:12px 16px;border:3px solid #ffc75f;border-radius:15px;font-size:16px;outline:none;font-family:inherit;" onkeydown="if(event.key==='Enter')submitExamAnswer()">
                     <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
                         <button class="btn btn-blue" onclick="submitExamAnswer()">提交答案</button>
                         <button class="btn btn-gray" onclick="skipExamAnswer()">跳过</button>
@@ -870,11 +1071,11 @@
                 </div>
                 <div style="display:flex;justify-content:center;gap:30px;margin-bottom:20px;">
                     <div style="text-align:center;">
-                        <div style="font-size:24px;font-weight:bold;color:#34a853;" id="exam-correct">0</div>
+                        <div style="font-size:24px;font-weight:bold;color:#66bb6a;" id="exam-correct">0</div>
                         <div style="color:#666;font-size:13px;">正确</div>
                     </div>
                     <div style="text-align:center;">
-                        <div style="font-size:24px;font-weight:bold;color:#ea4335;" id="exam-wrong">0</div>
+                        <div style="font-size:24px;font-weight:bold;color:#ef5350;" id="exam-wrong">0</div>
                         <div style="color:#666;font-size:13px;">错误</div>
                     </div>
                     <div style="text-align:center;">
@@ -892,7 +1093,7 @@
                 <h2>🔄 错题重考</h2>
                 <p style="color:#666;font-size:13px;margin-bottom:12px;">考试中匹配度低于100%的单词自动进入错题库，连续答对3次即可移除</p>
                 <div style="margin-bottom:12px;color:#666;font-size:13px;">
-                    错题数量：<span id="wrong-pool-count" style="font-weight:bold;color:#ea4335;">0</span> 个
+                    错题数量：<span id="wrong-pool-count" style="font-weight:bold;color:#ef5350;">0</span> 个
                 </div>
                 <div id="wrong-pool-list" style="margin-bottom:16px;"></div>
                 <button class="btn btn-blue" onclick="startWrongExam()" id="wrong-exam-btn">开始错题重考</button>
@@ -902,14 +1103,14 @@
                     <h2 style="margin-bottom:0;">🔄 错题重考</h2>
                     <span style="color:#666;font-size:14px;">进度：<span id="wrong-current">0</span> / <span id="wrong-total">0</span></span>
                 </div>
-                <div style="background:#f1f3f4;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden;">
-                    <div id="wrong-bar" style="background:#ea4335;height:100%;border-radius:8px;transition:width 0.3s;width:0%;"></div>
+                <div style="background:#fff9c4;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden;">
+                    <div id="wrong-bar" style="background:linear-gradient(90deg,#ef5350,#ff6f91);height:100%;border-radius:8px;transition:width 0.3s;width:0%;"></div>
                 </div>
                 <div id="wrong-question" style="font-size:20px;font-weight:bold;margin-bottom:16px;text-align:center;"></div>
                 <div id="wrong-speak-btn" style="text-align:center;margin-bottom:16px;display:none;">
                     <button class="btn btn-gray" onclick="speakWrongWord()">🔊 朗读单词</button>
                 </div>
-                <input type="text" id="wrong-answer" placeholder="请输入答案..." style="width:100%;padding:12px 16px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;" onkeydown="if(event.key==='Enter')submitWrongAnswer()">
+                <input type="text" id="wrong-answer" placeholder="请输入答案..." style="width:100%;padding:12px 16px;border:3px solid #ffc75f;border-radius:15px;font-size:16px;outline:none;font-family:inherit;" onkeydown="if(event.key==='Enter')submitWrongAnswer()">
                 <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
                     <button class="btn btn-blue" onclick="submitWrongAnswer()">提交答案</button>
                     <button class="btn btn-gray" onclick="skipWrongAnswer()">跳过</button>
@@ -972,7 +1173,7 @@
             </div>
             <div id="review-passed-info" style="margin-bottom:10px;font-size:12px;"></div>
             <div id="q-text" style="font-size:17px;line-height:1.7;margin-bottom:15px;"></div>
-            <input type="text" id="input-ans" placeholder="请输入答案..." style="width:100%;padding:10px 14px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;box-sizing:border-box;">
+            <input type="text" id="input-ans" placeholder="请输入答案..." style="width:100%;padding:10px 14px;border:3px solid #ffc75f;border-radius:15px;font-size:16px;outline:none;box-sizing:border-box;font-family:inherit;">
             <div style="margin-top:10px;display:flex;gap:8px;">
                 <button class="btn btn-blue" onclick="submitReviewAnswer()" id="btn-submit-review">提交答案</button>
                 <button class="btn btn-gray" onclick="viewReviewAns()" id="btn-view-ans">查看答案</button>
@@ -1015,6 +1216,57 @@
 
         function playSound(name) {
             try { new Audio(name + '.mp3').play(); } catch(e) {}
+        }
+
+        function addStars(count, reason) {
+            let u = safeUser(getUser());
+            u.stars = (u.stars || 0) + count;
+            setUser(u);
+            showStarAnimation(count, reason);
+            renderStarDisplay();
+        }
+
+        function addComboStar() {
+            let u = safeUser(getUser());
+            u.combo = (u.combo || 0) + 1;
+            let bonus = 0;
+            if (u.combo === 3) bonus = 5;
+            else if (u.combo === 10) bonus = 20;
+            else if (u.combo > 10 && u.combo % 10 === 0) bonus = 20;
+            u.stars = (u.stars || 0) + 1 + bonus;
+            setUser(u);
+            if (bonus > 0) {
+                showStarAnimation(1 + bonus, '连击' + u.combo + '次！+' + (1 + bonus) + '星');
+            } else {
+                showStarAnimation(1, '+1星');
+            }
+            renderStarDisplay();
+        }
+
+        function resetCombo() {
+            let u = safeUser(getUser());
+            u.combo = 0;
+            setUser(u);
+        }
+
+        function showStarAnimation(count, reason) {
+            let el = document.createElement('div');
+            el.className = 'star-fly';
+            el.innerHTML = '⭐' + (count > 1 ? ' ×' + count : '') + (reason ? ' ' + reason : '');
+            document.body.appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2000);
+        }
+
+        function renderStarDisplay() {
+            let u = safeUser(getUser());
+            let el = document.getElementById("star-count");
+            if (el) el.innerText = u.stars || 0;
+            let comboEl = document.getElementById("combo-count");
+            if (comboEl) {
+                let combo = u.combo || 0;
+                comboEl.innerText = combo;
+                comboEl.parentElement.style.display = combo > 0 ? '' : 'none';
+            }
         }
 
         const PERIOD = [0, 1, 2, 4, 7, 15, 30];
@@ -1103,8 +1355,8 @@
         }
 
         function safeUser(u) {
-            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {} };
-            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local", wrongPool: u.wrongPool || {} };
+            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0 };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local", wrongPool: u.wrongPool || {}, stars: u.stars || 0, combo: u.combo || 0, learnMilestone: u.learnMilestone || 0 };
         }
 
         function todayKey() {
@@ -1313,7 +1565,7 @@
             let u = safeUser(getUser());
             data[0].meanings.forEach(m => {
                 html += `<div style="margin-bottom:10px;">`;
-                html += `<div style="color:#34a853;font-weight:bold;margin-bottom:4px;">${m.partOfSpeech}</div>`;
+                html += `<div style="color:#845ec2;font-weight:bold;margin-bottom:4px;">${m.partOfSpeech}</div>`;
                 m.definitions.slice(0, 3).forEach((d, i) => {
                     html += `<div style="margin-bottom:6px;padding-left:8px;">`;
                     html += `<div>${i + 1}. ${d.definition}`;
@@ -1435,6 +1687,12 @@
                 u.log[idx] = { t: now, c: 1, next: nextTs };
                 setUser(u);
                 recordDaily('learn');
+                let newMilestone = Math.floor(u.learn.length / 10);
+                if (newMilestone > (u.learnMilestone || 0)) {
+                    u.learnMilestone = newMilestone;
+                    setUser(u);
+                    addStars(30, '学习' + (newMilestone * 10) + '个单词！');
+                }
             }
             closeLearnModal();
             renderAll();
@@ -1495,7 +1753,7 @@
             let roundLabels = ['看词写义', '看义写词', '听写单词'];
             let passedHtml = roundLabels.map((label, i) => {
                 let done = passedInfo.includes(i + 1);
-                return `<span style="color:${done ? '#34a853' : '#ccc'};margin-right:8px;">${done ? '✅' : '⬜'}${label}</span>`;
+                return `<span style="color:${done ? '#66bb6a' : '#ccc'};margin-right:8px;">${done ? '✅' : '⬜'}${label}</span>`;
             }).join('');
             document.getElementById("review-passed-info").innerHTML = passedHtml;
             let t = '';
@@ -1544,7 +1802,8 @@
             fb.style.display = 'block';
             if (result.correct) {
                 playSound('correct');
-                fb.style.background = '#e6f4ea';
+                addComboStar();
+                fb.style.background = '#c8e6c9';
                 fb.style.color = '#1e7e34';
                 fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
                 if (!reviewPassed[curr.idx]) reviewPassed[curr.idx] = [];
@@ -1559,7 +1818,8 @@
                 }, 1000);
             } else {
                 playSound('wrong');
-                fb.style.background = '#fce8e6';
+                resetCombo();
+                fb.style.background = '#ffcdd2';
                 fb.style.color = '#c5221f';
                 fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${reviewRound === 1 ? w.meaning : w.word}</strong>`;
                 document.getElementById("input-ans").disabled = true;
@@ -1630,6 +1890,7 @@
             });
             setUser(u);
             if (reviewed.length > 0) recordDaily('review');
+            if (reviewed.length > 0) addStars(30, '复习任务完成！');
             closeModal();
             renderAll();
             if (reviewed.length > 0) {
@@ -1733,9 +1994,11 @@
             document.getElementById("a-total").innerText = a.learn.length;
             document.getElementById("a-wait").innerText = countWait(a);
             document.getElementById("a-done").innerText = a.done.length;
+            document.getElementById("a-stars").innerText = a.stars || 0;
             document.getElementById("b-total").innerText = b.learn.length;
             document.getElementById("b-wait").innerText = countWait(b);
             document.getElementById("b-done").innerText = b.done.length;
+            document.getElementById("b-stars").innerText = b.stars || 0;
             document.getElementById("my-total").innerText = u.learn.length;
             document.getElementById("my-wait").innerText = countWait(u);
             document.getElementById("my-done").innerText = u.done.length;
@@ -2226,7 +2489,7 @@
                 html += `<div style="font-size:13px;color:#999;">柯林斯等级：${info.collins || 'N/A'}`;
                 if (info.exam) {
                     let tags = info.exam.split(" ").map(t => EXAM_LABELS[t] || t).filter(Boolean);
-                    if (tags.length) html += ' | ' + tags.map(t => `<span style="background:#e8f5e9;padding:2px 6px;border-radius:4px;font-size:11px;">${t}</span>`).join(" ");
+                    if (tags.length) html += ' | ' + tags.map(t => `<span style="background:#fff9c4;padding:2px 6px;border-radius:4px;font-size:11px;">${t}</span>`).join(" ");
                 }
                 html += '</div>';
             } else {
@@ -2548,7 +2811,7 @@
             document.getElementById("exam-feedback").style.display = "none";
             document.getElementById("exam-answer").disabled = false;
             if (mode === 1) {
-                qEl.innerHTML = `单词：<span style="font-size:28px;color:#34a853;">${w.word}</span><br><span style="font-size:14px;color:#999;">请写出中文释义</span>`;
+                qEl.innerHTML = `单词：<span style="font-size:28px;color:#845ec2;">${w.word}</span><br><span style="font-size:14px;color:#999;">请写出中文释义</span>`;
                 speakBtn.style.display = "block";
             } else if (mode === 2) {
                 qEl.innerHTML = `释义：<span style="font-size:18px;color:#333;">${w.meaning}</span><br><span style="font-size:14px;color:#999;">请写出英文单词</span>`;
@@ -2589,12 +2852,14 @@
             fb.style.display = "block";
             if (result.correct) {
                 playSound('correct');
-                fb.style.background = "#e6f4ea";
+                addComboStar();
+                fb.style.background = "#c8e6c9";
                 fb.style.color = "#1e7e34";
                 fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
             } else {
                 playSound('wrong');
-                fb.style.background = "#fce8e6";
+                resetCombo();
+                fb.style.background = "#ffcdd2";
                 fb.style.color = "#c5221f";
                 fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? w.meaning : w.word}</strong>`;
             }
@@ -2629,14 +2894,14 @@
             let skipCount = examAnswers.filter(a => a.skipped).length;
             let score = Math.round(correctCount / examWords.length * 100);
             document.getElementById("exam-score").innerText = score;
-            document.getElementById("exam-score").style.color = score >= 80 ? '#34a853' : score >= 60 ? '#fbbc04' : '#ea4335';
+            document.getElementById("exam-score").style.color = score >= 80 ? '#66bb6a' : score >= 60 ? '#ffa726' : '#ef5350';
             document.getElementById("exam-correct").innerText = correctCount;
             document.getElementById("exam-wrong").innerText = wrongCount;
             document.getElementById("exam-skip").innerText = skipCount;
             document.getElementById("exam-duration").innerText = formatDuration(duration);
             let html = `<div style="margin-bottom:10px;color:#666;font-size:13px;">考试模式：${MODE_LABELS[mode]} | 题目数量：${examWords.length} | 用时：${formatDuration(duration)}</div>`;
             html += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
-                <thead><tr style="background:#f1f3f4;">
+                <thead><tr style="background:#fff9c4;">
                     <th style="padding:8px;border:1px solid #eee;text-align:left;width:30px;">#</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:left;">单词</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:left;">释义</th>
@@ -2647,7 +2912,7 @@
             examAnswers.forEach((a, i) => {
                 let bg = i % 2 === 0 ? '#fff' : '#fafafa';
                 let resultIcon = a.skipped ? '⏭️' : (a.correct ? '✅' : '❌');
-                let simColor = a.simScore >= 80 ? '#34a853' : a.simScore >= 60 ? '#fbbc04' : '#ea4335';
+                let simColor = a.simScore >= 80 ? '#66bb6a' : a.simScore >= 60 ? '#ffa726' : '#ef5350';
                 html += `<tr style="background:${bg};">
                     <td style="padding:6px 8px;border:1px solid #eee;">${i + 1}</td>
                     <td style="padding:6px 8px;border:1px solid #eee;font-weight:bold;">${a.word.word}</td>
@@ -2663,6 +2928,7 @@
             document.getElementById("exam-result").style.display = "block";
             document.getElementById("wrong-pool-card").style.display = "block";
             saveExamScore(score, correctCount, examWords.length, mode, duration);
+            addStars(50, '考试完成！');
             let u = safeUser(getUser());
             examAnswers.forEach(a => {
                 if (a.simScore < 100 && !u.wrongPool[a.idx]) {
@@ -2721,7 +2987,7 @@
                 if (!w) return;
                 let info = pool[idx];
                 let statusText = WRONG_STATUS[Math.min(info.c, 2)];
-                let statusColor = info.c === 0 ? '#ea4335' : info.c === 1 ? '#fbbc04' : '#34a853';
+                let statusColor = info.c === 0 ? '#ef5350' : info.c === 1 ? '#ffa726' : '#66bb6a';
                 html += `<div class="word-item">
                     <div>
                         <span class="word-text">${w.word}</span>
@@ -2793,25 +3059,27 @@
             let u = safeUser(getUser());
             if (result.correct) {
                 playSound('correct');
+                addComboStar();
                 let info = u.wrongPool[item.idx];
                 if (info) {
                     info.c += 1;
                     if (info.c >= 3) {
                         delete u.wrongPool[item.idx];
-                        fb.style.background = '#e6f4ea';
+                        fb.style.background = '#c8e6c9';
                         fb.style.color = '#1e7e34';
                         fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，连续答对3次，已从错题库移除！`;
                     } else {
-                        fb.style.background = '#e6f4ea';
+                        fb.style.background = '#c8e6c9';
                         fb.style.color = '#1e7e34';
                         fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，状态：${WRONG_STATUS[Math.min(info.c, 2)]}(${info.c}/3)`;
                     }
                 }
             } else {
                 playSound('wrong');
+                resetCombo();
                 let info = u.wrongPool[item.idx];
                 if (info) info.c = 0;
-                fb.style.background = '#fce8e6';
+                fb.style.background = '#ffcdd2';
                 fb.style.color = '#c5221f';
                 fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? item.word.meaning : item.word.word}</strong>，计数已重置`;
             }
@@ -2855,7 +3123,7 @@
                 return;
             }
             let html = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
-                <thead><tr style="background:#f1f3f4;">
+                <thead><tr style="background:#fff9c4;">
                     <th style="padding:8px;border:1px solid #eee;text-align:left;">时间</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:center;">模式</th>
                     <th style="padding:8px;border:1px solid #eee;text-align:center;">正确/总数</th>
@@ -2864,7 +3132,7 @@
                 </tr></thead><tbody>`;
             scores.slice().reverse().forEach((s, i) => {
                 let bg = i % 2 === 0 ? '#fff' : '#fafafa';
-                let scoreColor = s.score >= 80 ? '#34a853' : s.score >= 60 ? '#fbbc04' : '#ea4335';
+                let scoreColor = s.score >= 80 ? '#66bb6a' : s.score >= 60 ? '#ffa726' : '#ef5350';
                 let dur = s.duration ? formatDuration(s.duration) : '-';
                 html += `<tr style="background:${bg};">
                     <td style="padding:6px 8px;border:1px solid #eee;">${s.date}</td>
@@ -2909,30 +3177,30 @@
                         {
                             label: '学习',
                             data: learnData,
-                            backgroundColor: 'rgba(52, 168, 83, 0.6)',
-                            borderColor: 'rgba(52, 168, 83, 1)',
+                            backgroundColor: 'rgba(255, 111, 145, 0.6)',
+                            borderColor: 'rgba(255, 111, 145, 1)',
                             borderWidth: 1,
-                            borderRadius: 3,
+                            borderRadius: 6,
                             order: 2
                         },
                         {
                             label: '复习',
                             data: reviewData,
-                            backgroundColor: 'rgba(66, 133, 244, 0.6)',
-                            borderColor: 'rgba(66, 133, 244, 1)',
+                            backgroundColor: 'rgba(79, 195, 247, 0.6)',
+                            borderColor: 'rgba(79, 195, 247, 1)',
                             borderWidth: 1,
-                            borderRadius: 3,
+                            borderRadius: 6,
                             order: 3
                         },
                         {
                             label: '学习趋势',
                             data: learnData,
                             type: 'line',
-                            borderColor: 'rgba(52, 168, 83, 1)',
-                            backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                            borderColor: 'rgba(255, 111, 145, 1)',
+                            backgroundColor: 'rgba(255, 111, 145, 0.1)',
                             borderWidth: 2,
-                            pointRadius: 2,
-                            pointHoverRadius: 4,
+                            pointRadius: 3,
+                            pointHoverRadius: 5,
                             tension: 0.3,
                             fill: false,
                             order: 0
@@ -2941,11 +3209,11 @@
                             label: '复习趋势',
                             data: reviewData,
                             type: 'line',
-                            borderColor: 'rgba(66, 133, 244, 1)',
-                            backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                            borderColor: 'rgba(79, 195, 247, 1)',
+                            backgroundColor: 'rgba(79, 195, 247, 0.1)',
                             borderWidth: 2,
-                            pointRadius: 2,
-                            pointHoverRadius: 4,
+                            pointRadius: 3,
+                            pointHoverRadius: 5,
                             tension: 0.3,
                             fill: false,
                             order: 1
@@ -3003,6 +3271,7 @@
             renderExamScores();
             renderWrongPool();
             renderVoiceSetting();
+            renderStarDisplay();
             let u = safeUser(getUser());
             document.getElementById("translate-toggle").checked = !!u.translate;
         }
