@@ -401,10 +401,35 @@
                 max-width: 600px;
             }
         }
+        .toast-item {
+            pointer-events: auto;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            max-width: 90vw;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .toast-success { background: #34a853; }
+        .toast-error { background: #ea4335; }
+        .toast-info { background: #4285f4; }
+        .toast-warning { background: #fbbc04; color: #333; }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
     </style>
 </head>
 
 <body>
+    <div id="toast-container" style="position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;"></div>
 
     <div class="top">
         <div style="display:flex;align-items:center;gap:12px;">
@@ -639,6 +664,15 @@
     </div>
 
     <script>
+        function toast(msg, type) {
+            type = type || 'info';
+            let el = document.createElement('div');
+            el.className = 'toast-item toast-' + type;
+            el.innerText = msg;
+            document.getElementById('toast-container').appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
+        }
+
         // ==============================
         // 配置
         // ==============================
@@ -1202,7 +1236,7 @@
             if (!confirm("确定清空当前用户所有学习记录？不可恢复！")) return;
             setUser({ learn: [], done: [], log: {} });
             renderAll();
-            alert("已重置");
+            toast("已重置", "success");
         }
 
         // ==============================
@@ -1459,7 +1493,7 @@
         function startExam() {
             let pool = getExamPool();
             if (pool.length < 1) {
-                alert("暂无已学习的诗词，请先学习一些诗词再考试");
+                toast("暂无已学习的诗词，请先学习一些诗词再考试", "warning");
                 return;
             }
             let countInput = parseInt(document.getElementById("exam-count-input").value) || 10;
