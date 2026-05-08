@@ -2329,6 +2329,7 @@
             document.getElementById("exam-setup").style.display = "none";
             document.getElementById("exam-progress").style.display = "block";
             document.getElementById("exam-result").style.display = "none";
+            document.getElementById("wrong-pool-card").style.display = "none";
             renderExamQuestion();
         }
 
@@ -2380,6 +2381,13 @@
             let result = checkExamAnswer(input, w);
             let scorePct = Math.round(result.score * 100);
             examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: input.trim(), correct: result.correct, simScore: scorePct, skipped: false });
+            if (scorePct < 100) {
+                let u = safeUser(getUser());
+                if (!u.wrongPool[examWords[examIndex].idx]) {
+                    u.wrongPool[examWords[examIndex].idx] = { c: 0, date: Date.now() };
+                    setUser(u);
+                }
+            }
             let fb = document.getElementById("exam-feedback");
             fb.style.display = "block";
             if (result.correct) {
@@ -2403,6 +2411,11 @@
             if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
             let w = examWords[examIndex].word;
             examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: "", correct: false, simScore: 0, skipped: true });
+            let u = safeUser(getUser());
+            if (!u.wrongPool[examWords[examIndex].idx]) {
+                u.wrongPool[examWords[examIndex].idx] = { c: 0, date: Date.now() };
+                setUser(u);
+            }
             examIndex++;
             renderExamQuestion();
         }
@@ -2448,14 +2461,16 @@
             document.getElementById("exam-detail-list").innerHTML = html;
             document.getElementById("exam-progress").style.display = "none";
             document.getElementById("exam-result").style.display = "block";
+            document.getElementById("wrong-pool-card").style.display = "block";
             saveExamScore(score, correctCount, examWords.length, mode, duration);
             let u = safeUser(getUser());
             examAnswers.forEach(a => {
-                if (!a.skipped && a.simScore < 100) {
+                if (a.simScore < 100 && !u.wrongPool[a.idx]) {
                     u.wrongPool[a.idx] = { c: 0, date: Date.now() };
                 }
             });
             setUser(u);
+            renderWrongPool();
         }
 
         function saveExamScore(score, correct, total, m, duration) {
@@ -2478,6 +2493,7 @@
             document.getElementById("exam-setup").style.display = "block";
             document.getElementById("exam-progress").style.display = "none";
             document.getElementById("exam-result").style.display = "none";
+            document.getElementById("wrong-pool-card").style.display = "block";
             renderExamPool();
         }
 
@@ -2511,20 +2527,12 @@
                         <span class="word-text">${w.word}</span>
                         <span class="word-meaning">${w.meaning}</span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:8px;">
+                    <div>
                         <span style="font-size:12px;color:${statusColor};font-weight:bold;">${statusText}(${info.c}/3)</span>
-                        <button class="btn btn-gray" style="padding:3px 8px;font-size:11px;" onclick="removeWrong(${idx})">移除</button>
                     </div>
                 </div>`;
             });
             document.getElementById("wrong-pool-list").innerHTML = html;
-        }
-
-        function removeWrong(idx) {
-            let u = safeUser(getUser());
-            delete u.wrongPool[idx];
-            setUser(u);
-            renderWrongPool();
         }
 
         function startWrongExam() {
@@ -2545,12 +2553,13 @@
 
         function renderWrongQuestion() {
             if (wrongExamIndex >= wrongExamList.length) {
-                finishWrongExam();
+                document.getElementById("wrong-bar").style.width = '100%';
+                setTimeout(() => finishWrongExam(), 300);
                 return;
             }
             let w = wrongExamList[wrongExamIndex].word;
             document.getElementById("wrong-current").innerText = wrongExamIndex + 1;
-            let pct = (wrongExamIndex / wrongExamList.length * 100).toFixed(1);
+            let pct = ((wrongExamIndex + 1) / wrongExamList.length * 100).toFixed(1);
             document.getElementById("wrong-bar").style.width = pct + '%';
             let q = '';
             if (mode === 1) q = `${w.word}`;
