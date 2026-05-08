@@ -1232,6 +1232,7 @@
         <div class="page" id="page-plan">
             <div class="card">
                 <h2>📅 复习日历</h2>
+                <div id="calendar-nav"></div>
                 <div class="calendar" id="calendar"></div>
             </div>
             <div class="card">
@@ -2657,7 +2658,8 @@
                 <span class="cal-title">${year}年${month + 1}月</span>
                 <button onclick="calNext()">下月 ▶</button>
             </div>`;
-            let html = navHtml;
+            document.getElementById("calendar-nav").innerHTML = navHtml;
+            let html = '';
             let weekNames = ["日", "一", "二", "三", "四", "五", "六"];
             weekNames.forEach(w => { html += `<div style="font-weight:bold;padding:8px;text-align:center;">${w}</div>`; });
             for (let i = 0; i < firstDay; i++) { html += `<div class="calendar-day"></div>`; }
