@@ -1707,6 +1707,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <h2 style="margin-bottom:0;">📝 考试进行中</h2>
                     <div style="display:flex;align-items:center;gap:16px;">
+                        <span style="color:#fbbc04;font-size:14px;font-weight:bold;">⭐ <span id="exam-star-count">0</span></span>
                         <span style="color:#666;font-size:14px;">⏱ <span id="exam-timer">00:00</span></span>
                         <span style="color:#666;font-size:14px;">进度：<span id="exam-current">0</span> / <span id="exam-total">100</span></span>
                     </div>
@@ -1766,7 +1767,10 @@
             <div class="card" id="wrong-exam-progress" style="display:none;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <h2 style="margin-bottom:0;">🔄 错题重考</h2>
-                    <span style="color:#666;font-size:14px;">进度：<span id="wrong-current">0</span> / <span id="wrong-total">0</span></span>
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <span style="color:#fbbc04;font-size:14px;font-weight:bold;">⭐ <span id="wrong-star-count">0</span></span>
+                        <span style="color:#666;font-size:14px;">进度：<span id="wrong-current">0</span> / <span id="wrong-total">0</span></span>
+                    </div>
                 </div>
                 <div class="theme-progress-bg" style="background:#fff9c4;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden;">
                     <div id="wrong-bar" class="theme-wrong-progress-fill" style="background:linear-gradient(90deg,#ef5350,#ff6f91);height:100%;border-radius:8px;transition:width 0.3s;width:0%;"></div>
@@ -1855,7 +1859,10 @@
         <div class="modal-body" style="max-width:600px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                 <div id="review-round-info" style="font-size:14px;color:#666;"></div>
-                <div id="review-progress-info" style="font-size:13px;color:#999;"></div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span id="modal-star-count" style="font-size:14px;color:#fbbc04;font-weight:bold;">⭐ 0</span>
+                    <span id="review-progress-info" style="font-size:13px;color:#999;"></span>
+                </div>
             </div>
             <div id="review-passed-info" style="margin-bottom:10px;font-size:12px;"></div>
             <div id="q-text" style="font-size:17px;line-height:1.7;margin-bottom:15px;"></div>
@@ -1965,8 +1972,9 @@
 
         function renderStarDisplay() {
             let u = safeUser(getUser());
+            let stars = u.stars || 0;
             let el = document.getElementById("star-count");
-            if (el) el.innerText = u.stars || 0;
+            if (el) el.innerText = stars;
             let comboEl = document.getElementById("combo-count");
             if (comboEl) {
                 let combo = u.combo || 0;
@@ -1974,7 +1982,13 @@
                 comboEl.parentElement.style.display = combo > 0 ? '' : 'none';
             }
             let lotteryEl = document.getElementById("lottery-stars");
-            if (lotteryEl) lotteryEl.innerText = u.stars || 0;
+            if (lotteryEl) lotteryEl.innerText = stars;
+            let modalStarEl = document.getElementById("modal-star-count");
+            if (modalStarEl) modalStarEl.innerText = '⭐ ' + stars;
+            let examStarEl = document.getElementById("exam-star-count");
+            if (examStarEl) examStarEl.innerText = stars;
+            let wrongStarEl = document.getElementById("wrong-star-count");
+            if (wrongStarEl) wrongStarEl.innerText = stars;
         }
 
         const LOTTERY_PRIZES = [
