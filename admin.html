@@ -51,11 +51,6 @@ table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { padding: 8px 12px; border: 1px solid #eee; text-align: left; }
 th { background: #f5f5f5; font-weight: 600; color: #555; position: sticky; top: 0; }
 tr:hover { background: #f8f9fa; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-.badge-green { background: #e6f4ea; color: #1e7e34; }
-.badge-red { background: #fce8e6; color: #c5221f; }
-.badge-blue { background: #e8f0fe; color: #1a73e8; }
-.badge-yellow { background: #fef7e0; color: #b06000; }
 .search-box { margin-bottom: 12px; }
 .search-box input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
 .search-box input:focus { outline: none; border-color: #1a73e8; }
@@ -69,9 +64,32 @@ tr:hover { background: #f8f9fa; }
 .toast-error { background: #ef5350; }
 .toast-warning { background: #f9ab00; }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.login-screen { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #1a73e8, #34a853); }
+.login-box { background: #fff; border-radius: 16px; padding: 40px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; }
+.login-box h1 { font-size: 24px; margin-bottom: 8px; color: #333; }
+.login-box p { color: #999; font-size: 14px; margin-bottom: 24px; }
+.login-box input { width: 100%; padding: 12px 16px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 16px; text-align: center; letter-spacing: 4px; }
+.login-box input:focus { outline: none; border-color: #1a73e8; }
+.login-box .btn { width: 100%; padding: 12px; font-size: 16px; }
+.login-error { color: #ef5350; font-size: 13px; margin-top: 8px; display: none; }
+#admin-content { display: none; }
 </style>
 </head>
 <body>
+
+<div class="login-screen" id="login-screen">
+    <div class="login-box">
+        <h1>🔒 管理后台</h1>
+        <p>请输入管理密码</p>
+        <input type="password" id="login-password" placeholder="请输入密码" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="btn btn-primary" onclick="doLogin()">验证登录</button>
+        <div class="login-error" id="login-error">密码错误，请重试</div>
+        <div style="margin-top:16px;"><a href="danci.html" style="color:#1a73e8;font-size:13px;">← 返回主页面</a></div>
+    </div>
+</div>
+
+<div id="admin-content">
 <div class="header">
     <h1>🔧 数据管理后台</h1>
     <a href="danci.html" class="back">← 返回主页面</a>
@@ -106,6 +124,7 @@ tr:hover { background: #f8f9fa; }
     <div class="panel" id="panel-words"></div>
     <div class="panel" id="panel-raw"></div>
 </div>
+</div>
 
 <div class="modal-overlay" id="edit-modal">
     <div class="modal-box">
@@ -119,6 +138,38 @@ tr:hover { background: #f8f9fa; }
 </div>
 
 <script>
+const PASSWORD_HASH = 'ba4bc8bc08e87b8f509310eef8ac3a65ba8b677de3818c15f635ee8ddfb06ef5';
+let isAuthenticated = false;
+
+async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function doLogin() {
+    let pwd = document.getElementById('login-password').value;
+    if (!pwd) return;
+    let hash = await sha256(pwd);
+    if (hash === PASSWORD_HASH) {
+        isAuthenticated = true;
+        sessionStorage.setItem('admin_auth', '1');
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('admin-content').style.display = 'block';
+        renderOverview();
+    } else {
+        document.getElementById('login-error').style.display = 'block';
+        document.getElementById('login-password').value = '';
+        setTimeout(() => { document.getElementById('login-error').style.display = 'none'; }, 3000);
+    }
+}
+
+if (sessionStorage.getItem('admin_auth') === '1') {
+    isAuthenticated = true;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-content').style.display = 'block';
+    renderOverview();
+}
+
 const KEYS = { A: 'wuserA', B: 'wuserB', words: 'ALL_WORDS_DATA', theme: 'wtheme' };
 
 function getStudent(who) {
@@ -592,8 +643,6 @@ function showToast(msg, type) {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 3000);
 }
-
-renderOverview();
 </script>
 </body>
 </html>
