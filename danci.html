@@ -4238,10 +4238,10 @@
             wrongExamAnswers.push({ idx: item.idx, word: item.word, input: input.trim(), correct: result.correct, simScore: scorePct });
             let fb = document.getElementById("wrong-feedback");
             fb.style.display = 'block';
-            let u = safeUser(getUser());
             if (result.correct) {
                 playSound('correct');
                 addComboStar();
+                let u = safeUser(getUser());
                 let info = u.wrongPool[item.idx];
                 if (info) {
                     info.c += 1;
@@ -4256,16 +4256,18 @@
                         fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，状态：${WRONG_STATUS[Math.min(info.c, 2)]}(${info.c}/3)`;
                     }
                 }
+                setUser(u);
             } else {
                 playSound('wrong');
                 resetCombo();
+                let u = safeUser(getUser());
                 let info = u.wrongPool[item.idx];
                 if (info) info.c = 0;
                 fb.style.background = '#ffcdd2';
                 fb.style.color = '#c5221f';
                 fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? item.word.meaning : item.word.word}</strong>，计数已重置`;
+                setUser(u);
             }
-            setUser(u);
             document.getElementById("wrong-answer").disabled = true;
             setTimeout(() => {
                 wrongExamIndex++;
@@ -4298,6 +4300,7 @@
             let total = wrongExamAnswers.length;
             toast(`错题重考完成！正确 ${correctCount}/${total}`, correctCount === total ? 'success' : 'info');
             renderWrongPool();
+            renderStarDisplay();
         }
 
         function renderExamScores() {
