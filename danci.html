@@ -637,6 +637,59 @@
             border: 1px solid #ffc75f;
         }
 
+        .reminder-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 2px solid #ffc75f;
+            background: #fffde7;
+            transition: all 0.3s;
+        }
+
+        .reminder-item.reminder-done {
+            border-color: #66bb6a;
+            background: #e8f5e9;
+            opacity: 0.6;
+        }
+
+        .reminder-item.reminder-urgent {
+            border-color: #ef5350;
+            background: #fff3e0;
+            animation: reminderPulse 2s infinite;
+        }
+
+        .reminder-icon {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .reminder-content {
+            flex: 1;
+        }
+
+        .reminder-title {
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+
+        .reminder-desc {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .reminder-action {
+            flex-shrink: 0;
+        }
+
+        @keyframes reminderPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.3); }
+            50% { box-shadow: 0 0 12px 4px rgba(239, 83, 80, 0.2); }
+        }
+
         @media (max-width: 768px) {
             .top {
                 height: 50px;
@@ -1158,6 +1211,22 @@
             border-color: #34a853;
             color: #1e7e34;
         }
+        [data-theme="simple"] .reminder-item {
+            border-color: #ddd;
+            background: #fff;
+            border-radius: 8px;
+        }
+        [data-theme="simple"] .reminder-item.reminder-done {
+            border-color: #34a853;
+            background: #e6f4ea;
+        }
+        [data-theme="simple"] .reminder-item.reminder-urgent {
+            border-color: #ea4335;
+            background: #fce8e6;
+        }
+        [data-theme="simple"] #reminder-countdown {
+            background: #e6f4ea !important;
+        }
         [data-theme="simple"] .toast-item {
             pointer-events: auto;
             padding: 12px 24px;
@@ -1284,10 +1353,10 @@
     <div class="container">
         <!-- 首页 -->
         <div class="page" id="page-home">
-            <div class="card">
-                <h2>📌 今日待复习</h2>
-                <p>今日需复习：<span id="today-count" style="font-weight:bold;color:red">0</span> 个</p>
-                <button class="btn btn-blue" onclick="show('plan')">前往复习</button>
+            <div class="card" id="reminder-card">
+                <h2>📋 今日任务提醒</h2>
+                <div id="reminder-list"></div>
+                <div id="reminder-countdown" style="display:none;margin-top:12px;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#fff3e0,#ffe0b2);font-size:13px;"></div>
             </div>
             <div class="card">
                 <h2>📊 同学 A / B 学习对比</h2>
@@ -1844,14 +1913,14 @@
         }
 
         const LOTTERY_PRIZES = [
-            { emoji: '🍔', name: '汉堡', weight: 0.05, type: 'good' },
-            { emoji: '🍗', name: '鸡腿', weight: 0.05, type: 'good' },
-            { emoji: '🖊️', name: '圆珠笔', weight: 0.1, type: 'good' },
-            { emoji: '📓', name: '记事本', weight: 0.1, type: 'good' },
-            { emoji: '🍭', name: '棒棒糖', weight: 0.2, type: 'good' },
-            { emoji: '🫧', name: '泡泡糖', weight: 0.2, type: 'good' },
-            { emoji: '💔', name: '积分减20', weight: 0.1, type: 'bad' },
-            { emoji: '💨', name: '什么也没有', weight: 0.9, type: 'neutral' }
+            { emoji: '🍔', name: '汉堡', weight: 0.005, type: 'good' },
+            { emoji: '🍗', name: '鸡腿', weight: 0.005, type: 'good' },
+            { emoji: '🖊️', name: '圆珠笔', weight: 0.01, type: 'good' },
+            { emoji: '📓', name: '记事本', weight: 0.01, type: 'good' },
+            { emoji: '🍭', name: '棒棒糖', weight: 0.02, type: 'good' },
+            { emoji: '🫧', name: '泡泡糖', weight: 0.02, type: 'good' },
+            { emoji: '💔', name: '积分减20', weight: 0.01, type: 'bad' },
+            { emoji: '💨', name: '什么也没有', weight: 9.8, type: 'neutral' }
         ];
 
         let lotterySpinning = false;
@@ -2783,8 +2852,114 @@
         }
 
         function renderToday() {
-            let cnt = getTodayTasks().length;
-            document.getElementById("today-count").innerText = cnt;
+            let u = safeUser(getUser());
+            let today = todayKey();
+            let dailyLog = u.dailyLog[today] || { learn: 0, review: 0 };
+            let reviewCount = getTodayTasks().length;
+            let todayLearn = dailyLog.learn || 0;
+            let todayReview = dailyLog.review || 0;
+            let todayExamScores = (u.examScores || []).filter(s => s.date === today);
+            let learnDone = todayLearn >= 10;
+            let reviewDone = todayReview > 0;
+            let examDone = todayExamScores.length > 0;
+            let allDone = learnDone && reviewDone && examDone;
+
+            let reminders = [];
+
+            reminders.push({
+                icon: '📚',
+                title: '学习任务',
+                desc: learnDone
+                    ? `✅ 今日已学习 ${todayLearn} 个单词，任务完成！`
+                    : `今日已学习 ${todayLearn}/10 个单词，完成10个奖励30⭐`,
+                done: learnDone,
+                urgent: !learnDone,
+                action: learnDone ? null : { label: '去学习', fn: "show('lib')" },
+                potentialStars: learnDone ? 0 : 30
+            });
+
+            reminders.push({
+                icon: '🔄',
+                title: '复习任务',
+                desc: reviewDone
+                    ? `✅ 今日已完成复习，任务完成！`
+                    : `今日待复习 ${reviewCount} 个单词，完成复习奖励30⭐`,
+                done: reviewDone,
+                urgent: !reviewDone && reviewCount > 0,
+                action: reviewDone ? null : (reviewCount > 0 ? { label: '去复习', fn: "startReviewSession()" } : null),
+                potentialStars: reviewDone ? 0 : 30
+            });
+
+            reminders.push({
+                icon: '📝',
+                title: '考试任务',
+                desc: examDone
+                    ? `✅ 今日已完成考试，任务完成！`
+                    : `完成一次考试奖励50⭐`,
+                done: examDone,
+                urgent: !examDone,
+                action: examDone ? null : { label: '去考试', fn: "show('exam')" },
+                potentialStars: examDone ? 0 : 50
+            });
+
+            let el = document.getElementById("reminder-list");
+            if (!el) return;
+
+            if (allDone) {
+                el.innerHTML = `<div style="text-align:center;padding:20px;">
+                    <div style="font-size:48px;margin-bottom:8px;">🎉</div>
+                    <div style="font-size:18px;font-weight:bold;color:#66bb6a;">今日任务全部完成！</div>
+                    <div style="font-size:13px;color:#999;margin-top:4px;">太棒了，继续保持！</div>
+                </div>`;
+                document.getElementById("reminder-card").style.display = '';
+                document.getElementById("reminder-countdown").style.display = 'none';
+                return;
+            }
+
+            let html = '';
+            reminders.forEach(r => {
+                let cls = 'reminder-item';
+                if (r.done) cls += ' reminder-done';
+                else if (r.urgent) cls += ' reminder-urgent';
+                let actionHtml = '';
+                if (r.action) {
+                    actionHtml = `<div class="reminder-action"><button class="btn btn-green" onclick="${r.action.fn}" style="padding:6px 16px;font-size:13px;border-radius:20px;">${r.action.label}</button></div>`;
+                }
+                html += `<div class="${cls}">
+                    <div class="reminder-icon">${r.icon}</div>
+                    <div class="reminder-content">
+                        <div class="reminder-title">${r.title}${r.done ? ' ✅' : ''}</div>
+                        <div class="reminder-desc">${r.desc}</div>
+                    </div>
+                    ${actionHtml}
+                </div>`;
+            });
+            el.innerHTML = html;
+
+            let totalPotential = reminders.reduce((s, r) => s + r.potentialStars, 0);
+            if (totalPotential > 0) {
+                let countdownEl = document.getElementById("reminder-countdown");
+                let now = new Date();
+                let midnight = new Date(now);
+                midnight.setHours(24, 0, 0, 0);
+                let diff = midnight - now;
+                let hours = Math.floor(diff / 3600000);
+                let minutes = Math.floor((diff % 3600000) / 60000);
+                let seconds = Math.floor((diff % 60000) / 1000);
+                let timeStr = `${hours}小时${minutes}分${seconds}秒`;
+                countdownEl.innerHTML = `⏰ 距今日过期还有 <strong style="color:#ef5350;">${timeStr}</strong>，未完成将损失 <strong style="color:#ef5350;">${totalPotential}⭐</strong>，尽快完成哦，加油！💪`;
+                countdownEl.style.display = 'block';
+            } else {
+                document.getElementById("reminder-countdown").style.display = 'none';
+            }
+        }
+
+        let reminderTimer = null;
+        function startReminderTimer() {
+            if (reminderTimer) clearInterval(reminderTimer);
+            reminderTimer = setInterval(() => {
+                renderToday();
+            }, 1000);
         }
 
         function renderTodayList() {
@@ -4072,6 +4247,7 @@
             loadRelations();
             applyTheme(currentTheme);
             show("home");
+            startReminderTimer();
         };
     </script>
 </body>
