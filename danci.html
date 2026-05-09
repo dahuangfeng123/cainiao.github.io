@@ -1382,17 +1382,22 @@
                 <div style="text-align:center;margin-bottom:12px;">
                     <span style="font-size:14px;color:#666;">当前星星：</span>
                     <span id="lottery-stars" style="font-size:20px;font-weight:bold;color:#fbbc04;">0</span>
-                    <span style="font-size:14px;color:#666;margin-left:16px;">抽奖消耗：10⭐</span>
+                    <span style="font-size:14px;color:#666;margin-left:16px;">抽奖消耗：50⭐</span>
                 </div>
                 <div id="lottery-box" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
                 </div>
                 <div id="lottery-result" style="display:none;text-align:center;padding:20px;border-radius:16px;margin-bottom:12px;font-size:22px;font-weight:bold;animation:lotteryPop 0.5s ease;"></div>
                 <div style="text-align:center;">
-                    <button class="btn btn-green" onclick="doLottery()" id="lottery-btn" style="padding:12px 40px;font-size:18px;border-radius:30px;">🎰 抽奖（10⭐）</button>
+                    <button class="btn btn-green" onclick="doLottery()" id="lottery-btn" style="padding:12px 40px;font-size:18px;border-radius:30px;">🎰 抽奖（50⭐）</button>
                 </div>
                 <div style="margin-top:16px;">
                     <h3 style="font-size:15px;margin-bottom:8px;">🎁 我的奖品</h3>
                     <div id="my-prizes" style="font-size:13px;color:#666;">暂无奖品</div>
+                </div>
+                <div style="margin-top:16px;border-top:1px dashed #ffc75f;padding-top:14px;">
+                    <h3 style="font-size:15px;margin-bottom:8px;">🛒 星星兑奖</h3>
+                    <div id="redeem-list" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
+                    <div id="redeem-result" style="display:none;text-align:center;padding:12px;border-radius:12px;margin-top:10px;font-size:14px;font-weight:bold;"></div>
                 </div>
             </div>
             <div class="card">
@@ -1414,15 +1419,24 @@
                     </ul>
                     <h3 style="font-size:15px;color:#ffc75f;margin-bottom:6px;">🎰 抽奖规则</h3>
                     <ul style="padding-left:20px;margin-bottom:12px;">
-                        <li>每次抽奖消耗 10⭐</li>
-                        <li>🍔 汉堡 — 中奖率约 3%</li>
-                        <li>🍗 鸡腿 — 中奖率约 3%</li>
-                        <li>🖊️ 圆珠笔 — 中奖率约 6%</li>
-                        <li>📓 记事本 — 中奖率约 6%</li>
-                        <li>🍭 棒棒糖 — 中奖率约 12%</li>
-                        <li>🫧 泡泡糖 — 中奖率约 12%</li>
-                        <li>💔 积分减20 — 中奖率约 6%</li>
-                        <li>💨 什么也没有 — 中奖率约 53%</li>
+                        <li>每次抽奖消耗 50⭐</li>
+                        <li>🍔 汉堡 — 中奖率约 1%</li>
+                        <li>🍗 鸡腿 — 中奖率约 1%</li>
+                        <li>🖊️ 圆珠笔 — 中奖率约 2%</li>
+                        <li>📓 记事本 — 中奖率约 2%</li>
+                        <li>🍭 棒棒糖 — 中奖率约 5%</li>
+                        <li>🫧 泡泡糖 — 中奖率约 5%</li>
+                        <li>💔 积分减30 — 中奖率约 15%</li>
+                        <li>💨 什么也没有 — 中奖率约 69%</li>
+                    </ul>
+                    <h3 style="font-size:15px;color:#66bb6a;margin-bottom:6px;">🛒 兑奖规则</h3>
+                    <ul style="padding-left:20px;margin-bottom:12px;">
+                        <li>🍔 汉堡 — 1000⭐</li>
+                        <li>🍗 鸡腿 — 900⭐</li>
+                        <li>🖊️ 圆珠笔 — 800⭐</li>
+                        <li>📓 记事本 — 800⭐</li>
+                        <li>🍭 棒棒糖 — 200⭐</li>
+                        <li>🫧 泡泡糖 — 100⭐</li>
                     </ul>
                     <p style="color:#999;font-size:12px;">⚠️ 复习中途退出，已获得的星星不会被保存</p>
                 </div>
@@ -1913,14 +1927,14 @@
         }
 
         const LOTTERY_PRIZES = [
-            { emoji: '🍔', name: '汉堡', weight: 0.005, type: 'good' },
-            { emoji: '🍗', name: '鸡腿', weight: 0.005, type: 'good' },
-            { emoji: '🖊️', name: '圆珠笔', weight: 0.01, type: 'good' },
-            { emoji: '📓', name: '记事本', weight: 0.01, type: 'good' },
-            { emoji: '🍭', name: '棒棒糖', weight: 0.02, type: 'good' },
-            { emoji: '🫧', name: '泡泡糖', weight: 0.02, type: 'good' },
-            { emoji: '💔', name: '积分减20', weight: 0.01, type: 'bad' },
-            { emoji: '💨', name: '什么也没有', weight: 9.8, type: 'neutral' }
+            { emoji: '🍔', name: '汉堡', weight: 0.01, type: 'good' },
+            { emoji: '🍗', name: '鸡腿', weight: 0.01, type: 'good' },
+            { emoji: '🖊️', name: '圆珠笔', weight: 0.02, type: 'good' },
+            { emoji: '📓', name: '记事本', weight: 0.02, type: 'good' },
+            { emoji: '🍭', name: '棒棒糖', weight: 0.05, type: 'good' },
+            { emoji: '🫧', name: '泡泡糖', weight: 0.05, type: 'good' },
+            { emoji: '💔', name: '积分减30', weight: 0.15, type: 'bad' },
+            { emoji: '💨', name: '什么也没有', weight: 0.69, type: 'neutral' }
         ];
 
         let lotterySpinning = false;
@@ -1936,12 +1950,12 @@
         function doLottery() {
             if (lotterySpinning) return;
             let u = safeUser(getUser());
-            if ((u.stars || 0) < 10) {
-                toast('星星不足10个，无法抽奖', 'warning');
+            if ((u.stars || 0) < 50) {
+                toast('星星不足50个，无法抽奖', 'warning');
                 return;
             }
             lotterySpinning = true;
-            u.stars -= 10;
+            u.stars -= 50;
             setUser(u);
             renderStarDisplay();
 
@@ -1972,7 +1986,7 @@
                     let prize = LOTTERY_PRIZES[hitIndex];
                     u = safeUser(getUser());
                     if (prize.type === 'bad') {
-                        u.stars = Math.max(0, (u.stars || 0) - 20);
+                        u.stars = Math.max(0, (u.stars || 0) - 30);
                         setUser(u);
                         resultEl.style.background = '#ffcdd2';
                         resultEl.style.color = '#c5221f';
@@ -2010,17 +2024,66 @@
             let prizes = u.prizes || [];
             if (prizes.length === 0) {
                 el.innerHTML = '暂无奖品';
+            } else {
+                let counts = {};
+                prizes.forEach(p => {
+                    let key = p.emoji + p.name;
+                    if (!counts[key]) counts[key] = { emoji: p.emoji, name: p.name, count: 0 };
+                    counts[key].count++;
+                });
+                el.innerHTML = Object.values(counts).map(c =>
+                    `<span class="prize-tag">${c.emoji} ${c.name} ×${c.count}</span>`
+                ).join('');
+            }
+            renderRedeemList();
+        }
+
+        const REDEEM_ITEMS = [
+            { emoji: '🍔', name: '汉堡', cost: 1000 },
+            { emoji: '🍗', name: '鸡腿', cost: 900 },
+            { emoji: '🖊️', name: '圆珠笔', cost: 800 },
+            { emoji: '📓', name: '记事本', cost: 800 },
+            { emoji: '🍭', name: '棒棒糖', cost: 200 },
+            { emoji: '🫧', name: '泡泡糖', cost: 100 }
+        ];
+
+        function renderRedeemList() {
+            let el = document.getElementById("redeem-list");
+            if (!el) return;
+            let u = safeUser(getUser());
+            let stars = u.stars || 0;
+            el.innerHTML = REDEEM_ITEMS.map(item => {
+                let canAfford = stars >= item.cost;
+                return `<div class="lottery-item" style="${canAfford ? '' : 'opacity:0.4;cursor:not-allowed;'}" onclick="${canAfford ? `redeemPrize('${item.name}',${item.cost})` : ''}">
+                    <span class="lottery-emoji">${item.emoji}</span>
+                    <span style="font-size:11px;">${item.cost}⭐</span>
+                </div>`;
+            }).join('');
+        }
+
+        function redeemPrize(name, cost) {
+            let u = safeUser(getUser());
+            if ((u.stars || 0) < cost) {
+                toast('星星不足，无法兑奖', 'warning');
                 return;
             }
-            let counts = {};
-            prizes.forEach(p => {
-                let key = p.emoji + p.name;
-                if (!counts[key]) counts[key] = { emoji: p.emoji, name: p.name, count: 0 };
-                counts[key].count++;
-            });
-            el.innerHTML = Object.values(counts).map(c =>
-                `<span class="prize-tag">${c.emoji} ${c.name} ×${c.count}</span>`
-            ).join('');
+            let item = REDEEM_ITEMS.find(i => i.name === name);
+            if (!item) return;
+            u.stars -= cost;
+            if (!u.prizes) u.prizes = [];
+            u.prizes.push({ emoji: item.emoji, name: item.name, date: todayKey() });
+            setUser(u);
+            let resultEl = document.getElementById("redeem-result");
+            resultEl.style.display = 'block';
+            resultEl.style.background = 'linear-gradient(135deg, #fff9c4, #c8e6c9)';
+            resultEl.style.color = '#1e7e34';
+            resultEl.innerHTML = `🎉 兑奖成功！${item.emoji} ${item.name}，消耗 ${cost}⭐`;
+            resultEl.style.animation = 'none';
+            resultEl.offsetHeight;
+            resultEl.style.animation = 'lotteryPop 0.5s ease';
+            playSound('victory');
+            renderStarDisplay();
+            renderPrizes();
         }
 
         const PERIOD = [0, 1, 2, 4, 7, 15, 30];
@@ -2858,7 +2921,11 @@
             let reviewCount = getTodayTasks().length;
             let todayLearn = dailyLog.learn || 0;
             let todayReview = dailyLog.review || 0;
-            let todayExamScores = (u.examScores || []).filter(s => s.date === today);
+            let todayExamScores = (u.examScores || []).filter(s => {
+                if (!s.date) return false;
+                let d = new Date(s.date);
+                return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') === today;
+            });
             let learnDone = todayLearn >= 10;
             let reviewDone = todayReview > 0;
             let examDone = todayExamScores.length > 0;
@@ -3881,8 +3948,16 @@
             document.getElementById("exam-progress").style.display = "none";
             document.getElementById("exam-result").style.display = "block";
             document.getElementById("wrong-pool-card").style.display = "block";
+            let todayStr = todayKey();
+            let existingTodayScores = (safeUser(getUser()).examScores || []).filter(s => {
+                if (!s.date) return false;
+                let d = new Date(s.date);
+                return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') === todayStr;
+            });
             saveExamScore(score, correctCount, examWords.length, mode, duration);
-            addStars(50, '考试完成！');
+            if (existingTodayScores.length === 0) {
+                addStars(50, '考试完成！');
+            }
             let u = safeUser(getUser());
             examAnswers.forEach(a => {
                 if (a.simScore < 100 && !u.wrongPool[a.idx]) {
