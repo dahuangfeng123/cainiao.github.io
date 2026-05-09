@@ -2819,6 +2819,7 @@
             if (result.correct) {
                 playSound('correct');
                 addComboStar();
+                recordDaily('review');
                 fb.style.background = '#c8e6c9';
                 fb.style.color = '#1e7e34';
                 fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
@@ -2914,7 +2915,6 @@
             reviewPendingStars = 0;
             reviewPendingCombo = 0;
             setUser(u);
-            if (reviewed.length > 0) recordDaily('review');
             if (reviewed.length > 0) addStars(30, '复习任务完成！');
             closeModal();
             renderAll();
