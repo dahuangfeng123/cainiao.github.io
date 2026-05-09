@@ -1445,18 +1445,20 @@
                     <ul style="padding-left:20px;margin-bottom:12px;">
                         <li>每次抽奖消耗 50⭐</li>
                         <li>🍔 汉堡 — 中奖率约 1%</li>
+                        <li>🍦 冰激凌 — 中奖率约 1%</li>
                         <li>🍗 鸡腿 — 中奖率约 1%</li>
                         <li>🖊️ 圆珠笔 — 中奖率约 2%</li>
                         <li>📓 记事本 — 中奖率约 2%</li>
                         <li>🍭 棒棒糖 — 中奖率约 5%</li>
                         <li>🫧 泡泡糖 — 中奖率约 5%</li>
                         <li>💔 积分减30 — 中奖率约 15%</li>
-                        <li>💨 什么也没有 — 中奖率约 69%</li>
+                        <li>💨 什么也没有 — 中奖率约 68%</li>
                     </ul>
                     <h3 style="font-size:15px;color:#66bb6a;margin-bottom:6px;">🛒 兑奖规则</h3>
                     <ul style="padding-left:20px;margin-bottom:12px;">
                         <li>🌟 心愿大奖 — 30000⭐（满足一次心愿）</li>
                         <li>🍔 汉堡 — 2000⭐</li>
+                        <li>🍦 冰激凌 — 1800⭐</li>
                         <li>🍗 鸡腿 — 1800⭐</li>
                         <li>🖊️ 圆珠笔 — 1600⭐</li>
                         <li>📓 记事本 — 1600⭐</li>
@@ -1944,11 +1946,13 @@
         function resetCombo() {
             if (isInReview) {
                 reviewPendingCombo = 0;
+                renderStarDisplay();
                 return;
             }
             let u = safeUser(getUser());
             u.combo = 0;
             setUser(u);
+            renderStarDisplay();
         }
 
         function showStarAnimation(count, reason) {
@@ -1975,13 +1979,14 @@
 
         const LOTTERY_PRIZES = [
             { emoji: '🍔', name: '汉堡', weight: 0.01, type: 'good' },
+            { emoji: '🍦', name: '冰激凌', weight: 0.01, type: 'good' },
             { emoji: '🍗', name: '鸡腿', weight: 0.01, type: 'good' },
             { emoji: '🖊️', name: '圆珠笔', weight: 0.02, type: 'good' },
             { emoji: '📓', name: '记事本', weight: 0.02, type: 'good' },
             { emoji: '🍭', name: '棒棒糖', weight: 0.05, type: 'good' },
             { emoji: '🫧', name: '泡泡糖', weight: 0.05, type: 'good' },
             { emoji: '💔', name: '积分减30', weight: 0.15, type: 'bad' },
-            { emoji: '💨', name: '什么也没有', weight: 0.69, type: 'neutral' }
+            { emoji: '💨', name: '什么也没有', weight: 0.68, type: 'neutral' }
         ];
 
         let lotterySpinning = false;
@@ -2106,6 +2111,7 @@
         const REDEEM_ITEMS = [
             { emoji: '🌟', name: '心愿大奖', cost: 30000 },
             { emoji: '🍔', name: '汉堡', cost: 2000 },
+            { emoji: '🍦', name: '冰激凌', cost: 1800 },
             { emoji: '🍗', name: '鸡腿', cost: 1800 },
             { emoji: '🖊️', name: '圆珠笔', cost: 1600 },
             { emoji: '📓', name: '记事本', cost: 1600 },
@@ -2672,8 +2678,8 @@
                 u.log[idx] = { t: now, c: 1, next: nextTs };
                 setUser(u);
                 recordDaily('learn');
+                u = safeUser(getUser());
                 
-                // 检查今日学习是否达到10个的倍数
                 let todayLearn = (u.dailyLog[today]?.learn || 0);
                 let todayMilestone = Math.floor(todayLearn / 10);
                 let lastTodayMilestone = u.lastTodayMilestone || {};
@@ -2827,6 +2833,7 @@
 
         function viewReviewAns() {
             if (!curr) return;
+            resetCombo();
             let w = curr.item;
             document.getElementById("ans-show").innerText = `${w.word}\n${w.meaning}`;
             document.getElementById("btn-submit-review").disabled = true;
@@ -2838,6 +2845,7 @@
 
         function skipReviewWord() {
             if (reviewIndex >= reviewQueue.length) return;
+            resetCombo();
             let idx = reviewQueue.splice(reviewIndex, 1)[0];
             reviewQueue.push(idx);
             renderReviewWord();
@@ -4023,6 +4031,7 @@
 
         function skipExamAnswer() {
             if (examSubmitted || examIndex >= examWords.length) return;
+            resetCombo();
             if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
             let w = examWords[examIndex].word;
             examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: "", correct: false, simScore: 0, skipped: true });
@@ -4252,6 +4261,7 @@
 
         function skipWrongAnswer() {
             if (wrongExamIndex >= wrongExamList.length) return;
+            resetCombo();
             let item = wrongExamList[wrongExamIndex];
             let u = safeUser(getUser());
             let info = u.wrongPool[item.idx];
