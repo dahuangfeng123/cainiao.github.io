@@ -1649,6 +1649,20 @@
         }
 
         function addComboStar() {
+            if (isInReview) {
+                reviewPendingCombo++;
+                let bonus = 0;
+                if (reviewPendingCombo === 3) bonus = 5;
+                else if (reviewPendingCombo === 10) bonus = 20;
+                else if (reviewPendingCombo > 10 && reviewPendingCombo % 10 === 0) bonus = 20;
+                reviewPendingStars += 1 + bonus;
+                if (bonus > 0) {
+                    showStarAnimation(1 + bonus, '连击' + reviewPendingCombo + '次！+' + (1 + bonus) + '星');
+                } else {
+                    showStarAnimation(1, '+1星');
+                }
+                return;
+            }
             let u = safeUser(getUser());
             u.combo = (u.combo || 0) + 1;
             let bonus = 0;
@@ -1666,6 +1680,10 @@
         }
 
         function resetCombo() {
+            if (isInReview) {
+                reviewPendingCombo = 0;
+                return;
+            }
             let u = safeUser(getUser());
             u.combo = 0;
             setUser(u);
@@ -2217,6 +2235,9 @@
         let reviewIndex = 0;
         let reviewPassed = {};
         let reviewViewedAns = false;
+        let reviewPendingStars = 0;
+        let reviewPendingCombo = 0;
+        let isInReview = false;
 
         function startReviewSession() {
             let tasks = getTodayTasks();
@@ -2226,6 +2247,9 @@
             reviewIndex = 0;
             reviewPassed = {};
             reviewViewedAns = false;
+            reviewPendingStars = 0;
+            reviewPendingCombo = 0;
+            isInReview = true;
             setMode(1);
             document.getElementById("modal").style.display = "flex";
             renderReviewWord();
@@ -2381,6 +2405,13 @@
                     log.next = d.getTime();
                 }
             });
+            if (reviewPendingStars > 0) {
+                u.stars = (u.stars || 0) + reviewPendingStars;
+            }
+            u.combo = reviewPendingCombo;
+            isInReview = false;
+            reviewPendingStars = 0;
+            reviewPendingCombo = 0;
             setUser(u);
             if (reviewed.length > 0) recordDaily('review');
             if (reviewed.length > 0) addStars(30, '复习任务完成！');
@@ -2401,12 +2432,21 @@
             reviewIndex = 0;
             reviewPassed = {};
             reviewViewedAns = false;
+            reviewPendingStars = 0;
+            reviewPendingCombo = 0;
+            isInReview = true;
             setMode(1);
             document.getElementById("modal").style.display = "flex";
             renderReviewWord();
         }
 
         function closeModal() {
+            if (isInReview && reviewPendingStars > 0) {
+                toast('复习未完成，' + reviewPendingStars + '颗星星未保存', 'warning');
+            }
+            isInReview = false;
+            reviewPendingStars = 0;
+            reviewPendingCombo = 0;
             document.getElementById("modal").style.display = "none";
             curr = null;
         }
