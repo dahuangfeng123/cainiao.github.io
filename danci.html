@@ -1378,26 +1378,26 @@
                 </div>
             </div>
             <div class="card">
-                <h2>🎰 星星抽奖</h2>
+                <h2>🎰 星星奖品</h2>
                 <div style="text-align:center;margin-bottom:12px;">
                     <span style="font-size:14px;color:#666;">当前星星：</span>
                     <span id="lottery-stars" style="font-size:20px;font-weight:bold;color:#fbbc04;">0</span>
-                    <span style="font-size:14px;color:#666;margin-left:16px;">抽奖消耗：50⭐</span>
                 </div>
                 <div id="lottery-box" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
                 </div>
                 <div id="lottery-result" style="display:none;text-align:center;padding:20px;border-radius:16px;margin-bottom:12px;font-size:22px;font-weight:bold;animation:lotteryPop 0.5s ease;"></div>
-                <div style="text-align:center;">
-                    <button class="btn btn-green" onclick="doLottery()" id="lottery-btn" style="padding:12px 40px;font-size:18px;border-radius:30px;">🎰 抽奖（50⭐）</button>
+                <div style="text-align:center;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                    <button class="btn btn-green" onclick="doLottery()" id="lottery-btn" style="padding:12px 32px;font-size:18px;border-radius:30px;">🎰 抽奖（50⭐）</button>
+                    <button class="btn btn-blue" onclick="showRedeem()" id="redeem-btn" style="padding:12px 32px;font-size:18px;border-radius:30px;">🛒 兑奖</button>
+                </div>
+                <div id="redeem-panel" style="display:none;margin-top:16px;border-top:1px dashed #ffc75f;padding-top:14px;">
+                    <h3 style="font-size:15px;margin-bottom:8px;">🛒 选择奖品兑换</h3>
+                    <div id="redeem-list" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
+                    <div id="redeem-result" style="display:none;text-align:center;padding:12px;border-radius:12px;margin-top:10px;font-size:14px;font-weight:bold;"></div>
                 </div>
                 <div style="margin-top:16px;">
                     <h3 style="font-size:15px;margin-bottom:8px;">🎁 我的奖品</h3>
                     <div id="my-prizes" style="font-size:13px;color:#666;">暂无奖品</div>
-                </div>
-                <div style="margin-top:16px;border-top:1px dashed #ffc75f;padding-top:14px;">
-                    <h3 style="font-size:15px;margin-bottom:8px;">🛒 星星兑奖</h3>
-                    <div id="redeem-list" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
-                    <div id="redeem-result" style="display:none;text-align:center;padding:12px;border-radius:12px;margin-top:10px;font-size:14px;font-weight:bold;"></div>
                 </div>
             </div>
             <div class="card">
@@ -1431,12 +1431,12 @@
                     </ul>
                     <h3 style="font-size:15px;color:#66bb6a;margin-bottom:6px;">🛒 兑奖规则</h3>
                     <ul style="padding-left:20px;margin-bottom:12px;">
-                        <li>🍔 汉堡 — 1000⭐</li>
-                        <li>🍗 鸡腿 — 900⭐</li>
-                        <li>🖊️ 圆珠笔 — 800⭐</li>
-                        <li>📓 记事本 — 800⭐</li>
-                        <li>🍭 棒棒糖 — 200⭐</li>
-                        <li>🫧 泡泡糖 — 100⭐</li>
+                        <li>🍔 汉堡 — 2000⭐</li>
+                        <li>🍗 鸡腿 — 1800⭐</li>
+                        <li>🖊️ 圆珠笔 — 1600⭐</li>
+                        <li>📓 记事本 — 1600⭐</li>
+                        <li>🍭 棒棒糖 — 400⭐</li>
+                        <li>🫧 泡泡糖 — 200⭐</li>
                     </ul>
                     <p style="color:#999;font-size:12px;">⚠️ 复习中途退出，已获得的星星不会被保存</p>
                 </div>
@@ -2039,13 +2039,19 @@
         }
 
         const REDEEM_ITEMS = [
-            { emoji: '🍔', name: '汉堡', cost: 1000 },
-            { emoji: '🍗', name: '鸡腿', cost: 900 },
-            { emoji: '🖊️', name: '圆珠笔', cost: 800 },
-            { emoji: '📓', name: '记事本', cost: 800 },
-            { emoji: '🍭', name: '棒棒糖', cost: 200 },
-            { emoji: '🫧', name: '泡泡糖', cost: 100 }
+            { emoji: '🍔', name: '汉堡', cost: 2000 },
+            { emoji: '🍗', name: '鸡腿', cost: 1800 },
+            { emoji: '🖊️', name: '圆珠笔', cost: 1600 },
+            { emoji: '📓', name: '记事本', cost: 1600 },
+            { emoji: '🍭', name: '棒棒糖', cost: 400 },
+            { emoji: '🫧', name: '泡泡糖', cost: 200 }
         ];
+
+        function showRedeem() {
+            let panel = document.getElementById("redeem-panel");
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            if (panel.style.display === 'block') renderRedeemList();
+        }
 
         function renderRedeemList() {
             let el = document.getElementById("redeem-list");
