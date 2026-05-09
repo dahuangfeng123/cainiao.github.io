@@ -628,13 +628,36 @@
         }
 
         .prize-tag {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
             padding: 3px 10px;
             border-radius: 12px;
             margin: 3px;
             font-size: 12px;
             background: #fff9c4;
             border: 1px solid #ffc75f;
+            position: relative;
+            gap: 4px;
+        }
+
+        .prize-tag .prize-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ef5350;
+            color: #fff;
+            font-size: 10px;
+            line-height: 1;
+            cursor: pointer;
+            margin-left: 4px;
+            flex-shrink: 0;
+        }
+
+        .prize-tag .prize-close:hover {
+            background: #c62828;
         }
 
         .reminder-item {
@@ -1432,6 +1455,7 @@
                     </ul>
                     <h3 style="font-size:15px;color:#66bb6a;margin-bottom:6px;">🛒 兑奖规则</h3>
                     <ul style="padding-left:20px;margin-bottom:12px;">
+                        <li>🌟 心愿大奖 — 30000⭐（满足一次心愿）</li>
                         <li>🍔 汉堡 — 2000⭐</li>
                         <li>🍗 鸡腿 — 1800⭐</li>
                         <li>🖊️ 圆珠笔 — 1600⭐</li>
@@ -1960,6 +1984,12 @@
             setUser(u);
             renderStarDisplay();
 
+            document.querySelectorAll('.lottery-item').forEach(el => {
+                el.classList.remove('lottery-hit');
+                el.classList.remove('lottery-active');
+            });
+            document.getElementById("lottery-result").style.display = 'none';
+
             let totalWeight = LOTTERY_PRIZES.reduce((s, p) => s + p.weight, 0);
             let rand = Math.random() * totalWeight;
             let hitIndex = 0;
@@ -2027,19 +2057,32 @@
                 el.innerHTML = '暂无奖品';
             } else {
                 let counts = {};
-                prizes.forEach(p => {
+                prizes.forEach((p, idx) => {
                     let key = p.emoji + p.name;
-                    if (!counts[key]) counts[key] = { emoji: p.emoji, name: p.name, count: 0 };
+                    if (!counts[key]) counts[key] = { emoji: p.emoji, name: p.name, count: 0, indices: [] };
                     counts[key].count++;
+                    counts[key].indices.push(idx);
                 });
                 el.innerHTML = Object.values(counts).map(c =>
-                    `<span class="prize-tag">${c.emoji} ${c.name} ×${c.count}</span>`
+                    `<span class="prize-tag">${c.emoji} ${c.name} ×${c.count}<span class="prize-close" onclick="redeemPrizeTag('${c.emoji}','${c.name}')">✕</span></span>`
                 ).join('');
             }
             renderRedeemList();
         }
 
+        function redeemPrizeTag(emoji, name) {
+            let u = safeUser(getUser());
+            if (!u.prizes || u.prizes.length === 0) return;
+            let idx = u.prizes.findIndex(p => p.emoji === emoji && p.name === name);
+            if (idx === -1) return;
+            u.prizes.splice(idx, 1);
+            setUser(u);
+            toast(`已核销 ${emoji} ${name}`, 'success');
+            renderPrizes();
+        }
+
         const REDEEM_ITEMS = [
+            { emoji: '🌟', name: '心愿大奖', cost: 30000 },
             { emoji: '🍔', name: '汉堡', cost: 2000 },
             { emoji: '🍗', name: '鸡腿', cost: 1800 },
             { emoji: '🖊️', name: '圆珠笔', cost: 1600 },
