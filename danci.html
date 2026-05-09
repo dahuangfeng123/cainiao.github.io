@@ -579,6 +579,64 @@
             100% { opacity: 0; transform: translate(-50%, -120%) scale(1.2); }
         }
 
+        @keyframes lotteryPop {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.15); }
+            70% { transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .lottery-item {
+            width: 80px;
+            height: 90px;
+            border: 2px solid #ffc75f;
+            border-radius: 14px;
+            background: #fffde7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            position: relative;
+        }
+
+        .lottery-item:hover {
+            transform: scale(1.08);
+            box-shadow: 0 4px 15px rgba(255, 199, 95, 0.4);
+        }
+
+        .lottery-item .lottery-emoji {
+            font-size: 32px;
+            margin-bottom: 4px;
+        }
+
+        .lottery-item.lottery-active {
+            border-color: #ff6f91;
+            background: linear-gradient(135deg, #fff9c4, #fce4ec);
+            box-shadow: 0 0 20px rgba(255, 111, 145, 0.5);
+            transform: scale(1.12);
+        }
+
+        .lottery-item.lottery-hit {
+            border-color: #ff6f91;
+            background: linear-gradient(135deg, #ffc75f, #ff6f91);
+            color: #fff;
+            transform: scale(1.2);
+            box-shadow: 0 0 25px rgba(255, 111, 145, 0.6);
+        }
+
+        .prize-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            margin: 3px;
+            font-size: 12px;
+            background: #fff9c4;
+            border: 1px solid #ffc75f;
+        }
+
         @media (max-width: 768px) {
             .top {
                 height: 50px;
@@ -1076,6 +1134,30 @@
             color: #34a853;
             text-shadow: none;
         }
+        [data-theme="simple"] .lottery-item {
+            border-color: #ddd;
+            background: #fff;
+            border-radius: 8px;
+        }
+        [data-theme="simple"] .lottery-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        [data-theme="simple"] .lottery-item.lottery-active {
+            border-color: #34a853;
+            background: #e6f4ea;
+            box-shadow: 0 0 10px rgba(52,168,83,0.3);
+        }
+        [data-theme="simple"] .lottery-item.lottery-hit {
+            border-color: #34a853;
+            background: #34a853;
+            color: #fff;
+            box-shadow: 0 0 15px rgba(52,168,83,0.4);
+        }
+        [data-theme="simple"] .prize-tag {
+            background: #e6f4ea;
+            border-color: #34a853;
+            color: #1e7e34;
+        }
         [data-theme="simple"] .toast-item {
             pointer-events: auto;
             padding: 12px 24px;
@@ -1224,6 +1306,56 @@
                         <p>已掌握：<span id="b-done">0</span></p>
                         <p>⭐ 星星：<span id="b-stars" style="font-weight:bold;color:#fbbc04;">0</span></p>
                     </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>🎰 星星抽奖</h2>
+                <div style="text-align:center;margin-bottom:12px;">
+                    <span style="font-size:14px;color:#666;">当前星星：</span>
+                    <span id="lottery-stars" style="font-size:20px;font-weight:bold;color:#fbbc04;">0</span>
+                    <span style="font-size:14px;color:#666;margin-left:16px;">抽奖消耗：10⭐</span>
+                </div>
+                <div id="lottery-box" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
+                </div>
+                <div id="lottery-result" style="display:none;text-align:center;padding:20px;border-radius:16px;margin-bottom:12px;font-size:22px;font-weight:bold;animation:lotteryPop 0.5s ease;"></div>
+                <div style="text-align:center;">
+                    <button class="btn btn-green" onclick="doLottery()" id="lottery-btn" style="padding:12px 40px;font-size:18px;border-radius:30px;">🎰 抽奖（10⭐）</button>
+                </div>
+                <div style="margin-top:16px;">
+                    <h3 style="font-size:15px;margin-bottom:8px;">🎁 我的奖品</h3>
+                    <div id="my-prizes" style="font-size:13px;color:#666;">暂无奖品</div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>📋 规则说明</h2>
+                <div style="font-size:13px;line-height:1.8;">
+                    <h3 style="font-size:15px;color:#ff6f91;margin-bottom:6px;">⭐ 星星获取规则</h3>
+                    <ul style="padding-left:20px;margin-bottom:12px;">
+                        <li>每答对1题 +1⭐</li>
+                        <li>今日学习每满10个新单词 +30⭐</li>
+                        <li>完成复习任务（3轮全部通过）+30⭐</li>
+                        <li>完成考试任务 +50⭐</li>
+                    </ul>
+                    <h3 style="font-size:15px;color:#845ec2;margin-bottom:6px;">🔥 连击奖励规则</h3>
+                    <ul style="padding-left:20px;margin-bottom:12px;">
+                        <li>连续答对3题 +5⭐（含基础1⭐共6⭐）</li>
+                        <li>连续答对10题 +20⭐（含基础1⭐共21⭐）</li>
+                        <li>之后每10连击额外 +20⭐</li>
+                        <li>答错1题连击归零</li>
+                    </ul>
+                    <h3 style="font-size:15px;color:#ffc75f;margin-bottom:6px;">🎰 抽奖规则</h3>
+                    <ul style="padding-left:20px;margin-bottom:12px;">
+                        <li>每次抽奖消耗 10⭐</li>
+                        <li>🍔 汉堡 — 中奖率约 3%</li>
+                        <li>🍗 鸡腿 — 中奖率约 3%</li>
+                        <li>🖊️ 圆珠笔 — 中奖率约 6%</li>
+                        <li>📓 记事本 — 中奖率约 6%</li>
+                        <li>🍭 棒棒糖 — 中奖率约 12%</li>
+                        <li>🫧 泡泡糖 — 中奖率约 12%</li>
+                        <li>💔 积分减20 — 中奖率约 6%</li>
+                        <li>💨 什么也没有 — 中奖率约 53%</li>
+                    </ul>
+                    <p style="color:#999;font-size:12px;">⚠️ 复习中途退出，已获得的星星不会被保存</p>
                 </div>
             </div>
         </div>
@@ -1707,6 +1839,119 @@
                 comboEl.innerText = combo;
                 comboEl.parentElement.style.display = combo > 0 ? '' : 'none';
             }
+            let lotteryEl = document.getElementById("lottery-stars");
+            if (lotteryEl) lotteryEl.innerText = u.stars || 0;
+        }
+
+        const LOTTERY_PRIZES = [
+            { emoji: '🍔', name: '汉堡', weight: 0.05, type: 'good' },
+            { emoji: '🍗', name: '鸡腿', weight: 0.05, type: 'good' },
+            { emoji: '🖊️', name: '圆珠笔', weight: 0.1, type: 'good' },
+            { emoji: '📓', name: '记事本', weight: 0.1, type: 'good' },
+            { emoji: '🍭', name: '棒棒糖', weight: 0.2, type: 'good' },
+            { emoji: '🫧', name: '泡泡糖', weight: 0.2, type: 'good' },
+            { emoji: '💔', name: '积分减20', weight: 0.1, type: 'bad' },
+            { emoji: '💨', name: '什么也没有', weight: 0.9, type: 'neutral' }
+        ];
+
+        let lotterySpinning = false;
+
+        function renderLotteryBox() {
+            let box = document.getElementById("lottery-box");
+            if (!box) return;
+            box.innerHTML = LOTTERY_PRIZES.map((p, i) =>
+                `<div class="lottery-item" id="lottery-item-${i}"><span class="lottery-emoji">${p.emoji}</span><span>${p.name}</span></div>`
+            ).join('');
+        }
+
+        function doLottery() {
+            if (lotterySpinning) return;
+            let u = safeUser(getUser());
+            if ((u.stars || 0) < 10) {
+                toast('星星不足10个，无法抽奖', 'warning');
+                return;
+            }
+            lotterySpinning = true;
+            u.stars -= 10;
+            setUser(u);
+            renderStarDisplay();
+
+            let totalWeight = LOTTERY_PRIZES.reduce((s, p) => s + p.weight, 0);
+            let rand = Math.random() * totalWeight;
+            let hitIndex = 0;
+            let cumWeight = 0;
+            for (let i = 0; i < LOTTERY_PRIZES.length; i++) {
+                cumWeight += LOTTERY_PRIZES[i].weight;
+                if (rand < cumWeight) { hitIndex = i; break; }
+            }
+
+            let resultEl = document.getElementById("lottery-result");
+            resultEl.style.display = 'none';
+
+            let steps = 20 + Math.floor(Math.random() * 10);
+            let currentStep = 0;
+            let interval = setInterval(() => {
+                document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
+                let idx = currentStep % LOTTERY_PRIZES.length;
+                document.getElementById('lottery-item-' + idx).classList.add('lottery-active');
+                currentStep++;
+                if (currentStep >= steps) {
+                    clearInterval(interval);
+                    document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
+                    document.getElementById('lottery-item-' + hitIndex).classList.add('lottery-hit');
+
+                    let prize = LOTTERY_PRIZES[hitIndex];
+                    u = safeUser(getUser());
+                    if (prize.type === 'bad') {
+                        u.stars = Math.max(0, (u.stars || 0) - 20);
+                        setUser(u);
+                        resultEl.style.background = '#ffcdd2';
+                        resultEl.style.color = '#c5221f';
+                        resultEl.innerHTML = `${prize.emoji} ${prize.name}！`;
+                        playSound('wrong');
+                    } else if (prize.type === 'neutral') {
+                        resultEl.style.background = '#f5f5f5';
+                        resultEl.style.color = '#666';
+                        resultEl.innerHTML = `${prize.emoji} ${prize.name}`;
+                    } else {
+                        if (!u.prizes) u.prizes = [];
+                        u.prizes.push({ emoji: prize.emoji, name: prize.name, date: todayKey() });
+                        setUser(u);
+                        resultEl.style.background = 'linear-gradient(135deg, #fff9c4, #c8e6c9)';
+                        resultEl.style.color = '#1e7e34';
+                        resultEl.innerHTML = `🎉 恭喜获得 ${prize.emoji} ${prize.name}！`;
+                        playSound('victory');
+                    }
+                    resultEl.style.display = 'block';
+                    resultEl.style.animation = 'none';
+                    resultEl.offsetHeight;
+                    resultEl.style.animation = 'lotteryPop 0.5s ease';
+
+                    renderStarDisplay();
+                    renderPrizes();
+                    lotterySpinning = false;
+                }
+            }, 80 + currentStep * 5);
+        }
+
+        function renderPrizes() {
+            let u = safeUser(getUser());
+            let el = document.getElementById("my-prizes");
+            if (!el) return;
+            let prizes = u.prizes || [];
+            if (prizes.length === 0) {
+                el.innerHTML = '暂无奖品';
+                return;
+            }
+            let counts = {};
+            prizes.forEach(p => {
+                let key = p.emoji + p.name;
+                if (!counts[key]) counts[key] = { emoji: p.emoji, name: p.name, count: 0 };
+                counts[key].count++;
+            });
+            el.innerHTML = Object.values(counts).map(c =>
+                `<span class="prize-tag">${c.emoji} ${c.name} ×${c.count}</span>`
+            ).join('');
         }
 
         const PERIOD = [0, 1, 2, 4, 7, 15, 30];
@@ -1860,8 +2105,8 @@
         }
 
         function safeUser(u) {
-            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0, lastTodayMilestone: {} };
-            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local", wrongPool: u.wrongPool || {}, stars: u.stars || 0, combo: u.combo || 0, learnMilestone: u.learnMilestone || 0, lastTodayMilestone: u.lastTodayMilestone || {} };
+            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0, lastTodayMilestone: {}, prizes: [] };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local", wrongPool: u.wrongPool || {}, stars: u.stars || 0, combo: u.combo || 0, learnMilestone: u.learnMilestone || 0, lastTodayMilestone: u.lastTodayMilestone || {}, prizes: u.prizes || [] };
         }
 
         function todayKey() {
@@ -3815,6 +4060,8 @@
             renderWrongPool();
             renderVoiceSetting();
             renderStarDisplay();
+            renderLotteryBox();
+            renderPrizes();
             let u = safeUser(getUser());
             document.getElementById("translate-toggle").checked = !!u.translate;
             applyInlineThemeOverrides();
