@@ -1682,8 +1682,9 @@
                 </div>
                 <p style="margin-top:10px;color:#999;font-size:13px;">导出为JSON文件，可在另一台电脑上导入恢复学习进度</p>
             </div>
-            <div class="card" style="text-align:center;">
+            <div class="card" style="text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
                 <button class="btn btn-blue" onclick="downloadXlsx()">📥 下载所有单词（xlsx）</button>
+                <button class="btn btn-green" onclick="downloadJson()">📥 下载所有单词（json）</button>
             </div>
         </div>
 
@@ -1822,6 +1823,27 @@
                     <p>关系表格式：CSV，表头 原词,关系类型,目标词</p>
                     <p>关系类型：相似 / 同义词 / 同音词 / 部分同音 / 近义词 / 反义词 / 同词不同性 / 词形变化 / 比较级 / 最高级 / 序数词 / 过去式 / 过去分词</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑单词弹窗 -->
+    <div class="modal" id="edit-modal">
+        <div class="modal-body" style="max-width:480px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="margin:0;">✏️ 编辑单词</h3>
+                <button class="btn btn-gray" onclick="closeEditWord()" style="padding:4px 12px;">✕</button>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">单词</label>
+                <input type="text" id="edit-word-text" readonly style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;background:#f5f5f5;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">释义</label>
+                <textarea id="edit-word-meaning" rows="3" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;resize:vertical;"></textarea>
+            </div>
+            <div style="text-align:right;">
+                <button class="btn btn-green" onclick="saveEditWord()">💾 保存</button>
             </div>
         </div>
     </div>
@@ -2393,9 +2415,10 @@
                 <span class="word-meta">${examHtml}</span>
                 <div class="word-meaning">${w.meaning}</div>
             </div>
-            <div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                 ${skilled ? '' : `<button class="btn ${btnClass}" onclick="start(${realIdx})">${btnText}</button>`}
                 <button class="btn ${skilled ? 'btn-green' : 'btn-gray'}" onclick="toggleSkilled(${realIdx})">${skilled ? '✅ 熟练' : '熟练'}</button>
+                <button class="btn btn-gray" onclick="editWord(${realIdx})" style="font-size:12px;padding:4px 8px;">✏️</button>
             </div>
         </div>`;
             }
@@ -2408,6 +2431,35 @@
 
         function loadMoreWords() {
             wordLoadedCount += wordPageSize;
+
+        let editingWordIdx = null;
+
+        function editWord(idx) {
+            editingWordIdx = idx;
+            let w = ALL_WORDS[idx];
+            document.getElementById("edit-word-text").value = w.word;
+            document.getElementById("edit-word-meaning").value = w.meaning;
+            document.getElementById("edit-modal").style.display = "flex";
+        }
+
+        function closeEditWord() {
+            document.getElementById("edit-modal").style.display = "none";
+            editingWordIdx = null;
+        }
+
+        function saveEditWord() {
+            if (editingWordIdx === null) return;
+            let newMeaning = document.getElementById("edit-word-meaning").value.trim();
+            if (!newMeaning) {
+                toast("释义不能为空", "warning");
+                return;
+            }
+            ALL_WORDS[editingWordIdx].meaning = newMeaning;
+            localStorage.setItem("ALL_WORDS_DATA", JSON.stringify(ALL_WORDS));
+            closeEditWord();
+            renderWordList(true);
+            toast("释义已更新", "success");
+        }
             renderWordsUpTo(wordLoadedCount);
         }
 
@@ -3304,6 +3356,18 @@
             XLSX.writeFile(wb, "单词库.xlsx");
         }
 
+        function downloadJson() {
+            let words = getWords();
+            let json = JSON.stringify(words, null, 2);
+            let blob = new Blob([json], { type: "application/json" });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = "单词库.json";
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
         // ==============================
         // 重置用户
         // ==============================
@@ -3741,14 +3805,17 @@
             return (2 * common) / (sa.size + sb.size);
         }
 
+        function stripPosTag(s) {
+            return s.replace(/^(n|v|vt|vi|adj|adv|pron|prep|conj|interj|art|num|abbr)\.\s*/i, '').trim();
+        }
+
         function checkExamAnswer(input, word) {
             let ans = input.trim();
             if (!ans) return { correct: false, score: 0 };
 
             if (mode === 1) {
-                let meanings = word.meaning.split(/[;；,，、\n]/).map(s => s.replace(/[（(][^）)]*[）)]/g, '').trim()).filter(s => s.length > 0);// 去除括号内容
+                let meanings = word.meaning.split(/[;；,，、\n]/).map(s => s.replace(/[（(][^）)]*[）)]/g, '').trim()).map(s => stripPosTag(s)).filter(s => s.length > 0);
                 let ansParts = ans.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
-                // 如果用户没有用分隔符，额外把每个字也当一个候选
                 if (ansParts.length === 1 && /^[\u4e00-\u9fa5]+$/.test(ans)) {
                     let chars = ans.split('');
                     ansParts = [...ansParts, ...chars];
@@ -3764,8 +3831,7 @@
                         let s = Math.max(edSim, csSim);
                         if (s > bestScore) bestScore = s;
 
-                        // ✅ 修复：用 ap 而不是 ans，且要求长度足够才允许包含匹配
-                        if (ap.length >= 2 && m.length >= 2) {
+                        if (ap.length >= 1 && m.length >= 1) {
                             if (ap === m || ap.includes(m) || m.includes(ap)) {
                                 containMatch = true;
                             }
@@ -3773,7 +3839,23 @@
                     }
                 }
 
-                // ✅ 修复：阈值提高到 0.6
+                let isChinese = /^[\u4e00-\u9fa5]+$/.test(ans);
+                if (isChinese && !containMatch) {
+                    let ansChars = new Set(ans.split(''));
+                    for (let m of meanings) {
+                        let mChars = new Set(m.split(''));
+                        let common = 0;
+                        for (let c of ansChars) { if (mChars.has(c)) common++; }
+                        let charCoverage = common / mChars.size;
+                        let ansCoverage = common / ansChars.size;
+                        let overlapScore = (charCoverage + ansCoverage) / 2;
+                        if (overlapScore > bestScore) bestScore = overlapScore;
+                        if (charCoverage >= 0.8 || ansCoverage >= 0.8) {
+                            containMatch = true;
+                        }
+                    }
+                }
+
                 return {
                     correct: bestScore >= 0.6 || containMatch,
                     score: Math.min(Math.max(bestScore, 0), 1)
@@ -3785,10 +3867,8 @@
 
                 let s = similarity(ansLower, wordLower);
 
-                // ✅ 修复：包含匹配只允许完全相等，或答案是单词的合理前缀（长度至少覆盖80%）
                 let containMatch = ansLower === wordLower ||
                     (ansLower.length >= Math.floor(wordLower.length * 0.8) && wordLower.startsWith(ansLower));
-                //短词（≤ 4个字母）阈值提高到 80%
                 const threshold = wordLower.length <= 4 ? 0.8 : 0.6;
                 return {
                     correct: s >= threshold || containMatch,
