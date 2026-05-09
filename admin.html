@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据管理后台</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+.header { background: #1a73e8; color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+.header h1 { font-size: 20px; font-weight: 600; }
+.header .back { color: #fff; text-decoration: none; font-size: 14px; opacity: 0.8; }
+.header .back:hover { opacity: 1; }
+.container { max-width: 1200px; margin: 20px auto; padding: 0 16px; }
+.tabs { display: flex; gap: 0; margin-bottom: 20px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.tab { flex: 1; padding: 12px 20px; text-align: center; cursor: pointer; font-size: 15px; font-weight: 500; border: none; background: #fff; color: #666; transition: all 0.2s; }
+.tab:hover { background: #f5f5f5; }
+.tab.active { background: #1a73e8; color: #fff; }
+.panel { display: none; }
+.panel.active { display: block; }
+.card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.card h2 { font-size: 16px; margin-bottom: 16px; color: #1a73e8; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.card h3 { font-size: 14px; margin: 12px 0 8px; color: #555; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: 500; }
+.field input, .field textarea, .field select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+.field textarea { resize: vertical; min-height: 80px; }
+.field input:focus, .field textarea:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
+.btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+.btn-primary { background: #1a73e8; color: #fff; }
+.btn-primary:hover { background: #1557b0; }
+.btn-danger { background: #ef5350; color: #fff; }
+.btn-danger:hover { background: #c62828; }
+.btn-success { background: #34a853; color: #fff; }
+.btn-success:hover { background: #1e7e34; }
+.btn-gray { background: #f5f5f5; color: #666; border: 1px solid #ddd; }
+.btn-gray:hover { background: #eee; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat-item { background: #f8f9fa; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-item .value { font-size: 24px; font-weight: 700; color: #1a73e8; }
+.stat-item .label { font-size: 12px; color: #999; margin-top: 4px; }
+.json-view { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 6px; font-family: "Consolas", "Monaco", monospace; font-size: 12px; max-height: 400px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+.json-view .key { color: #9cdcfe; }
+.json-view .string { color: #ce9178; }
+.json-view .number { color: #b5cea8; }
+.json-view .boolean { color: #569cd6; }
+.json-view .null { color: #569cd6; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 8px 12px; border: 1px solid #eee; text-align: left; }
+th { background: #f5f5f5; font-weight: 600; color: #555; position: sticky; top: 0; }
+tr:hover { background: #f8f9fa; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.badge-green { background: #e6f4ea; color: #1e7e34; }
+.badge-red { background: #fce8e6; color: #c5221f; }
+.badge-blue { background: #e8f0fe; color: #1a73e8; }
+.badge-yellow { background: #fef7e0; color: #b06000; }
+.search-box { margin-bottom: 12px; }
+.search-box input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+.search-box input:focus { outline: none; border-color: #1a73e8; }
+.empty { text-align: center; color: #999; padding: 40px; font-size: 14px; }
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+.modal-overlay.show { display: flex; }
+.modal-box { background: #fff; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+.modal-box h3 { margin-bottom: 16px; }
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: #fff; font-size: 14px; z-index: 2000; animation: slideIn 0.3s ease; }
+.toast-success { background: #34a853; }
+.toast-error { background: #ef5350; }
+.toast-warning { background: #f9ab00; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>🔧 数据管理后台</h1>
+    <a href="danci.html" class="back">← 返回主页面</a>
+</div>
+<div class="container">
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('overview')">📊 总览</button>
+        <button class="tab" onclick="switchTab('studentA')">👤 同学A</button>
+        <button class="tab" onclick="switchTab('studentB')">👤 同学B</button>
+        <button class="tab" onclick="switchTab('words')">📚 单词库</button>
+        <button class="tab" onclick="switchTab('raw')">💻 原始数据</button>
+    </div>
+
+    <div class="panel active" id="panel-overview">
+        <div class="card">
+            <h2>📊 数据总览</h2>
+            <div class="stats" id="overview-stats"></div>
+        </div>
+        <div class="card">
+            <h2>⚡ 快捷操作</h2>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="exportAllData()">📤 导出所有数据</button>
+                <button class="btn btn-success" onclick="document.getElementById('import-all-file').click()">📥 导入所有数据</button>
+                <input type="file" id="import-all-file" accept=".json" style="display:none" onchange="importAllData(event)">
+                <button class="btn btn-danger" onclick="clearAllData()">🗑️ 清空所有数据</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" id="panel-studentA"></div>
+    <div class="panel" id="panel-studentB"></div>
+    <div class="panel" id="panel-words"></div>
+    <div class="panel" id="panel-raw"></div>
+</div>
+
+<div class="modal-overlay" id="edit-modal">
+    <div class="modal-box">
+        <h3 id="modal-title">编辑</h3>
+        <div id="modal-content"></div>
+        <div class="btn-group" style="justify-content:flex-end;">
+            <button class="btn btn-gray" onclick="closeModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveModal()">保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const KEYS = { A: 'wuserA', B: 'wuserB', words: 'ALL_WORDS_DATA', theme: 'wtheme' };
+
+function getStudent(who) {
+    try { return JSON.parse(localStorage.getItem(KEYS[who])) || null; } catch { return null; }
+}
+function setStudent(who, data) {
+    localStorage.setItem(KEYS[who], JSON.stringify(data));
+}
+function getWords() {
+    try { return JSON.parse(localStorage.getItem(KEYS.words)) || []; } catch { return []; }
+}
+function setWords(data) {
+    localStorage.setItem(KEYS.words, JSON.stringify(data));
+}
+
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+    renderPanel(name);
+}
+
+function renderPanel(name) {
+    if (name === 'overview') renderOverview();
+    else if (name === 'studentA') renderStudent('A');
+    else if (name === 'studentB') renderStudent('B');
+    else if (name === 'words') renderWords();
+    else if (name === 'raw') renderRaw();
+}
+
+function renderOverview() {
+    let a = getStudent('A') || {};
+    let b = getStudent('B') || {};
+    let words = getWords();
+    let html = `<div class="stats">
+        <div class="stat-item"><div class="value">${(a.learn || []).length}</div><div class="label">A 已学习</div></div>
+        <div class="stat-item"><div class="value">${(b.learn || []).length}</div><div class="label">B 已学习</div></div>
+        <div class="stat-item"><div class="value">${(a.skilled || []).length}</div><div class="label">A 已熟练</div></div>
+        <div class="stat-item"><div class="value">${(b.skilled || []).length}</div><div class="label">B 已熟练</div></div>
+        <div class="stat-item"><div class="value">${a.stars || 0}</div><div class="label">A 星星</div></div>
+        <div class="stat-item"><div class="value">${b.stars || 0}</div><div class="label">B 星星</div></div>
+        <div class="stat-item"><div class="value">${(a.examScores || []).length}</div><div class="label">A 考试次数</div></div>
+        <div class="stat-item"><div class="value">${(b.examScores || []).length}</div><div class="label">B 考试次数</div></div>
+        <div class="stat-item"><div class="value">${words.length}</div><div class="label">单词总数</div></div>
+        <div class="stat-item"><div class="value">${Object.keys(a.wrongPool || {}).length}</div><div class="label">A 错题数</div></div>
+        <div class="stat-item"><div class="value">${Object.keys(b.wrongPool || {}).length}</div><div class="label">B 错题数</div></div>
+        <div class="stat-item"><div class="value">${(a.prizes || []).length}</div><div class="label">A 奖品数</div></div>
+        <div class="stat-item"><div class="value">${(b.prizes || []).length}</div><div class="label">B 奖品数</div></div>
+    </div>`;
+    document.getElementById('overview-stats').innerHTML = html;
+}
+
+function renderStudent(who) {
+    let u = getStudent(who);
+    let panel = document.getElementById('panel-student' + who);
+    if (!u) {
+        panel.innerHTML = `<div class="card"><div class="empty">该学生暂无数据</div>
+            <div class="btn-group"><button class="btn btn-success" onclick="initStudent('${who}')">初始化数据</button></div></div>`;
+        return;
+    }
+
+    let dailyLogKeys = Object.keys(u.dailyLog || {}).sort().reverse();
+    let examScores = u.examScores || [];
+    let prizes = u.prizes || [];
+    let wrongPoolKeys = Object.keys(u.wrongPool || {});
+
+    let html = `
+    <div class="card">
+        <h2>👤 同学${who} — 基本数据</h2>
+        <div class="stats">
+            <div class="stat-item"><div class="value">${u.stars || 0}</div><div class="label">星星</div></div>
+            <div class="stat-item"><div class="value">${u.combo || 0}</div><div class="label">连击</div></div>
+            <div class="stat-item"><div class="value">${(u.learn || []).length}</div><div class="label">已学习</div></div>
+            <div class="stat-item"><div class="value">${(u.skilled || []).length}</div><div class="label">已熟练</div></div>
+            <div class="stat-item"><div class="value">${(u.done || []).length}</div><div class="label">已完成</div></div>
+            <div class="stat-item"><div class="value">${wrongPoolKeys.length}</div><div class="label">错题数</div></div>
+            <div class="stat-item"><div class="value">${prizes.length}</div><div class="label">奖品数</div></div>
+            <div class="stat-item"><div class="value">${u.learnMilestone || 0}</div><div class="label">学习里程碑</div></div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="editStars('${who}')">✏️ 修改星星</button>
+            <button class="btn btn-primary" onclick="editCombo('${who}')">✏️ 修改连击</button>
+            <button class="btn btn-danger" onclick="clearWrongPool('${who}')">🗑️ 清空错题</button>
+            <button class="btn btn-danger" onclick="clearPrizes('${who}')">🗑️ 清空奖品</button>
+            <button class="btn btn-danger" onclick="resetStudent('${who}')">⚠️ 重置该学生</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📅 每日学习记录</h2>
+        ${dailyLogKeys.length === 0 ? '<div class="empty">暂无记录</div>' : `
+        <div class="table-wrap"><table>
+            <tr><th>日期</th><th>学习数</th><th>复习数</th></tr>
+            ${dailyLogKeys.map(k => `<tr><td>${k}</td><td>${(u.dailyLog[k].learn || 0)}</td><td>${(u.dailyLog[k].review || 0)}</td></tr>`).join('')}
+        </table></div>`}
+    </div>
+
+    <div class="card">
+        <h2>📝 考试成绩</h2>
+        ${examScores.length === 0 ? '<div class="empty">暂无考试记录</div>' : `
+        <div class="table-wrap"><table>
+            <tr><th>日期</th><th>模式</th><th>得分</th><th>正确/总数</th><th>用时</th></tr>
+            ${examScores.map(s => `<tr><td>${s.date || '-'}</td><td>${s.modeLabel || '-'}</td><td>${s.score}</td><td>${s.correct}/${s.total}</td><td>${s.duration || '-'}</td></tr>`).join('')}
+        </table></div>`}
+    </div>
+
+    <div class="card">
+        <h2>🎁 奖品列表</h2>
+        ${prizes.length === 0 ? '<div class="empty">暂无奖品</div>' : `
+        <div class="table-wrap"><table>
+            <tr><th>奖品</th><th>名称</th><th>日期</th><th>操作</th></tr>
+            ${prizes.map((p, i) => `<tr><td>${p.emoji}</td><td>${p.name}</td><td>${p.date || '-'}</td><td><button class="btn btn-danger" style="padding:2px 8px;font-size:12px;" onclick="removePrize('${who}',${i})">删除</button></td></tr>`).join('')}
+        </table></div>`}
+    </div>
+
+    <div class="card">
+        <h2>❌ 错题库</h2>
+        ${wrongPoolKeys.length === 0 ? '<div class="empty">暂无错题</div>' : `
+        <div class="table-wrap"><table>
+            <tr><th>单词索引</th><th>错误次数</th><th>添加日期</th><th>操作</th></tr>
+            ${wrongPoolKeys.map(k => `<tr><td>${k}</td><td>${u.wrongPool[k].c || 0}</td><td>${new Date(u.wrongPool[k].date).toLocaleString()}</td><td><button class="btn btn-danger" style="padding:2px 8px;font-size:12px;" onclick="removeWrong('${who}','${k}')">删除</button></td></tr>`).join('')}
+        </table></div>`}
+    </div>
+
+    <div class="card">
+        <h2>📚 已学习单词索引</h2>
+        <div class="field">
+            <textarea id="learn-indices-${who}" style="min-height:60px;">${(u.learn || []).join(', ')}</textarea>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="saveLearnIndices('${who}')">💾 保存已学习索引</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>✅ 已熟练单词索引</h2>
+        <div class="field">
+            <textarea id="skilled-indices-${who}" style="min-height:60px;">${(u.skilled || []).join(', ')}</textarea>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="saveSkilledIndices('${who}')">💾 保存已熟练索引</button>
+        </div>
+    </div>`;
+
+    panel.innerHTML = html;
+}
+
+function renderWords() {
+    let words = getWords();
+    let panel = document.getElementById('panel-words');
+    let html = `
+    <div class="card">
+        <h2>📚 单词库（${words.length} 个）</h2>
+        <div class="btn-group" style="margin-bottom:16px;">
+            <button class="btn btn-primary" onclick="addWord()">➕ 添加单词</button>
+            <button class="btn btn-success" onclick="document.getElementById('upload-words-admin').click()">📤 上传JSON单词库</button>
+            <input type="file" id="upload-words-admin" accept=".json" style="display:none" onchange="uploadWordsAdmin(event)">
+            <button class="btn btn-gray" onclick="downloadWordsJson()">📥 下载JSON</button>
+        </div>
+        <div class="search-box"><input type="text" id="word-search-admin" placeholder="搜索单词或释义..." oninput="filterWords()"></div>
+        <div class="table-wrap" style="max-height:500px;overflow-y:auto;">
+            <table id="words-table">
+                <tr><th>#</th><th>单词</th><th>柯林斯</th><th>考试范围</th><th>释义</th><th>操作</th></tr>
+                ${words.map((w, i) => `<tr data-search="${w.word.toLowerCase()} ${w.meaning.toLowerCase()}">
+                    <td>${i}</td><td><strong>${w.word}</strong></td><td>${'★'.repeat(w.collins)}</td><td>${w.exam}</td><td style="max-width:300px;word-break:break-all;">${w.meaning}</td>
+                    <td><button class="btn btn-primary" style="padding:2px 8px;font-size:12px;" onclick="editWordItem(${i})">✏️</button> <button class="btn btn-danger" style="padding:2px 8px;font-size:12px;" onclick="deleteWordItem(${i})">🗑️</button></td>
+                </tr>`).join('')}
+            </table>
+        </div>
+    </div>`;
+    panel.innerHTML = html;
+}
+
+function filterWords() {
+    let kw = (document.getElementById('word-search-admin').value || '').toLowerCase();
+    document.querySelectorAll('#words-table tr[data-search]').forEach(tr => {
+        tr.style.display = tr.dataset.search.includes(kw) ? '' : 'none';
+    });
+}
+
+function renderRaw() {
+    let panel = document.getElementById('panel-raw');
+    let keys = ['wuserA', 'wuserB', 'ALL_WORDS_DATA', 'wtheme'];
+    let html = '';
+    keys.forEach(key => {
+        let raw = localStorage.getItem(key);
+        let size = raw ? (raw.length / 1024).toFixed(1) : 0;
+        html += `<div class="card">
+            <h2>🔑 ${key} <span style="font-size:12px;color:#999;font-weight:normal;">(${size} KB)</span></h2>
+            <div class="btn-group" style="margin-bottom:12px;">
+                <button class="btn btn-primary" onclick="editRawKey('${key}')">✏️ 编辑</button>
+                <button class="btn btn-gray" onclick="copyRaw('${key}')">📋 复制</button>
+                <button class="btn btn-danger" onclick="deleteRawKey('${key}')">🗑️ 删除</button>
+            </div>
+            <div class="json-view">${raw ? syntaxHighlight(raw.substring(0, 5000)) : '<span class="null">null</span>'}${raw && raw.length > 5000 ? '\n... (已截断，点击编辑查看完整内容)' : ''}</div>
+        </div>`;
+    });
+    panel.innerHTML = html;
+}
+
+function syntaxHighlight(json) {
+    try {
+        json = JSON.stringify(JSON.parse(json), null, 2);
+    } catch {}
+    return json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"([^"]+)":/g, '<span class="key">"$1"</span>:')
+        .replace(/: "([^"]*)"/g, ': <span class="string">"$1"</span>')
+        .replace(/: (\d+\.?\d*)/g, ': <span class="number">$1</span>')
+        .replace(/: (true|false)/g, ': <span class="boolean">$1</span>')
+        .replace(/: (null)/g, ': <span class="null">$1</span>');
+}
+
+function editStars(who) {
+    let u = getStudent(who);
+    document.getElementById('modal-title').innerText = `修改同学${who}的星星`;
+    document.getElementById('modal-content').innerHTML = `
+        <div class="field"><label>当前星星：${u.stars || 0}</label><input type="number" id="edit-stars-value" value="${u.stars || 0}"></div>`;
+    document.getElementById('edit-modal').classList.add('show');
+    document.getElementById('edit-modal')._save = () => {
+        u.stars = parseInt(document.getElementById('edit-stars-value').value) || 0;
+        setStudent(who, u);
+        renderStudent(who);
+    };
+}
+
+function editCombo(who) {
+    let u = getStudent(who);
+    document.getElementById('modal-title').innerText = `修改同学${who}的连击`;
+    document.getElementById('modal-content').innerHTML = `
+        <div class="field"><label>当前连击：${u.combo || 0}</label><input type="number" id="edit-combo-value" value="${u.combo || 0}"></div>`;
+    document.getElementById('edit-modal').classList.add('show');
+    document.getElementById('edit-modal')._save = () => {
+        u.combo = parseInt(document.getElementById('edit-combo-value').value) || 0;
+        setStudent(who, u);
+        renderStudent(who);
+    };
+}
+
+function clearWrongPool(who) {
+    if (!confirm(`确定清空同学${who}的错题库？`)) return;
+    let u = getStudent(who);
+    u.wrongPool = {};
+    setStudent(who, u);
+    renderStudent(who);
+    showToast('错题库已清空', 'success');
+}
+
+function clearPrizes(who) {
+    if (!confirm(`确定清空同学${who}的所有奖品？`)) return;
+    let u = getStudent(who);
+    u.prizes = [];
+    setStudent(who, u);
+    renderStudent(who);
+    showToast('奖品已清空', 'success');
+}
+
+function resetStudent(who) {
+    if (!confirm(`⚠️ 确定重置同学${who}的所有数据？此操作不可恢复！`)) return;
+    localStorage.removeItem(KEYS[who]);
+    renderStudent(who);
+    showToast(`同学${who}数据已重置`, 'success');
+}
+
+function removePrize(who, idx) {
+    let u = getStudent(who);
+    u.prizes.splice(idx, 1);
+    setStudent(who, u);
+    renderStudent(who);
+}
+
+function removeWrong(who, key) {
+    let u = getStudent(who);
+    delete u.wrongPool[key];
+    setStudent(who, u);
+    renderStudent(who);
+}
+
+function saveLearnIndices(who) {
+    let u = getStudent(who);
+    let val = document.getElementById('learn-indices-' + who).value;
+    u.learn = val.split(/[,\s\n]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    setStudent(who, u);
+    showToast('已学习索引已保存', 'success');
+}
+
+function saveSkilledIndices(who) {
+    let u = getStudent(who);
+    let val = document.getElementById('skilled-indices-' + who).value;
+    u.skilled = val.split(/[,\s\n]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    setStudent(who, u);
+    showToast('已熟练索引已保存', 'success');
+}
+
+function initStudent(who) {
+    let u = { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0, lastTodayMilestone: {}, prizes: [] };
+    setStudent(who, u);
+    renderStudent(who);
+    showToast(`同学${who}数据已初始化`, 'success');
+}
+
+function editWordItem(idx) {
+    let words = getWords();
+    let w = words[idx];
+    document.getElementById('modal-title').innerText = `编辑单词 #${idx}`;
+    document.getElementById('modal-content').innerHTML = `
+        <div class="field"><label>单词</label><input type="text" id="edit-w-word" value="${w.word}"></div>
+        <div class="field"><label>柯林斯分级</label><input type="number" id="edit-w-collins" value="${w.collins}" min="1" max="5"></div>
+        <div class="field"><label>考试范围</label><input type="text" id="edit-w-exam" value="${w.exam}"></div>
+        <div class="field"><label>释义</label><textarea id="edit-w-meaning">${w.meaning}</textarea></div>`;
+    document.getElementById('edit-modal').classList.add('show');
+    document.getElementById('edit-modal')._save = () => {
+        words[idx].word = document.getElementById('edit-w-word').value.trim();
+        words[idx].collins = parseInt(document.getElementById('edit-w-collins').value) || 1;
+        words[idx].exam = document.getElementById('edit-w-exam').value.trim();
+        words[idx].meaning = document.getElementById('edit-w-meaning').value.trim();
+        setWords(words);
+        renderWords();
+        showToast('单词已更新', 'success');
+    };
+}
+
+function deleteWordItem(idx) {
+    let words = getWords();
+    if (!confirm(`确定删除单词 "${words[idx].word}"？`)) return;
+    words.splice(idx, 1);
+    setWords(words);
+    renderWords();
+    showToast('单词已删除', 'success');
+}
+
+function addWord() {
+    document.getElementById('modal-title').innerText = '添加单词';
+    document.getElementById('modal-content').innerHTML = `
+        <div class="field"><label>单词</label><input type="text" id="add-w-word"></div>
+        <div class="field"><label>柯林斯分级</label><input type="number" id="add-w-collins" value="3" min="1" max="5"></div>
+        <div class="field"><label>考试范围</label><input type="text" id="add-w-exam"></div>
+        <div class="field"><label>释义</label><textarea id="add-w-meaning"></textarea></div>`;
+    document.getElementById('edit-modal').classList.add('show');
+    document.getElementById('edit-modal')._save = () => {
+        let words = getWords();
+        words.push({
+            word: document.getElementById('add-w-word').value.trim(),
+            collins: parseInt(document.getElementById('add-w-collins').value) || 3,
+            exam: document.getElementById('add-w-exam').value.trim(),
+            meaning: document.getElementById('add-w-meaning').value.trim()
+        });
+        setWords(words);
+        renderWords();
+        showToast('单词已添加', 'success');
+    };
+}
+
+function uploadWordsAdmin(event) {
+    let file = event.target.files[0];
+    if (!file) return;
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let data = JSON.parse(e.target.result);
+            if (!Array.isArray(data)) throw new Error('格式错误');
+            setWords(data);
+            renderWords();
+            showToast(`单词库已更新，共 ${data.length} 个单词`, 'success');
+        } catch(err) {
+            showToast('文件解析失败：' + err.message, 'error');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function downloadWordsJson() {
+    let words = getWords();
+    let json = JSON.stringify(words, null, 2);
+    let blob = new Blob([json], { type: 'application/json' });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url; a.download = '单词库.json'; a.click();
+    URL.revokeObjectURL(url);
+}
+
+function editRawKey(key) {
+    let raw = localStorage.getItem(key) || '';
+    document.getElementById('modal-title').innerText = `编辑 ${key}`;
+    document.getElementById('modal-content').innerHTML = `
+        <div class="field"><textarea id="edit-raw-value" style="min-height:300px;font-family:Consolas,Monaco,monospace;font-size:12px;">${raw}</textarea></div>`;
+    document.getElementById('edit-modal').classList.add('show');
+    document.getElementById('edit-modal')._save = () => {
+        let val = document.getElementById('edit-raw-value').value;
+        try { JSON.parse(val); } catch { if (!confirm('JSON格式有误，确定保存？')) return; }
+        localStorage.setItem(key, val);
+        renderRaw();
+        showToast('数据已更新', 'success');
+    };
+}
+
+function copyRaw(key) {
+    let raw = localStorage.getItem(key) || '';
+    navigator.clipboard.writeText(raw).then(() => showToast('已复制到剪贴板', 'success')).catch(() => showToast('复制失败', 'error'));
+}
+
+function deleteRawKey(key) {
+    if (!confirm(`确定删除 ${key}？此操作不可恢复！`)) return;
+    localStorage.removeItem(key);
+    renderRaw();
+    showToast(`${key} 已删除`, 'success');
+}
+
+function closeModal() {
+    document.getElementById('edit-modal').classList.remove('show');
+    document.getElementById('edit-modal')._save = null;
+}
+
+function saveModal() {
+    if (document.getElementById('edit-modal')._save) {
+        document.getElementById('edit-modal')._save();
+    }
+    closeModal();
+}
+
+function exportAllData() {
+    let data = {};
+    Object.keys(KEYS).forEach(k => {
+        let val = localStorage.getItem(KEYS[k]);
+        if (val) data[KEYS[k]] = val;
+    });
+    let json = JSON.stringify(data, null, 2);
+    let blob = new Blob([json], { type: 'application/json' });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url; a.download = 'moring_read_backup.json'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('数据已导出', 'success');
+}
+
+function importAllData(event) {
+    let file = event.target.files[0];
+    if (!file) return;
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let data = JSON.parse(e.target.result);
+            let count = 0;
+            Object.keys(data).forEach(key => {
+                localStorage.setItem(key, typeof data[key] === 'string' ? data[key] : JSON.stringify(data[key]));
+                count++;
+            });
+            renderOverview();
+            showToast(`已导入 ${count} 条数据`, 'success');
+        } catch(err) {
+            showToast('导入失败：' + err.message, 'error');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function clearAllData() {
+    if (!confirm('⚠️ 确定清空所有数据？包括两个学生的记录和单词库！此操作不可恢复！')) return;
+    if (!confirm('再次确认：真的要删除所有数据吗？')) return;
+    Object.values(KEYS).forEach(k => localStorage.removeItem(k));
+    renderOverview();
+    showToast('所有数据已清空', 'success');
+}
+
+function showToast(msg, type) {
+    let el = document.createElement('div');
+    el.className = 'toast toast-' + type;
+    el.innerText = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+}
+
+renderOverview();
+</script>
+</body>
+</html>
