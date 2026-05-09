@@ -2437,6 +2437,8 @@
 
         function loadMoreWords() {
             wordLoadedCount += wordPageSize;
+            renderWordsUpTo(wordLoadedCount);
+        }
 
         let editingWordIdx = null;
 
@@ -2465,8 +2467,6 @@
             closeEditWord();
             renderWordList(true);
             toast("释义已更新", "success");
-        }
-            renderWordsUpTo(wordLoadedCount);
         }
 
         function toggleSkilled(idx) {
