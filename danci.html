@@ -2103,6 +2103,7 @@
 
         function doLottery() {
             if (lotterySpinning) return;
+            const prizes = getLotteryPrizes();
             let elig = getLotteryEligibility();
             if (!elig.canLottery) {
                 let msgs = [];
