@@ -1981,7 +1981,7 @@
             let hasRedeemUnlock = false;
             if (redeemUnlockData) {
                 let elapsed = Date.now() - redeemUnlockData.time;
-                if (elapsed < 7 * 24 * 3600 * 1000 && !redeemUnlockData.used) hasRedeemUnlock = true;
+                if (elapsed < 1 * 24 * 3600 * 1000 && !redeemUnlockData.used) hasRedeemUnlock = true;
             }
             let starsEnough = stars >= config.starThreshold;
             let dailyCountOk = todayLotteryCount < (config.dailyLimit || 1);
@@ -2034,7 +2034,7 @@
                 <h3 style="font-size:15px;color:#ffc75f;margin-bottom:6px;">🎰 抽奖规则</h3>
                 <ul style="padding-left:20px;margin-bottom:12px;">
                     <li>积分须达 ${config.starThreshold || 5000}⭐ 才能抽奖</li>
-                    <li>需先完成一次兑奖，解锁抽奖资格（7天有效）</li>
+                    <li>需先完成一次兑奖，解锁抽奖资格（当日有效，不用即失效）</li>
                     <li>每次抽奖消耗 ${config.cost}⭐</li>
                     <li>每日最多抽奖 ${config.dailyLimit || 1} 次</li>
                     <li>每日抽奖消耗上限 ${config.dailySpendLimit || 500}⭐</li>
@@ -2068,6 +2068,7 @@
             let btn = document.getElementById("lottery-btn");
             if (!bar) return;
             let elig = getLotteryEligibility();
+            let config = getLotteryConfig();
             let html = '';
             if (!elig.starsEnough) {
                 let pct = Math.min(100, Math.round(elig.stars / elig.starThreshold * 100));
@@ -2081,6 +2082,14 @@
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
                         <span style="font-size:11px;color:#bbb;">${pct}%</span>
+                        <button onclick="showRedeem()" style="background:linear-gradient(135deg,#ff6f91,#ffc75f);color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:bold;cursor:pointer;box-shadow:0 2px 8px rgba(255,111,145,0.3);">🛒 去兑奖</button>
+                    </div>
+                </div>`;
+            } else if (config.redeemUnlock && !elig.redeemOk) {
+                html = `<div style="background:#fff3e0;border-radius:8px;padding:10px;text-align:center;">
+                    <span style="font-size:13px;color:#e65100;">🔒 需先完成一次兑奖，解锁今日抽奖资格</span>
+                    <div style="margin-top:8px;">
+                        <button onclick="showRedeem()" style="background:linear-gradient(135deg,#ff6f91,#ffc75f);color:#fff;border:none;border-radius:20px;padding:6px 20px;font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 2px 8px rgba(255,111,145,0.3);">🛒 去兑奖</button>
                     </div>
                 </div>`;
             } else if (!elig.dailyCountOk) {
@@ -2095,7 +2104,7 @@
             }
             bar.innerHTML = html;
             if (btn) {
-                let canDo = elig.starsEnough && elig.dailyCountOk && elig.dailySpendOk && elig.costEnough;
+                let canDo = elig.starsEnough && elig.dailyCountOk && elig.dailySpendOk && elig.redeemOk && elig.costEnough;
                 btn.style.opacity = canDo ? '1' : '0.4';
                 btn.style.cursor = canDo ? 'pointer' : 'not-allowed';
                 btn.disabled = !canDo;
