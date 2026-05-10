@@ -182,6 +182,10 @@ const KEYS = { A: 'wuserA', B: 'wuserB', words: 'ALL_WORDS_DATA', theme: 'wtheme
 const DEFAULT_LOTTERY_CONFIG = {
     cost: 50,
     badDeduct: 30,
+    starThreshold: 5000,
+    dailyLimit: 1,
+    dailySpendLimit: 500,
+    redeemUnlock: true,
     prizes: [
         { emoji: '🍔', name: '汉堡', weight: 0.01, type: 'good', cost: 2000 },
         { emoji: '🍦', name: '冰激凌', weight: 0.01, type: 'good', cost: 1800 },
@@ -358,6 +362,25 @@ function renderLottery() {
             <label>抽到"扣积分"类型扣除星星数</label>
             <input type="number" id="lottery-bad-deduct" value="${config.badDeduct || 30}" min="0">
         </div>
+        <div class="field">
+            <label>积分门槛（达到才能抽奖）</label>
+            <input type="number" id="lottery-star-threshold" value="${config.starThreshold || 5000}" min="0">
+        </div>
+        <div class="field">
+            <label>每日抽奖上限</label>
+            <input type="number" id="lottery-daily-limit" value="${config.dailyLimit || 1}" min="1">
+        </div>
+        <div class="field">
+            <label>每日抽奖消耗上限</label>
+            <input type="number" id="lottery-daily-spend-limit" value="${config.dailySpendLimit || 500}" min="0">
+        </div>
+        <div class="field">
+            <label>兑奖解锁抽奖资格</label>
+            <select id="lottery-redeem-unlock" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;">
+                <option value="true" ${config.redeemUnlock !== false ? 'selected' : ''}>开启（需先兑奖才能抽奖）</option>
+                <option value="false" ${config.redeemUnlock === false ? 'selected' : ''}>关闭</option>
+            </select>
+        </div>
     </div>
     <div class="card">
         <h2>🎁 奖品列表（中奖率 & 兑奖消耗）</h2>
@@ -416,8 +439,36 @@ function renderLottery() {
         <div class="btn-group">
             <button class="btn btn-danger" onclick="clearLotteryLogs()">🗑️ 清空记录</button>
         </div>`}
+    </div>
+    <div class="card">
+        <h2>🧮 抽奖积分计算器</h2>
+        <div class="input-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:16px;">
+            <div class="field"><label>日均积分收入</label><input type="number" id="calc-daily" value="1500" min="100" oninput="updateCalc()"></div>
+            <div class="field"><label>抽一次费用</label><input type="number" id="calc-cost" value="${config.cost}" min="10" oninput="updateCalc()"></div>
+            <div class="field"><label>💔 扣分值</label><input type="number" id="calc-deduct" value="${config.badDeduct || 30}" min="0" oninput="updateCalc()"></div>
+            <div class="field"><label>💔 扣分概率(%)</label><input type="number" id="calc-badrate" value="${Math.round(config.prizes.filter(p=>p.type==='bad').reduce((s,p)=>s+p.weight,0)*100)}" min="0" max="100" oninput="updateCalc()"></div>
+            <div class="field"><label>实物奖概率(%)</label><input type="number" id="calc-goodrate" value="${Math.round(config.prizes.filter(p=>p.type==='good').reduce((s,p)=>s+p.weight,0)*100)}" min="0" max="100" oninput="updateCalc()"></div>
+            <div class="field"><label>空奖概率(%)</label><input type="number" id="calc-neutral" value="${Math.round(config.prizes.filter(p=>p.type==='neutral').reduce((s,p)=>s+p.weight,0)*100)}" readonly style="opacity:0.6;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+            <div style="background:#f1efe8;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:11px;color:#73726c;">日均收入</div><div style="font-size:20px;font-weight:500;color:#185FA5;" id="cm-daily">1500</div></div>
+            <div style="background:#f1efe8;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:11px;color:#73726c;">抽一次费用</div><div style="font-size:20px;font-weight:500;color:#854F0B;" id="cm-cost">${config.cost}</div></div>
+            <div style="background:#f1efe8;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:11px;color:#73726c;">占日收入</div><div style="font-size:20px;font-weight:500;color:#A32D2D;" id="cm-ratio">0%</div></div>
+            <div style="background:#f1efe8;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:11px;color:#73726c;">扣分期望损失</div><div style="font-size:20px;font-weight:500;color:#A32D2D;" id="cm-loss">0</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:12px;">
+                <div style="font-size:11px;color:#73726c;margin-bottom:8px;">兑奖商品 — 需攒多少天</div>
+                <div id="calc-prize-list"></div>
+            </div>
+            <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:12px;">
+                <div style="font-size:11px;color:#73726c;margin-bottom:8px;">抽奖期望收益分析</div>
+                <div id="calc-analysis"></div>
+            </div>
+        </div>
     </div>`;
     panel.innerHTML = html;
+    updateCalc();
 }
 
 function openEmojiPicker(targetIdx) {
@@ -481,6 +532,10 @@ function saveLotteryConfig() {
     let config = getLotteryConfig();
     config.cost = parseInt(document.getElementById('lottery-cost').value) || 50;
     config.badDeduct = parseInt(document.getElementById('lottery-bad-deduct').value) || 30;
+    config.starThreshold = parseInt(document.getElementById('lottery-star-threshold').value) || 5000;
+    config.dailyLimit = parseInt(document.getElementById('lottery-daily-limit').value) || 1;
+    config.dailySpendLimit = parseInt(document.getElementById('lottery-daily-spend-limit').value) || 500;
+    config.redeemUnlock = document.getElementById('lottery-redeem-unlock').value === 'true';
     config.wishPrize = {
         emoji: document.getElementById('wish-emoji').value || '🌟',
         name: document.getElementById('wish-name').value || '心愿大奖',
@@ -780,6 +835,50 @@ function importAllData(event) {
 function clearAllData() { if (!confirm('⚠️ 确定清空所有数据？')) return; if (!confirm('再次确认？')) return; Object.values(KEYS).forEach(k => localStorage.removeItem(k)); localStorage.removeItem('lottery_config'); localStorage.removeItem('lottery_logs'); renderOverview(); showToast('已清空', 'success'); }
 
 function showToast(msg, type) { let el = document.createElement('div'); el.className = 'toast toast-' + type; el.innerText = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 3000); }
+
+function updateCalc() {
+    let daily = parseInt(document.getElementById('calc-daily').value) || 1500;
+    let cost = parseInt(document.getElementById('calc-cost').value) || 50;
+    let deduct = parseInt(document.getElementById('calc-deduct').value) || 30;
+    let badrate = parseInt(document.getElementById('calc-badrate').value) || 0;
+    let goodrate = parseInt(document.getElementById('calc-goodrate').value) || 0;
+    let neutral = Math.max(0, 100 - badrate - goodrate);
+    document.getElementById('calc-neutral').value = neutral;
+    let ratio = daily > 0 ? Math.round(cost / daily * 100) : 0;
+    let loss = Math.round(deduct * badrate / 100);
+    document.getElementById('cm-daily').textContent = daily.toLocaleString();
+    document.getElementById('cm-cost').textContent = cost.toLocaleString();
+    document.getElementById('cm-ratio').textContent = ratio + '%';
+    document.getElementById('cm-loss').textContent = '-' + loss.toLocaleString();
+    let config = getLotteryConfig();
+    let redeemItems = config.prizes.filter(p => p.type === 'good' && p.cost > 0);
+    if (config.wishPrize) redeemItems.push(config.wishPrize);
+    let maxCost = Math.max(...redeemItems.map(p => p.cost), 1);
+    document.getElementById('calc-prize-list').innerHTML = redeemItems.map(p => {
+        let days = daily > 0 ? (p.cost / daily).toFixed(1) : '∞';
+        let pct = Math.min(100, Math.round(p.cost / maxCost * 100));
+        return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:13px;">
+            <span style="width:60px;">${p.emoji} ${p.name}</span>
+            <span style="width:70px;color:#999;font-size:12px;">${p.cost.toLocaleString()}⭐</span>
+            <div style="flex:1;height:6px;background:#f1efe8;border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:#1D9E75;border-radius:3px;"></div></div>
+            <span style="width:50px;text-align:right;font-size:12px;color:#999;">~${days}天</span>
+        </div>`;
+    }).join('');
+    let evCost = -cost;
+    let evBad = -deduct * badrate / 100;
+    let evTotal = evCost + evBad;
+    document.getElementById('calc-analysis').innerHTML = `
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;"><span style="color:#73726c;">每次花费</span><span style="color:#A32D2D;font-weight:500;">${evCost} 积分</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;"><span style="color:#73726c;">扣分概率</span><span>${badrate}%</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;"><span style="color:#73726c;">额外扣分期望</span><span style="color:#A32D2D;font-weight:500;">${evBad.toFixed(0)} 积分</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;"><span style="color:#73726c;">实物奖概率</span><span>${goodrate}%</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;"><span style="color:#73726c;">空奖概率</span><span>${neutral}%</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="color:#73726c;">综合期望</span><span style="color:#A32D2D;font-weight:500;">${evTotal.toFixed(0)} 积分/次</span></div>
+        <div style="background:#FAEEDA;color:#633806;border-radius:8px;padding:8px 10px;font-size:12px;margin-top:8px;line-height:1.6;">
+            每次抽奖期望亏损 ${Math.abs(evTotal).toFixed(0)} 积分。兑奖才是积分的主要出口，抽奖只是"可选的小惊喜"。
+        </div>
+    `;
+}
 </script>
 </body>
 </html>
