@@ -77,6 +77,10 @@ tr:hover { background: #f8f9fa; }
 .prize-row .emoji { font-size: 20px; width: 30px; text-align: center; }
 .prize-row .name { flex: 1; font-size: 14px; }
 .prize-row input { width: 80px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; text-align: center; }
+.prize-row.dragging { opacity: 0.4; background: #fff3e0; }
+.prize-row.drag-over { border-top: 3px solid #1a73e8; }
+.drag-handle { cursor: grab; color: #bbb; font-size: 16px; padding: 0 4px; user-select: none; }
+.drag-handle:active { cursor: grabbing; }
 </style>
 </head>
 <body>
@@ -409,13 +413,22 @@ function renderLottery() {
                 <option value="false" ${config.redeemUnlock === false ? 'selected' : ''}>关闭</option>
             </select>
         </div>
+        <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #ddd;">
+            <h3 style="font-size:14px;margin-bottom:8px;">🔄 重置今日抽奖资格</h3>
+            <div style="font-size:12px;color:#999;margin-bottom:8px;">重置后该同学今日已抽次数归零，兑奖解锁恢复为未使用</div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-warning" onclick="resetTodayLottery('A')">🔄 重置同学A</button>
+                <button class="btn btn-warning" onclick="resetTodayLottery('B')">🔄 重置同学B</button>
+            </div>
+        </div>
     </div>
     <div class="card">
         <h2>🎁 奖品列表（中奖率 & 兑奖消耗）</h2>
         <div style="font-size:12px;color:#999;margin-bottom:12px;">中奖率(weight)为概率权重，所有奖品权重之和应为1。兑奖消耗(cost)为0表示不可兑奖。</div>
         <div id="prize-list-admin">
             ${config.prizes.map((p, i) => `
-            <div class="prize-row" style="flex-wrap:wrap;gap:6px;">
+            <div class="prize-row" draggable="true" ondragstart="prizeDragStart(event,${i})" ondragover="prizeDragOver(event,${i})" ondragend="prizeDragEnd(event)" ondrop="prizeDrop(event,${i})" data-prize-index="${i}" style="flex-wrap:wrap;gap:6px;">
+                <span class="drag-handle" title="拖动排序">⠿</span>
                 <span class="emoji" id="prize-emoji-display-${i}" style="cursor:pointer;border:2px dashed #ddd;border-radius:6px;padding:2px;" onclick="openEmojiPicker(${i})" title="点击更换emoji">${p.emoji}</span>
                 <input type="hidden" id="prize-emoji-${i}" value="${p.emoji}">
                 <input type="text" id="prize-name-${i}" value="${p.name}" style="width:100px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px;" placeholder="名称">
@@ -592,6 +605,49 @@ function clearLotteryLogs() {
     localStorage.removeItem('lottery_logs');
     renderLottery();
     showToast('记录已清空', 'success');
+}
+
+function resetTodayLottery(who) {
+    if (!confirm(`确定重置同学${who}的今日抽奖资格？`)) return;
+    let key = who === 'A' ? 'wuserA' : 'wuserB';
+    let u = null;
+    try { u = JSON.parse(localStorage.getItem(key)); } catch {}
+    if (!u) { showToast('该同学无数据', 'warning'); return; }
+    if (u.lotteryRedeemUnlock) u.lotteryRedeemUnlock.used = false;
+    let logs = [];
+    try { logs = JSON.parse(localStorage.getItem('lottery_logs') || '[]'); } catch {}
+    let todayStr = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-' + String(new Date().getDate()).padStart(2, '0');
+    logs = logs.filter(l => !(l.dateKey === todayStr && l.user === who && l.type === 'lottery'));
+    localStorage.setItem(key, JSON.stringify(u));
+    localStorage.setItem('lottery_logs', JSON.stringify(logs));
+    showToast(`同学${who}今日抽奖资格已重置`, 'success');
+}
+
+let prizeDragFromIndex = null;
+function prizeDragStart(e, idx) {
+    prizeDragFromIndex = idx;
+    e.target.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+function prizeDragOver(e, idx) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.prize-row').forEach(r => r.classList.remove('drag-over'));
+    if (idx !== prizeDragFromIndex) e.target.closest('.prize-row').classList.add('drag-over');
+}
+function prizeDragEnd(e) {
+    document.querySelectorAll('.prize-row').forEach(r => { r.classList.remove('dragging'); r.classList.remove('drag-over'); });
+    prizeDragFromIndex = null;
+}
+function prizeDrop(e, toIdx) {
+    e.preventDefault();
+    if (prizeDragFromIndex === null || prizeDragFromIndex === toIdx) return;
+    let config = getLotteryConfig();
+    let moved = config.prizes.splice(prizeDragFromIndex, 1)[0];
+    config.prizes.splice(toIdx, 0, moved);
+    setLotteryConfig(config);
+    renderLottery();
+    showToast('奖品顺序已更新', 'success');
 }
 
 function renderDataMgmt() {
