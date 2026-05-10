@@ -588,7 +588,7 @@
 
         .lottery-item {
             width: 80px;
-            height: 90px;
+            height: 100px;
             border: 2px solid #ffc75f;
             border-radius: 14px;
             background: #fffde7;
@@ -625,6 +625,22 @@
             color: #fff;
             transform: scale(1.2);
             box-shadow: 0 0 25px rgba(255, 111, 145, 0.6);
+        }
+
+        .lottery-item.redeem-selected {
+            border-color: #ff6f91;
+            background: linear-gradient(135deg, #fff9c4, #fce4ec);
+            box-shadow: 0 0 15px rgba(255, 111, 145, 0.4);
+            transform: scale(1.08);
+        }
+
+        .lottery-item.redeem-item {
+            border-color: #66bb6a;
+            background: #e8f5e9;
+        }
+
+        .lottery-item.redeem-item:hover {
+            box-shadow: 0 4px 15px rgba(102, 187, 106, 0.4);
         }
 
         .prize-tag {
@@ -1408,17 +1424,21 @@
                     <span style="font-size:14px;color:#666;margin-left:16px;">抽奖消耗：<span id="lottery-cost-display"></span>⭐</span>
                 </div>
                 <div id="lottery-eligibility-bar" style="margin-bottom:12px;"></div>
-                <div id="lottery-box" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <span style="font-size:13px;color:#ffc75f;font-weight:bold;">🎰 抽奖池</span>
+                    <span style="font-size:11px;color:#999;">|</span>
+                    <span style="font-size:13px;color:#66bb6a;font-weight:bold;">🛒 兑换区</span>
+                </div>
+                <div id="lottery-box" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px;">
                 </div>
                 <div id="lottery-result" style="display:none;text-align:center;padding:20px;border-radius:16px;margin-bottom:12px;font-size:22px;font-weight:bold;animation:lotteryPop 0.5s ease;"></div>
+                <div id="redeem-confirm-bar" style="display:none;text-align:center;margin-bottom:12px;">
+                    <div id="redeem-confirm-info" style="font-size:13px;color:#666;margin-bottom:8px;"></div>
+                    <button class="btn btn-blue" onclick="confirmRedeem()" id="redeem-confirm-btn" style="padding:10px 28px;font-size:16px;border-radius:30px;">🛒 确认兑换</button>
+                    <button style="padding:10px 20px;font-size:14px;border-radius:30px;border:1px solid #ddd;background:#fff;color:#999;cursor:pointer;margin-left:8px;" onclick="cancelRedeem()">取消</button>
+                </div>
                 <div style="text-align:center;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
                     <button class="btn btn-green" onclick="doLottery()" id="lottery-btn" style="padding:12px 32px;font-size:18px;border-radius:30px;">🎰 抽奖</button>
-                    <button class="btn btn-blue" onclick="showRedeem()" id="redeem-btn" style="padding:12px 32px;font-size:18px;border-radius:30px;">🛒 兑奖</button>
-                </div>
-                <div id="redeem-panel" style="display:none;margin-top:16px;border-top:1px dashed #ffc75f;padding-top:14px;">
-                    <h3 style="font-size:15px;margin-bottom:8px;">🛒 选择奖品兑换</h3>
-                    <div id="redeem-list" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
-                    <div id="redeem-result" style="display:none;text-align:center;padding:12px;border-radius:12px;margin-top:10px;font-size:14px;font-weight:bold;"></div>
                 </div>
                 <div style="margin-top:16px;">
                     <h3 style="font-size:15px;margin-bottom:8px;">🎁 我的奖品</h3>
@@ -2049,18 +2069,95 @@
         }
 
         let lotterySpinning = false;
+        let selectedRedeemItem = null;
 
         function renderLotteryBox() {
             let box = document.getElementById("lottery-box");
             if (!box) return;
             let config = getLotteryConfig();
             let prizes = getLotteryPrizes();
+            let redeemItems = getRedeemItems();
+            let u = safeUser(getUser());
+            let stars = u.stars || 0;
             let costEl = document.getElementById("lottery-cost-display");
             if (costEl) costEl.innerText = config.cost;
-            box.innerHTML = prizes.map((p, i) =>
-                `<div class="lottery-item" id="lottery-item-${i}"><span class="lottery-emoji">${p.emoji}</span><span>${p.name}</span></div>`
-            ).join('');
+            let html = '';
+            prizes.forEach((p, i) => {
+                html += `<div class="lottery-item" id="lottery-item-${i}"><span class="lottery-emoji">${p.emoji}</span><span style="font-size:11px;">${p.name}</span></div>`;
+            });
+            redeemItems.forEach((item, i) => {
+                let canAfford = stars >= item.cost;
+                let pct = Math.min(100, Math.round(stars / item.cost * 100));
+                let isSelected = selectedRedeemItem && selectedRedeemItem.name === item.name;
+                let selectedClass = isSelected ? ' redeem-selected' : '';
+                let opacityStyle = canAfford ? '' : 'opacity:0.5;';
+                html += `<div class="lottery-item redeem-item${selectedClass}" style="${opacityStyle}" onclick="selectRedeemItem('${item.name}',${item.cost})" id="redeem-item-${i}">
+                    <span class="lottery-emoji">${item.emoji}</span>
+                    <span style="font-size:11px;">${item.name}</span>
+                    <span style="font-size:10px;color:#fbbc04;font-weight:bold;">${item.cost}⭐</span>
+                    <div style="background:#e0e0e0;border-radius:3px;height:3px;width:90%;margin-top:2px;overflow:hidden;"><div style="background:#66bb6a;height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div></div>
+                </div>`;
+            });
+            box.innerHTML = html;
             renderLotteryEligibility();
+            updateRedeemConfirmBar();
+        }
+
+        function selectRedeemItem(name, cost) {
+            let u = safeUser(getUser());
+            if ((u.stars || 0) < cost) {
+                toast(`星星不足，还需 ${cost - (u.stars || 0)}⭐`, 'warning');
+                return;
+            }
+            if (selectedRedeemItem && selectedRedeemItem.name === name) {
+                selectedRedeemItem = null;
+            } else {
+                selectedRedeemItem = { name, cost };
+            }
+            renderLotteryBox();
+        }
+
+        function cancelRedeem() {
+            selectedRedeemItem = null;
+            renderLotteryBox();
+        }
+
+        function updateRedeemConfirmBar() {
+            let bar = document.getElementById("redeem-confirm-bar");
+            let info = document.getElementById("redeem-confirm-info");
+            let btn = document.getElementById("redeem-confirm-btn");
+            if (!bar) return;
+            if (selectedRedeemItem) {
+                let items = getRedeemItems();
+                let item = items.find(i => i.name === selectedRedeemItem.name);
+                bar.style.display = 'block';
+                info.innerHTML = `已选择：${item.emoji} ${item.name}，消耗 <b style="color:#fbbc04;">${item.cost}⭐</b>`;
+                let u = safeUser(getUser());
+                btn.disabled = (u.stars || 0) < item.cost;
+                btn.style.opacity = btn.disabled ? '0.4' : '1';
+                btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        function confirmRedeem() {
+            if (!selectedRedeemItem) return;
+            redeemPrize(selectedRedeemItem.name, selectedRedeemItem.cost);
+            selectedRedeemItem = null;
+        }
+
+        function scrollToRedeem() {
+            let box = document.getElementById("lottery-box");
+            if (box) {
+                let firstRedeem = box.querySelector('.redeem-item');
+                if (firstRedeem) {
+                    firstRedeem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstRedeem.style.transition = 'box-shadow 0.3s';
+                    firstRedeem.style.boxShadow = '0 0 20px rgba(102,187,106,0.8)';
+                    setTimeout(() => { firstRedeem.style.boxShadow = ''; }, 1500);
+                }
+            }
         }
 
         function renderLotteryEligibility() {
@@ -2083,14 +2180,14 @@
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
                         <span style="font-size:11px;color:#bbb;">${pct}%</span>
-                        <button onclick="showRedeem()" style="background:linear-gradient(135deg,#ff6f91,#ffc75f);color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:bold;cursor:pointer;box-shadow:0 2px 8px rgba(255,111,145,0.3);">🛒 去兑奖</button>
+                        <button onclick="scrollToRedeem()" style="background:linear-gradient(135deg,#ff6f91,#ffc75f);color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:bold;cursor:pointer;box-shadow:0 2px 8px rgba(255,111,145,0.3);">🛒 去兑奖</button>
                     </div>
                 </div>`;
             } else if (config.redeemUnlock && !elig.redeemOk) {
                 html = `<div style="background:#fff3e0;border-radius:8px;padding:10px;text-align:center;">
                     <span style="font-size:13px;color:#e65100;">🔒 需先完成一次兑奖，解锁今日抽奖资格</span>
                     <div style="margin-top:8px;">
-                        <button onclick="showRedeem()" style="background:linear-gradient(135deg,#ff6f91,#ffc75f);color:#fff;border:none;border-radius:20px;padding:6px 20px;font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 2px 8px rgba(255,111,145,0.3);">🛒 去兑奖</button>
+                        <button onclick="scrollToRedeem()" style="background:linear-gradient(135deg,#ff6f91,#ffc75f);color:#fff;border:none;border-radius:20px;padding:6px 20px;font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 2px 8px rgba(255,111,145,0.3);">🛒 去兑奖</button>
                     </div>
                 </div>`;
             } else if (!elig.dailyCountOk) {
@@ -2137,7 +2234,7 @@
             setUser(u);
             renderStarDisplay();
 
-            document.querySelectorAll('.lottery-item').forEach(el => {
+            document.querySelectorAll('.lottery-item:not(.redeem-item)').forEach(el => {
                 el.classList.remove('lottery-hit');
                 el.classList.remove('lottery-active');
             });
@@ -2158,13 +2255,13 @@
             let steps = 20 + Math.floor(Math.random() * 10);
             let currentStep = 0;
             let interval = setInterval(() => {
-                document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
+                document.querySelectorAll('.lottery-item:not(.redeem-item)').forEach(el => el.classList.remove('lottery-active'));
                 let idx = currentStep % prizes.length;
                 document.getElementById('lottery-item-' + idx).classList.add('lottery-active');
                 currentStep++;
                 if (currentStep >= steps) {
                     clearInterval(interval);
-                    document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
+                    document.querySelectorAll('.lottery-item:not(.redeem-item)').forEach(el => el.classList.remove('lottery-active'));
                     document.getElementById('lottery-item-' + hitIndex).classList.add('lottery-hit');
 
                     let prize = prizes[hitIndex];
@@ -2236,36 +2333,6 @@
             renderPrizes();
         }
 
-        function showRedeem() {
-            let panel = document.getElementById("redeem-panel");
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-            if (panel.style.display === 'block') renderRedeemList();
-        }
-
-        function renderRedeemList() {
-            let el = document.getElementById("redeem-list");
-            if (!el) return;
-            let u = safeUser(getUser());
-            let stars = u.stars || 0;
-            let items = getRedeemItems();
-            el.innerHTML = items.map(item => {
-                let canAfford = stars >= item.cost;
-                let pct = Math.min(100, Math.round(stars / item.cost * 100));
-                let isWish = item.cost >= 30000;
-                let barBg = isWish ? 'linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2)' : '#66bb6a';
-                let pctStyle = isWish
-                    ? 'font-weight:bold;background:linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'
-                    : 'color:#999;';
-                return `<div class="lottery-item" style="${canAfford ? '' : 'opacity:0.6;'}min-width:80px;" onclick="${canAfford ? `redeemPrize('${item.name}',${item.cost})` : ''}">
-                    <span class="lottery-emoji">${item.emoji}</span>
-                    <span style="font-size:11px;">${item.name}</span>
-                    <span style="font-size:10px;color:#fbbc04;">${item.cost}⭐</span>
-                    <div style="background:#e0e0e0;border-radius:3px;height:4px;margin-top:3px;overflow:hidden;"><div style="background:${barBg};height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div></div>
-                    <div style="font-size:9px;${pctStyle}margin-top:1px;">${pct}%</div>
-                </div>`;
-            }).join('');
-        }
-
         function redeemPrize(name, cost) {
             let u = safeUser(getUser());
             if ((u.stars || 0) < cost) {
@@ -2280,7 +2347,7 @@
             u.prizes.push({ emoji: item.emoji, name: item.name, date: todayKey() });
             u.lotteryRedeemUnlock = { time: Date.now(), used: false };
             setUser(u);
-            let resultEl = document.getElementById("redeem-result");
+            let resultEl = document.getElementById("lottery-result");
             resultEl.style.display = 'block';
             resultEl.style.background = 'linear-gradient(135deg, #fff9c4, #c8e6c9)';
             resultEl.style.color = '#1e7e34';
@@ -2291,7 +2358,7 @@
             playSound('victory');
             renderStarDisplay();
             renderPrizes();
-            renderLotteryEligibility();
+            renderLotteryBox();
             addLotteryLog('redeem', item.emoji, item.name, -cost);
         }
 
