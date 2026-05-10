@@ -1430,47 +1430,7 @@
             </div>
             <div class="card">
                 <h2>📋 规则说明</h2>
-                <div style="font-size:13px;line-height:1.8;">
-                    <h3 style="font-size:15px;color:#ff6f91;margin-bottom:6px;">⭐ 星星获取规则</h3>
-                    <ul style="padding-left:20px;margin-bottom:12px;">
-                        <li>每答对1题 +1⭐</li>
-                        <li>今日学习每满10个新单词 +30⭐</li>
-                        <li>完成复习任务（3轮全部通过）+30⭐</li>
-                        <li>完成考试任务 +50⭐</li>
-                    </ul>
-                    <h3 style="font-size:15px;color:#845ec2;margin-bottom:6px;">🔥 连击奖励规则</h3>
-                    <ul style="padding-left:20px;margin-bottom:12px;">
-                        <li>连续答对3题 +5⭐（含基础1⭐共6⭐）</li>
-                        <li>连续答对10题 +20⭐（含基础1⭐共21⭐）</li>
-                        <li>之后每10连击额外 +20⭐</li>
-                        <li>答错1题连击归零</li>
-                    </ul>
-                    <h3 style="font-size:15px;color:#ffc75f;margin-bottom:6px;">🎰 抽奖规则</h3>
-                    <ul style="padding-left:20px;margin-bottom:12px;">
-                        <li>每次抽奖消耗 50⭐</li>
-                        <li>🍔 汉堡 — 中奖率约 1%</li>
-                        <li>🍦 冰激凌 — 中奖率约 1%</li>
-                        <li>🍗 鸡腿 — 中奖率约 1%</li>
-                        <li>🖊️ 圆珠笔 — 中奖率约 2%</li>
-                        <li>📓 记事本 — 中奖率约 2%</li>
-                        <li>🍭 棒棒糖 — 中奖率约 5%</li>
-                        <li>🫧 泡泡糖 — 中奖率约 5%</li>
-                        <li>💔 积分减30 — 中奖率约 15%</li>
-                        <li>💨 什么也没有 — 中奖率约 68%</li>
-                    </ul>
-                    <h3 style="font-size:15px;color:#66bb6a;margin-bottom:6px;">🛒 兑奖规则</h3>
-                    <ul style="padding-left:20px;margin-bottom:12px;">
-                        <li>🌟 心愿大奖 — 30000⭐（满足一次心愿）</li>
-                        <li>🍔 汉堡 — 2000⭐</li>
-                        <li>🍦 冰激凌 — 1800⭐</li>
-                        <li>🍗 鸡腿 — 1800⭐</li>
-                        <li>🖊️ 圆珠笔 — 1600⭐</li>
-                        <li>📓 记事本 — 1600⭐</li>
-                        <li>🍭 棒棒糖 — 400⭐</li>
-                        <li>🫧 泡泡糖 — 200⭐</li>
-                    </ul>
-                    <p style="color:#999;font-size:12px;">⚠️ 复习中途退出，已获得的星星不会被保存</p>
-                </div>
+                <div id="rules-content" style="font-size:13px;line-height:1.8;"></div>
             </div>
         </div>
 
@@ -2005,6 +1965,53 @@
             let items = config.prizes.filter(p => p.type === 'good' && p.cost > 0).map(p => ({ emoji: p.emoji, name: p.name, cost: p.cost }));
             if (config.wishPrize) items.unshift(config.wishPrize);
             return items;
+        }
+
+        function renderRules() {
+            let el = document.getElementById("rules-content");
+            if (!el) return;
+            let config = getLotteryConfig();
+            let prizes = config.prizes;
+            let redeemItems = getRedeemItems();
+            let totalWeight = prizes.reduce((s, p) => s + p.weight, 0);
+            let lotteryItems = prizes.map(p => {
+                let pct = totalWeight > 0 ? (p.weight / totalWeight * 100).toFixed(0) : 0;
+                let label = p.type === 'bad' ? `${p.emoji} ${p.name}` : `${p.emoji} ${p.name}`;
+                return `<li>${label} — 中奖率约 ${pct}%</li>`;
+            }).join('');
+            let redeemHtml = redeemItems.map(item => {
+                let suffix = item.name === '心愿大奖' ? '（满足一次心愿）' : '';
+                return `<li>${item.emoji} ${item.name} — ${item.cost}⭐${suffix}</li>`;
+            }).join('');
+            el.innerHTML = `
+                <h3 style="font-size:15px;color:#ff6f91;margin-bottom:6px;">⭐ 星星获取规则</h3>
+                <ul style="padding-left:20px;margin-bottom:12px;">
+                    <li>每答对1题 +1⭐</li>
+                    <li>今日学习每满10个新单词 +30⭐</li>
+                    <li>完成复习任务（3轮全部通过）+30⭐</li>
+                    <li>考试全对 +100⭐</li>
+                    <li>完成考试且错题清零 +50⭐</li>
+                    <li>错题重考清零 +20⭐</li>
+                    <li>考试答错1题 -1⭐</li>
+                </ul>
+                <h3 style="font-size:15px;color:#845ec2;margin-bottom:6px;">🔥 连击奖励规则</h3>
+                <ul style="padding-left:20px;margin-bottom:12px;">
+                    <li>连续答对3题 +5⭐（含基础1⭐共6⭐）</li>
+                    <li>连续答对10题 +20⭐（含基础1⭐共21⭐）</li>
+                    <li>之后每10连击额外 +20⭐</li>
+                    <li>答错1题连击归零</li>
+                </ul>
+                <h3 style="font-size:15px;color:#ffc75f;margin-bottom:6px;">🎰 抽奖规则</h3>
+                <ul style="padding-left:20px;margin-bottom:12px;">
+                    <li>每次抽奖消耗 ${config.cost}⭐</li>
+                    ${lotteryItems}
+                </ul>
+                <h3 style="font-size:15px;color:#66bb6a;margin-bottom:6px;">🛒 兑奖规则</h3>
+                <ul style="padding-left:20px;margin-bottom:12px;">
+                    ${redeemHtml}
+                </ul>
+                <p style="color:#999;font-size:12px;">⚠️ 复习中途退出，已获得的星星不会被保存</p>
+            `;
         }
 
         let lotterySpinning = false;
@@ -4529,6 +4536,7 @@
             loadWords();
             loadRelations();
             applyTheme(currentTheme);
+            renderRules();
             show("home");
             startReminderTimer();
         };
