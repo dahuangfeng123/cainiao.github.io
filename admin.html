@@ -523,6 +523,10 @@ function downloadWordsJson() {
     URL.revokeObjectURL(url);
 }
 
+let wordPageSize = 100;
+let wordLoadedCount = 0;
+let wordSearchKeyword = '';
+
 function renderWords() {
     let words = getWords();
     let panel = document.getElementById('panel-words');
@@ -535,25 +539,63 @@ function renderWords() {
             <input type="file" id="upload-words-admin" accept=".json" style="display:none" onchange="uploadWordsAdmin(event)">
             <button class="btn btn-gray" onclick="downloadWordsJson()">📥 下载JSON</button>
         </div>
-        <div class="search-box"><input type="text" id="word-search-admin" placeholder="搜索单词或释义..." oninput="filterWords()"></div>
-        <div class="table-wrap" style="max-height:500px;overflow-y:auto;">
+        <div class="search-box"><input type="text" id="word-search-admin" placeholder="搜索单词或释义..." oninput="onWordSearch()"></div>
+        <div id="word-list-info" style="font-size:12px;color:#999;margin-bottom:8px;"></div>
+        <div class="table-wrap" id="word-table-wrap" style="max-height:500px;overflow-y:auto;">
             <table id="words-table">
-                <tr><th>#</th><th>单词</th><th>柯林斯</th><th>考试范围</th><th>释义</th><th>操作</th></tr>
-                ${words.map((w, i) => `<tr data-search="${w.word.toLowerCase()} ${w.meaning.toLowerCase()}">
-                    <td>${i}</td><td><strong>${w.word}</strong></td><td>${'★'.repeat(w.collins)}</td><td>${w.exam}</td><td style="max-width:300px;word-break:break-all;">${w.meaning}</td>
-                    <td><button class="btn btn-primary" style="padding:2px 8px;font-size:12px;" onclick="editWordItem(${i})">✏️</button> <button class="btn btn-danger" style="padding:2px 8px;font-size:12px;" onclick="deleteWordItem(${i})">🗑️</button></td>
-                </tr>`).join('')}
+                <thead><tr><th>#</th><th>单词</th><th>柯林斯</th><th>考试范围</th><th>释义</th><th>操作</th></tr></thead>
+                <tbody id="words-tbody"></tbody>
             </table>
         </div>
     </div>`;
     panel.innerHTML = html;
+    wordLoadedCount = 0;
+    wordSearchKeyword = '';
+    document.getElementById('word-table-wrap').addEventListener('scroll', onWordScroll);
+    loadMoreWords();
 }
 
-function filterWords() {
-    let kw = (document.getElementById('word-search-admin').value || '').toLowerCase();
-    document.querySelectorAll('#words-table tr[data-search]').forEach(tr => {
-        tr.style.display = tr.dataset.search.includes(kw) ? '' : 'none';
-    });
+function getFilteredWords() {
+    let words = getWords();
+    if (!wordSearchKeyword) return words;
+    return words.filter(w => (w.word.toLowerCase() + ' ' + w.meaning.toLowerCase()).includes(wordSearchKeyword));
+}
+
+function loadMoreWords() {
+    let filtered = getFilteredWords();
+    let tbody = document.getElementById('words-tbody');
+    if (!tbody) return;
+    let end = Math.min(wordLoadedCount + wordPageSize, filtered.length);
+    let html = '';
+    for (let i = wordLoadedCount; i < end; i++) {
+        let w = filtered[i];
+        let realIdx = wordSearchKeyword ? getWords().indexOf(w) : i;
+        html += `<tr data-search="${w.word.toLowerCase()} ${w.meaning.toLowerCase()}">
+            <td>${realIdx}</td><td><strong>${w.word}</strong></td><td>${'★'.repeat(w.collins)}</td><td>${w.exam}</td><td style="max-width:300px;word-break:break-all;">${w.meaning}</td>
+            <td><button class="btn btn-primary" style="padding:2px 8px;font-size:12px;" onclick="editWordItem(${realIdx})">✏️</button> <button class="btn btn-danger" style="padding:2px 8px;font-size:12px;" onclick="deleteWordItem(${realIdx})">🗑️</button></td>
+        </tr>`;
+    }
+    tbody.insertAdjacentHTML('beforeend', html);
+    wordLoadedCount = end;
+    let info = document.getElementById('word-list-info');
+    if (info) info.innerText = `显示 ${wordLoadedCount} / ${filtered.length} 个单词` + (wordLoadedCount < filtered.length ? '（向下滚动加载更多）' : '');
+}
+
+function onWordScroll() {
+    let wrap = document.getElementById('word-table-wrap');
+    if (!wrap) return;
+    if (wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 100) {
+        let filtered = getFilteredWords();
+        if (wordLoadedCount < filtered.length) loadMoreWords();
+    }
+}
+
+function onWordSearch() {
+    wordSearchKeyword = (document.getElementById('word-search-admin').value || '').toLowerCase();
+    let tbody = document.getElementById('words-tbody');
+    if (tbody) tbody.innerHTML = '';
+    wordLoadedCount = 0;
+    loadMoreWords();
 }
 
 function renderRaw() {
