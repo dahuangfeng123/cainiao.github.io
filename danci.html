@@ -2096,8 +2096,10 @@
             }
             bar.innerHTML = html;
             if (btn) {
-                btn.style.opacity = '1';
-                btn.style.cursor = 'pointer';
+                let canDo = elig.starsEnough && elig.dailyCountOk && elig.dailySpendOk && elig.costEnough;
+                btn.style.opacity = canDo ? '1' : '0.4';
+                btn.style.cursor = canDo ? 'pointer' : 'not-allowed';
+                btn.disabled = !canDo;
             }
         }
 
@@ -2183,6 +2185,7 @@
                     renderStarDisplay();
                     renderPrizes();
                     addLotteryLog('lottery', prize.emoji, prize.name, -config.cost);
+                    renderLotteryEligibility();   // ← 新增：刷新次数显示和按钮状态
                     lotterySpinning = false;
                 }
             }, 80 + currentStep * 5);
