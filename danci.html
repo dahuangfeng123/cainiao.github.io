@@ -2236,7 +2236,6 @@
 
             let allPrizeIds = [];
             prizes.forEach((p, i) => { allPrizeIds.push(i); });
-            if (config.wishPrize) allPrizeIds.push('wish');
 
             document.querySelectorAll('.lottery-item').forEach(el => {
                 el.classList.remove('lottery-hit');
@@ -2301,7 +2300,9 @@
                     renderStarDisplay();
                     renderPrizes();
                     addLotteryLog('lottery', prize.emoji, prize.name, -config.cost);
-                    renderLotteryEligibility();   // ← 新增：刷新次数显示和按钮状态
+                    renderLotteryBox();
+                    let newHitEl = document.getElementById('lottery-item-' + hitIndex);
+                    if (newHitEl) newHitEl.classList.add('lottery-hit');
                     lotterySpinning = false;
                 }
             }, 80 + currentStep * 5);
