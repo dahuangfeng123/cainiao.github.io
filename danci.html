@@ -2183,17 +2183,17 @@
                         <button onclick="scrollToRedeem()" style="background:linear-gradient(135deg,#ff6f91,#ffc75f);color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:bold;cursor:pointer;box-shadow:0 2px 8px rgba(255,111,145,0.3);">🛒 去兑奖</button>
                     </div>
                 </div>`;
+            } else if (!elig.dailyCountOk) {
+                html = `<div style="background:#fce4ec;border-radius:8px;padding:10px;text-align:center;">
+                    <div style="font-size:15px;font-weight:bold;color:#c62828;">🎰 今日抽奖次数已用完</div>
+                    <div style="font-size:12px;color:#999;margin-top:4px;">已抽 ${elig.todayLotteryCount} 次 / 上限 ${elig.dailyLimit} 次，明天再来</div>
+                </div>`;
             } else if (config.redeemUnlock && !elig.redeemOk) {
                 html = `<div style="background:#fff3e0;border-radius:8px;padding:10px;text-align:center;">
                     <span style="font-size:13px;color:#e65100;">🔒 需先完成一次兑奖，解锁今日抽奖资格</span>
                     <div style="margin-top:8px;">
                         <button onclick="scrollToRedeem()" style="background:linear-gradient(135deg,#ff6f91,#ffc75f);color:#fff;border:none;border-radius:20px;padding:6px 20px;font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 2px 8px rgba(255,111,145,0.3);">🛒 去兑奖</button>
                     </div>
-                </div>`;
-            } else if (!elig.dailyCountOk) {
-                html = `<div style="background:#fce4ec;border-radius:8px;padding:10px;text-align:center;">
-                    <div style="font-size:15px;font-weight:bold;color:#c62828;">🎰 今日抽奖次数已用完</div>
-                    <div style="font-size:12px;color:#999;margin-top:4px;">已抽 ${elig.todayLotteryCount} 次 / 上限 ${elig.dailyLimit} 次，明天再来</div>
                 </div>`;
             } else {
                 html = `<div style="background:#e8f5e9;border-radius:8px;padding:8px;text-align:center;">
@@ -2265,47 +2265,51 @@
                 currentStep++;
                 if (currentStep >= steps) {
                     clearInterval(interval);
-                    document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
-
-                    let prize = prizes[hitIndex];
-                    let hitEl = document.getElementById('lottery-item-' + hitIndex);
-                    if (hitEl) hitEl.classList.add('lottery-hit');
-
-                    u = safeUser(getUser());
-                    if (prize.type === 'bad') {
-                        u.stars = Math.max(0, (u.stars || 0) - config.badDeduct);
-                        setUser(u);
-                        resultEl.style.background = '#ffcdd2';
-                        resultEl.style.color = '#c5221f';
-                        resultEl.innerHTML = `${prize.emoji} ${prize.name}！`;
-                        playSound('wrong');
-                    } else if (prize.type === 'neutral') {
-                        resultEl.style.background = '#f5f5f5';
-                        resultEl.style.color = '#666';
-                        resultEl.innerHTML = `${prize.emoji} ${prize.name}`;
-                    } else {
-                        if (!u.prizes) u.prizes = [];
-                        u.prizes.push({ emoji: prize.emoji, name: prize.name, date: todayKey() });
-                        setUser(u);
-                        resultEl.style.background = 'linear-gradient(135deg, #fff9c4, #c8e6c9)';
-                        resultEl.style.color = '#1e7e34';
-                        resultEl.innerHTML = `🎉 恭喜获得 ${prize.emoji} ${prize.name}！`;
-                        playSound('victory');
+                    try {
+                        document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
+                        let prize = prizes[hitIndex];
+                        let hitEl = document.getElementById('lottery-item-' + hitIndex);
+                        if (hitEl) hitEl.classList.add('lottery-hit');
+                        u = safeUser(getUser());
+                        if (prize.type === 'bad') {
+                            u.stars = Math.max(0, (u.stars || 0) - config.badDeduct);
+                            setUser(u);
+                            resultEl.style.background = '#ffcdd2';
+                            resultEl.style.color = '#c5221f';
+                            resultEl.innerHTML = `${prize.emoji} ${prize.name}！`;
+                            playSound('wrong');
+                        } else if (prize.type === 'neutral') {
+                            resultEl.style.background = '#f5f5f5';
+                            resultEl.style.color = '#666';
+                            resultEl.innerHTML = `${prize.emoji} ${prize.name}`;
+                        } else {
+                            if (!u.prizes) u.prizes = [];
+                            u.prizes.push({ emoji: prize.emoji, name: prize.name, date: todayKey() });
+                            setUser(u);
+                            resultEl.style.background = 'linear-gradient(135deg, #fff9c4, #c8e6c9)';
+                            resultEl.style.color = '#1e7e34';
+                            resultEl.innerHTML = `🎉 恭喜获得 ${prize.emoji} ${prize.name}！`;
+                            playSound('victory');
+                        }
+                        resultEl.style.display = 'block';
+                        resultEl.style.animation = 'none';
+                        resultEl.offsetHeight;
+                        resultEl.style.animation = 'lotteryPop 0.5s ease';
+                        addLotteryLog('lottery', prize.emoji, prize.name, -config.cost);
+                        renderStarDisplay();
+                        renderPrizes();
+                        renderLotteryBox();
+                        let newHitEl = document.getElementById('lottery-item-' + hitIndex);
+                        if (newHitEl) newHitEl.classList.add('lottery-hit');
+                    } catch(e) {
+                        console.error('lottery callback error:', e);
+                    } finally {
+                        renderLotteryEligibility();
+                        updateRedeemBtn();
+                        lotterySpinning = false;
                     }
-                    resultEl.style.display = 'block';
-                    resultEl.style.animation = 'none';
-                    resultEl.offsetHeight;
-                    resultEl.style.animation = 'lotteryPop 0.5s ease';
-
-                    renderStarDisplay();
-                    renderPrizes();
-                    addLotteryLog('lottery', prize.emoji, prize.name, -config.cost);
-                    renderLotteryBox();
-                    let newHitEl = document.getElementById('lottery-item-' + hitIndex);
-                    if (newHitEl) newHitEl.classList.add('lottery-hit');
-                    lotterySpinning = false;
                 }
-            }, 80 + currentStep * 5);
+            }, 80);
         }
 
         function renderPrizes() {
@@ -2327,7 +2331,6 @@
                     `<span class="prize-tag">${c.emoji} ${c.name} ×${c.count}<span class="prize-close" onclick="redeemPrizeTag('${c.emoji}','${c.name}')">✕</span></span>`
                 ).join('');
             }
-            renderRedeemList();
         }
 
         function redeemPrizeTag(emoji, name) {
@@ -2355,19 +2358,26 @@
             u.prizes.push({ emoji: item.emoji, name: item.name, date: todayKey() });
             u.lotteryRedeemUnlock = { time: Date.now(), used: false };
             setUser(u);
-            let resultEl = document.getElementById("lottery-result");
-            resultEl.style.display = 'block';
-            resultEl.style.background = 'linear-gradient(135deg, #fff9c4, #c8e6c9)';
-            resultEl.style.color = '#1e7e34';
-            resultEl.innerHTML = `🎉 兑奖成功！${item.emoji} ${item.name}，消耗 ${cost}⭐`;
-            resultEl.style.animation = 'none';
-            resultEl.offsetHeight;
-            resultEl.style.animation = 'lotteryPop 0.5s ease';
-            playSound('victory');
-            renderStarDisplay();
-            renderPrizes();
-            renderLotteryBox();
             addLotteryLog('redeem', item.emoji, item.name, -cost);
+            try {
+                let resultEl = document.getElementById("lottery-result");
+                resultEl.style.display = 'block';
+                resultEl.style.background = 'linear-gradient(135deg, #fff9c4, #c8e6c9)';
+                resultEl.style.color = '#1e7e34';
+                resultEl.innerHTML = `🎉 兑奖成功！${item.emoji} ${item.name}，消耗 ${cost}⭐`;
+                resultEl.style.animation = 'none';
+                resultEl.offsetHeight;
+                resultEl.style.animation = 'lotteryPop 0.5s ease';
+                playSound('victory');
+                renderStarDisplay();
+                renderPrizes();
+                renderLotteryBox();
+            } catch(e) {
+                console.error('redeem render error:', e);
+            } finally {
+                renderLotteryEligibility();
+                updateRedeemBtn();
+            }
         }
 
         function addLotteryLog(type, emoji, name, starChange) {
