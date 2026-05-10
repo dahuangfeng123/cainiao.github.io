@@ -2056,22 +2056,11 @@
             if (!box) return;
             let config = getLotteryConfig();
             let prizes = getLotteryPrizes();
-            let u = safeUser(getUser());
-            let stars = u.stars || 0;
             let costEl = document.getElementById("lottery-cost-display");
             if (costEl) costEl.innerText = config.cost;
-            box.innerHTML = prizes.map((p, i) => {
-                let pct = p.cost > 0 ? Math.min(100, Math.round(stars / p.cost * 100)) : 0;
-                let barColor = p.type === 'bad' ? '#ef5350' : (p.type === 'neutral' ? '#bdbdbd' : '#66bb6a');
-                let barHtml = p.cost > 0 ? `<div style="background:#e0e0e0;border-radius:3px;height:4px;margin-top:4px;overflow:hidden;"><div style="background:${barColor};height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div></div><div style="font-size:9px;color:#999;margin-top:1px;">${pct}%</div>` : '';
-                return `<div class="lottery-item" id="lottery-item-${i}" style="min-width:70px;"><span class="lottery-emoji">${p.emoji}</span><span style="font-size:11px;">${p.name}</span>${barHtml}</div>`;
-            }).join('');
-            let wish = config.wishPrize;
-            if (wish) {
-                let wishPct = Math.min(100, Math.round(stars / wish.cost * 100));
-                let wishBarColor = '#ff6f91,#ffc75f,#845ec2';
-                box.innerHTML += `<div class="lottery-item" style="min-width:70px;"><span class="lottery-emoji">${wish.emoji}</span><span style="font-size:11px;">${wish.name}</span><div style="background:#e0e0e0;border-radius:3px;height:4px;margin-top:4px;overflow:hidden;"><div style="background:linear-gradient(90deg,${wishBarColor});height:100%;width:${wishPct}%;border-radius:3px;transition:width 0.5s;"></div></div><div style="font-size:9px;font-weight:bold;background:linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-top:1px;">${wishPct}%</div></div>`;
-            }
+            box.innerHTML = prizes.map((p, i) =>
+                `<div class="lottery-item" id="lottery-item-${i}"><span class="lottery-emoji">${p.emoji}</span><span>${p.name}</span></div>`
+            ).join('');
             renderLotteryEligibility();
         }
 
@@ -2108,8 +2097,8 @@
             }
             bar.innerHTML = html;
             if (btn) {
-                btn.style.opacity = elig.canLottery ? '1' : '0.5';
-                btn.style.cursor = elig.canLottery ? 'pointer' : 'not-allowed';
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
             }
         }
 
@@ -2246,9 +2235,18 @@
             let items = getRedeemItems();
             el.innerHTML = items.map(item => {
                 let canAfford = stars >= item.cost;
-                return `<div class="lottery-item" style="${canAfford ? '' : 'opacity:0.4;cursor:not-allowed;'}" onclick="${canAfford ? `redeemPrize('${item.name}',${item.cost})` : ''}">
+                let pct = Math.min(100, Math.round(stars / item.cost * 100));
+                let isWish = item.cost >= 30000;
+                let barBg = isWish ? 'linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2)' : '#66bb6a';
+                let pctStyle = isWish
+                    ? 'font-weight:bold;background:linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'
+                    : 'color:#999;';
+                return `<div class="lottery-item" style="${canAfford ? '' : 'opacity:0.6;'}min-width:80px;" onclick="${canAfford ? `redeemPrize('${item.name}',${item.cost})` : ''}">
                     <span class="lottery-emoji">${item.emoji}</span>
-                    <span style="font-size:11px;">${item.cost}⭐</span>
+                    <span style="font-size:11px;">${item.name}</span>
+                    <span style="font-size:10px;color:#fbbc04;">${item.cost}⭐</span>
+                    <div style="background:#e0e0e0;border-radius:3px;height:4px;margin-top:3px;overflow:hidden;"><div style="background:${barBg};height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div></div>
+                    <div style="font-size:9px;${pctStyle}margin-top:1px;">${pct}%</div>
                 </div>`;
             }).join('');
         }
