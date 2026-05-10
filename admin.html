@@ -483,12 +483,13 @@ function renderLottery() {
     </div>
     <div class="card">
         <h2>🧮 抽奖积分计算器</h2>
+        <div style="font-size:12px;color:#999;margin-bottom:12px;">以下数据从已保存的奖品配置实时计算，修改奖品后保存即可自动更新</div>
         <div class="input-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:16px;">
             <div class="field"><label>日均积分收入</label><input type="number" id="calc-daily" value="1500" min="100" oninput="updateCalc()"></div>
             <div class="field"><label>抽一次费用</label><input type="number" id="calc-cost" value="${config.cost}" min="10" oninput="updateCalc()"></div>
             <div class="field"><label>💔 扣分值</label><input type="number" id="calc-deduct" value="${config.badDeduct || 30}" min="0" oninput="updateCalc()"></div>
-            <div class="field"><label>💔 扣分概率(%)</label><input type="number" id="calc-badrate" value="${Math.round(config.prizes.filter(p=>p.type==='bad').reduce((s,p)=>s+p.weight,0)*100)}" min="0" max="100" oninput="updateCalc()"></div>
-            <div class="field"><label>实物奖概率(%)</label><input type="number" id="calc-goodrate" value="${Math.round(config.prizes.filter(p=>p.type==='good').reduce((s,p)=>s+p.weight,0)*100)}" min="0" max="100" oninput="updateCalc()"></div>
+            <div class="field"><label>💔 扣分概率(%)</label><input type="number" id="calc-badrate" value="${Math.round(config.prizes.filter(p=>p.type==='bad').reduce((s,p)=>s+p.weight,0)*100)}" readonly style="opacity:0.6;"></div>
+            <div class="field"><label>实物奖概率(%)</label><input type="number" id="calc-goodrate" value="${Math.round(config.prizes.filter(p=>p.type==='good').reduce((s,p)=>s+p.weight,0)*100)}" readonly style="opacity:0.6;"></div>
             <div class="field"><label>空奖概率(%)</label><input type="number" id="calc-neutral" value="${Math.round(config.prizes.filter(p=>p.type==='neutral').reduce((s,p)=>s+p.weight,0)*100)}" readonly style="opacity:0.6;"></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
@@ -590,6 +591,7 @@ function saveLotteryConfig() {
         p.type = document.getElementById('prize-type-' + i).value;
     });
     setLotteryConfig(config);
+    renderLottery();
     showToast('抽奖配置已保存', 'success');
 }
 
@@ -923,12 +925,15 @@ function clearAllData() { if (!confirm('⚠️ 确定清空所有数据？')) re
 function showToast(msg, type) { let el = document.createElement('div'); el.className = 'toast toast-' + type; el.innerText = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 3000); }
 
 function updateCalc() {
+    let config = getLotteryConfig();
     let daily = parseInt(document.getElementById('calc-daily').value) || 1500;
     let cost = parseInt(document.getElementById('calc-cost').value) || 50;
     let deduct = parseInt(document.getElementById('calc-deduct').value) || 30;
-    let badrate = parseInt(document.getElementById('calc-badrate').value) || 0;
-    let goodrate = parseInt(document.getElementById('calc-goodrate').value) || 0;
-    let neutral = Math.max(0, 100 - badrate - goodrate);
+    let badrate = Math.round(config.prizes.filter(p=>p.type==='bad').reduce((s,p)=>s+p.weight,0)*100);
+    let goodrate = Math.round(config.prizes.filter(p=>p.type==='good').reduce((s,p)=>s+p.weight,0)*100);
+    let neutral = Math.round(config.prizes.filter(p=>p.type==='neutral').reduce((s,p)=>s+p.weight,0)*100);
+    document.getElementById('calc-badrate').value = badrate;
+    document.getElementById('calc-goodrate').value = goodrate;
     document.getElementById('calc-neutral').value = neutral;
     let ratio = daily > 0 ? Math.round(cost / daily * 100) : 0;
     let loss = Math.round(deduct * badrate / 100);
@@ -936,7 +941,6 @@ function updateCalc() {
     document.getElementById('cm-cost').textContent = cost.toLocaleString();
     document.getElementById('cm-ratio').textContent = ratio + '%';
     document.getElementById('cm-loss').textContent = '-' + loss.toLocaleString();
-    let config = getLotteryConfig();
     let redeemItems = config.prizes.filter(p => p.type === 'good' && p.cost > 0);
     if (config.wishPrize) redeemItems.push(config.wishPrize);
     let maxCost = Math.max(...redeemItems.map(p => p.cost), 1);
