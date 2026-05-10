@@ -2455,8 +2455,9 @@
         }
 
         function safeUser(u) {
-            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0, lastTodayMilestone: {}, prizes: [] };
-            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local", wrongPool: u.wrongPool || {}, stars: u.stars || 0, combo: u.combo || 0, learnMilestone: u.learnMilestone || 0, lastTodayMilestone: u.lastTodayMilestone || {}, prizes: u.prizes || [] };
+            let def = { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0, lastTodayMilestone: {}, prizes: [], lotteryRedeemUnlock: null };
+            if (!u) return def;
+            return { ...def, ...u };
         }
 
         function todayKey() {
