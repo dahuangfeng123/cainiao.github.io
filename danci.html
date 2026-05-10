@@ -1405,6 +1405,7 @@
                 <div style="text-align:center;margin-bottom:12px;">
                     <span style="font-size:14px;color:#666;">当前星星：</span>
                     <span id="lottery-stars" style="font-size:20px;font-weight:bold;color:#fbbc04;">0</span>
+                    <span style="font-size:14px;color:#666;margin-left:16px;">抽奖消耗：<span id="lottery-cost-display"></span>⭐</span>
                 </div>
                 <div id="lottery-eligibility-bar" style="margin-bottom:12px;"></div>
                 <div id="lottery-box" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
@@ -1419,14 +1420,9 @@
                     <div id="redeem-list" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
                     <div id="redeem-result" style="display:none;text-align:center;padding:12px;border-radius:12px;margin-top:10px;font-size:14px;font-weight:bold;"></div>
                 </div>
-                <div id="wish-progress-wall" style="margin-top:16px;"></div>
                 <div style="margin-top:16px;">
                     <h3 style="font-size:15px;margin-bottom:8px;">🎁 我的奖品</h3>
                     <div id="my-prizes" style="font-size:13px;color:#666;">暂无奖品</div>
-                </div>
-                <div style="margin-top:16px;">
-                    <h3 style="font-size:15px;margin-bottom:8px;">📜 最近抽奖/兑奖记录</h3>
-                    <div id="lottery-history" style="max-height:200px;overflow-y:auto;font-size:12px;color:#666;">暂无记录</div>
                 </div>
             </div>
             <div class="card">
@@ -2060,11 +2056,23 @@
             if (!box) return;
             let config = getLotteryConfig();
             let prizes = getLotteryPrizes();
-            box.innerHTML = prizes.map((p, i) =>
-                `<div class="lottery-item" id="lottery-item-${i}"><span class="lottery-emoji">${p.emoji}</span><span>${p.name}</span></div>`
-            ).join('');
+            let u = safeUser(getUser());
+            let stars = u.stars || 0;
+            let costEl = document.getElementById("lottery-cost-display");
+            if (costEl) costEl.innerText = config.cost;
+            box.innerHTML = prizes.map((p, i) => {
+                let pct = p.cost > 0 ? Math.min(100, Math.round(stars / p.cost * 100)) : 0;
+                let barColor = p.type === 'bad' ? '#ef5350' : (p.type === 'neutral' ? '#bdbdbd' : '#66bb6a');
+                let barHtml = p.cost > 0 ? `<div style="background:#e0e0e0;border-radius:3px;height:4px;margin-top:4px;overflow:hidden;"><div style="background:${barColor};height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div></div><div style="font-size:9px;color:#999;margin-top:1px;">${pct}%</div>` : '';
+                return `<div class="lottery-item" id="lottery-item-${i}" style="min-width:70px;"><span class="lottery-emoji">${p.emoji}</span><span style="font-size:11px;">${p.name}</span>${barHtml}</div>`;
+            }).join('');
+            let wish = config.wishPrize;
+            if (wish) {
+                let wishPct = Math.min(100, Math.round(stars / wish.cost * 100));
+                let wishBarColor = '#ff6f91,#ffc75f,#845ec2';
+                box.innerHTML += `<div class="lottery-item" style="min-width:70px;"><span class="lottery-emoji">${wish.emoji}</span><span style="font-size:11px;">${wish.name}</span><div style="background:#e0e0e0;border-radius:3px;height:4px;margin-top:4px;overflow:hidden;"><div style="background:linear-gradient(90deg,${wishBarColor});height:100%;width:${wishPct}%;border-radius:3px;transition:width 0.5s;"></div></div><div style="font-size:9px;font-weight:bold;background:linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-top:1px;">${wishPct}%</div></div>`;
+            }
             renderLotteryEligibility();
-            renderWishProgressWall();
         }
 
         function renderLotteryEligibility() {
@@ -2072,7 +2080,6 @@
             let btn = document.getElementById("lottery-btn");
             if (!bar) return;
             let elig = getLotteryEligibility();
-            let config = getLotteryConfig();
             let html = '';
             if (!elig.starsEnough) {
                 let pct = Math.min(100, Math.round(elig.stars / elig.starThreshold * 100));
@@ -2089,11 +2096,6 @@
                         <button class="btn btn-primary" style="padding:4px 12px;font-size:12px;" onclick="showRedeem()">🛒 去兑奖</button>
                     </div>
                 </div>`;
-            } else if (!elig.redeemOk) {
-                html = `<div style="background:#fff3e0;border-radius:8px;padding:10px;text-align:center;">
-                    <span style="font-size:13px;color:#e65100;">🔒 需先完成一次兑奖解锁抽奖资格</span>
-                    <button class="btn btn-primary" style="margin-left:8px;padding:4px 12px;font-size:12px;" onclick="showRedeem()">🛒 去兑奖</button>
-                </div>`;
             } else if (!elig.dailyCountOk) {
                 html = `<div style="background:#e8f5e9;border-radius:8px;padding:10px;text-align:center;">
                     <span style="font-size:13px;color:#2e7d32;">✅ 今日抽奖次数已用完（${elig.todayLotteryCount}/${elig.dailyLimit}），明天再来！</span>
@@ -2106,37 +2108,9 @@
             }
             bar.innerHTML = html;
             if (btn) {
-                if (elig.canLottery) {
-                    btn.style.opacity = '1';
-                    btn.style.cursor = 'pointer';
-                } else {
-                    btn.style.opacity = '0.5';
-                    btn.style.cursor = 'not-allowed';
-                }
+                btn.style.opacity = elig.canLottery ? '1' : '0.5';
+                btn.style.cursor = elig.canLottery ? 'pointer' : 'not-allowed';
             }
-        }
-
-        function renderWishProgressWall() {
-            let wall = document.getElementById("wish-progress-wall");
-            if (!wall) return;
-            let config = getLotteryConfig();
-            let wish = config.wishPrize;
-            if (!wish) { wall.innerHTML = ''; return; }
-            let u = safeUser(getUser());
-            let stars = u.stars || 0;
-            let pct = Math.min(100, Math.round(stars / wish.cost * 100));
-            let filledBlocks = Math.floor(pct / 5);
-            let blocks = '';
-            for (let i = 0; i < 20; i++) {
-                blocks += i < filledBlocks
-                    ? '<span style="font-size:16px;">🌟</span>'
-                    : '<span style="font-size:16px;opacity:0.2;">⬜</span>';
-            }
-            wall.innerHTML = `<div style="background:linear-gradient(135deg,#fffde7,#fff8e1);border-radius:12px;padding:14px;text-align:center;">
-                <div style="font-size:18px;margin-bottom:6px;">${wish.emoji} ${wish.name}</div>
-                <div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-bottom:8px;">${blocks}</div>
-                <div style="font-size:12px;color:#999;">${stars} / ${wish.cost}⭐（${pct}%）</div>
-            </div>`;
         }
 
         function doLottery() {
@@ -2245,7 +2219,6 @@
                 ).join('');
             }
             renderRedeemList();
-            renderLotteryHistory();
         }
 
         function redeemPrizeTag(emoji, name) {
@@ -2305,6 +2278,7 @@
             playSound('victory');
             renderStarDisplay();
             renderPrizes();
+            renderLotteryEligibility();
             addLotteryLog('redeem', item.emoji, item.name, -cost);
         }
 
