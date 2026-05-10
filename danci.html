@@ -1405,7 +1405,7 @@
                 <div style="text-align:center;margin-bottom:12px;">
                     <span style="font-size:14px;color:#666;">当前星星：</span>
                     <span id="lottery-stars" style="font-size:20px;font-weight:bold;color:#fbbc04;">0</span>
-                    <span style="font-size:14px;color:#666;margin-left:16px;">抽奖消耗：50⭐</span>
+                    <span style="font-size:14px;color:#666;margin-left:16px;">抽奖消耗：<span id="lottery-cost-display">50</span>⭐</span>
                 </div>
                 <div id="lottery-box" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
                 </div>
@@ -2018,10 +2018,13 @@
         function renderLotteryBox() {
             let box = document.getElementById("lottery-box");
             if (!box) return;
+            let config = getLotteryConfig();
             let prizes = getLotteryPrizes();
             box.innerHTML = prizes.map((p, i) =>
                 `<div class="lottery-item" id="lottery-item-${i}"><span class="lottery-emoji">${p.emoji}</span><span>${p.name}</span></div>`
             ).join('');
+            let costEl = document.getElementById("lottery-cost-display");
+            if (costEl) costEl.innerText = config.cost;
         }
 
         function doLottery() {
@@ -3117,11 +3120,11 @@
                 title: '考试任务',
                 desc: examDone
                     ? `✅ 今日已完成考试，任务完成！`
-                    : `完成一次考试奖励50⭐`,
+                    : `完成考试且错题清零奖励50⭐，考试全对奖励100⭐`,
                 done: examDone,
                 urgent: !examDone,
                 action: examDone ? null : { label: '去考试', fn: "show('exam')" },
-                potentialStars: examDone ? 0 : 50
+                potentialStars: examDone ? 0 : 150
             });
 
             let el = document.getElementById("reminder-list");
