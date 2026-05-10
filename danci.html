@@ -2007,9 +2007,8 @@
             let redeemItems = getRedeemItems();
             let totalWeight = prizes.reduce((s, p) => s + p.weight, 0);
             let lotteryItems = prizes.map(p => {
-                let pct = totalWeight > 0 ? (p.weight / totalWeight * 100).toFixed(0) : 0;
                 let label = p.type === 'bad' ? `${p.emoji} ${p.name}` : `${p.emoji} ${p.name}`;
-                return `<li>${label} — 中奖率约 ${pct}%</li>`;
+                return `<li>${label}</li>`;
             }).join('');
             let redeemHtml = redeemItems.map(item => {
                 let suffix = item.name === '心愿大奖' ? '（满足一次心愿）' : '';
