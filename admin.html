@@ -326,6 +326,22 @@ function renderStudent(who) {
     panel.innerHTML = html;
 }
 
+const EMOJI_LIST = [
+    '🍔','🍟','🍕','🌭','🍿','🧀','🍳','🥞','🥓','🥩',
+    '🍗','🍖','🌮','🌯','🥪','🍝','🍜','🍲','🍛','🍣',
+    '🍱','🥟','🍤','🍙','🍚','🍘','🍥','🥠','🍦','🍧',
+    '🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭',
+    '🍮','🍯','🥛','☕','🧃','🥤','🍺','🍻','🥂','🍷',
+    '🧋','🍵','🫖','🍶','🍾','🥃','🍸','🍹','🧉','🍺',
+    '🖊️','✏️','🖋️','📌','📎','📐','📏','📒','📓','📔',
+    '📕','📖','📗','📘','📙','📚','📜','📰','🗞️','🏷️',
+    '🎁','🎀','🎈','🎆','🎇','🧨','✨','🎉','🎊','🎃',
+    '🎄','🎋','🎍','🎎','🎏','🎐','🎑','🧧','🏅','🥇',
+    '🥈','🥉','🏆','🎖️','🏵️','🎗️','🎫','🎟️','🎪','🎭'
+];
+
+let emojiPickerTarget = null;
+
 function renderLottery() {
     let config = getLotteryConfig();
     let panel = document.getElementById('panel-lottery');
@@ -348,11 +364,11 @@ function renderLottery() {
         <div style="font-size:12px;color:#999;margin-bottom:12px;">中奖率(weight)为概率权重，所有奖品权重之和应为1。兑奖消耗(cost)为0表示不可兑奖。</div>
         <div id="prize-list-admin">
             ${config.prizes.map((p, i) => `
-            <div class="prize-row">
-                <span class="emoji">${p.emoji}</span>
-                <span class="name">${p.name}</span>
-                <label style="font-size:11px;margin:0;">类型:</label>
-                <select id="prize-type-${i}" style="width:80px;padding:4px;border:1px solid #ddd;border-radius:4px;font-size:12px;">
+            <div class="prize-row" style="flex-wrap:wrap;gap:6px;">
+                <span class="emoji" id="prize-emoji-display-${i}" style="cursor:pointer;border:2px dashed #ddd;border-radius:6px;padding:2px;" onclick="openEmojiPicker(${i})" title="点击更换emoji">${p.emoji}</span>
+                <input type="hidden" id="prize-emoji-${i}" value="${p.emoji}">
+                <input type="text" id="prize-name-${i}" value="${p.name}" style="width:100px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px;" placeholder="名称">
+                <select id="prize-type-${i}" style="width:70px;padding:4px;border:1px solid #ddd;border-radius:4px;font-size:12px;">
                     <option value="good" ${p.type==='good'?'selected':''}>奖品</option>
                     <option value="bad" ${p.type==='bad'?'selected':''}>扣分</option>
                     <option value="neutral" ${p.type==='neutral'?'selected':''}>中性</option>
@@ -361,6 +377,7 @@ function renderLottery() {
                 <input type="number" id="prize-weight-${i}" value="${p.weight}" step="0.01" min="0" max="1">
                 <label style="font-size:11px;margin:0;">兑奖:</label>
                 <input type="number" id="prize-cost-${i}" value="${p.cost}" min="0">
+                <button class="btn btn-danger" style="padding:2px 6px;font-size:11px;" onclick="removePrizeRow(${i})">✕</button>
             </div>`).join('')}
         </div>
         <div class="btn-group">
@@ -371,6 +388,11 @@ function renderLottery() {
     </div>
     <div class="card">
         <h2>🌟 心愿大奖</h2>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <span id="wish-emoji-display" style="cursor:pointer;font-size:24px;border:2px dashed #ddd;border-radius:6px;padding:4px;" onclick="openEmojiPicker(-1)" title="点击更换emoji">${config.wishPrize ? config.wishPrize.emoji : '🌟'}</span>
+            <input type="hidden" id="wish-emoji" value="${config.wishPrize ? config.wishPrize.emoji : '🌟'}">
+            <input type="text" id="wish-name" value="${config.wishPrize ? config.wishPrize.name : '心愿大奖'}" style="width:120px;padding:6px;border:1px solid #ddd;border-radius:4px;">
+        </div>
         <div class="field">
             <label>兑奖消耗星星</label>
             <input type="number" id="wish-cost" value="${config.wishPrize ? config.wishPrize.cost : 30000}" min="0">
@@ -398,9 +420,59 @@ function renderLottery() {
     panel.innerHTML = html;
 }
 
+function openEmojiPicker(targetIdx) {
+    emojiPickerTarget = targetIdx;
+    let overlay = document.getElementById('emoji-picker-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'emoji-picker-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:3000;display:flex;justify-content:center;align-items:center;';
+        document.body.appendChild(overlay);
+    }
+    let html = `<div style="background:#fff;border-radius:12px;padding:20px;max-width:500px;width:90%;max-height:70vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 style="margin:0;">选择 Emoji</h3>
+            <button class="btn btn-gray" style="padding:4px 10px;" onclick="closeEmojiPicker()">✕</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+            ${EMOJI_LIST.map(e => `<span style="font-size:24px;cursor:pointer;padding:4px;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''" onclick="selectEmoji('${e}')">${e}</span>`).join('')}
+        </div>
+    </div>`;
+    overlay.innerHTML = html;
+    overlay.style.display = 'flex';
+}
+
+function closeEmojiPicker() {
+    let overlay = document.getElementById('emoji-picker-overlay');
+    if (overlay) overlay.style.display = 'none';
+    emojiPickerTarget = null;
+}
+
+function selectEmoji(emoji) {
+    if (emojiPickerTarget === -1) {
+        let display = document.getElementById('wish-emoji-display');
+        let hidden = document.getElementById('wish-emoji');
+        if (display) display.innerText = emoji;
+        if (hidden) hidden.value = emoji;
+    } else if (emojiPickerTarget !== null) {
+        let display = document.getElementById('prize-emoji-display-' + emojiPickerTarget);
+        let hidden = document.getElementById('prize-emoji-' + emojiPickerTarget);
+        if (display) display.innerText = emoji;
+        if (hidden) hidden.value = emoji;
+    }
+    closeEmojiPicker();
+}
+
 function addPrizeRow() {
     let config = getLotteryConfig();
     config.prizes.push({ emoji: '🎁', name: '新奖品', weight: 0.01, type: 'good', cost: 500 });
+    setLotteryConfig(config);
+    renderLottery();
+}
+
+function removePrizeRow(idx) {
+    let config = getLotteryConfig();
+    config.prizes.splice(idx, 1);
     setLotteryConfig(config);
     renderLottery();
 }
@@ -409,8 +481,14 @@ function saveLotteryConfig() {
     let config = getLotteryConfig();
     config.cost = parseInt(document.getElementById('lottery-cost').value) || 50;
     config.badDeduct = parseInt(document.getElementById('lottery-bad-deduct').value) || 30;
-    config.wishPrize.cost = parseInt(document.getElementById('wish-cost').value) || 30000;
+    config.wishPrize = {
+        emoji: document.getElementById('wish-emoji').value || '🌟',
+        name: document.getElementById('wish-name').value || '心愿大奖',
+        cost: parseInt(document.getElementById('wish-cost').value) || 30000
+    };
     config.prizes.forEach((p, i) => {
+        p.emoji = document.getElementById('prize-emoji-' + i).value || p.emoji;
+        p.name = document.getElementById('prize-name-' + i).value || p.name;
         p.weight = parseFloat(document.getElementById('prize-weight-' + i).value) || 0;
         p.cost = parseInt(document.getElementById('prize-cost-' + i).value) || 0;
         p.type = document.getElementById('prize-type-' + i).value;
@@ -523,7 +601,7 @@ function downloadWordsJson() {
     URL.revokeObjectURL(url);
 }
 
-let wordPageSize = 1000;
+let wordPageSize = 100;
 let wordLoadedCount = 0;
 let wordSearchKeyword = '';
 
