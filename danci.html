@@ -1405,8 +1405,8 @@
                 <div style="text-align:center;margin-bottom:12px;">
                     <span style="font-size:14px;color:#666;">当前星星：</span>
                     <span id="lottery-stars" style="font-size:20px;font-weight:bold;color:#fbbc04;">0</span>
-                    <span style="font-size:14px;color:#666;margin-left:16px;">抽奖消耗：<span id="lottery-cost-display">50</span>⭐</span>
                 </div>
+                <div id="lottery-eligibility-bar" style="margin-bottom:12px;"></div>
                 <div id="lottery-box" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
                 </div>
                 <div id="lottery-result" style="display:none;text-align:center;padding:20px;border-radius:16px;margin-bottom:12px;font-size:22px;font-weight:bold;animation:lotteryPop 0.5s ease;"></div>
@@ -1419,6 +1419,7 @@
                     <div id="redeem-list" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
                     <div id="redeem-result" style="display:none;text-align:center;padding:12px;border-radius:12px;margin-top:10px;font-size:14px;font-weight:bold;"></div>
                 </div>
+                <div id="wish-progress-wall" style="margin-top:16px;"></div>
                 <div style="margin-top:16px;">
                     <h3 style="font-size:15px;margin-bottom:8px;">🎁 我的奖品</h3>
                     <div id="my-prizes" style="font-size:13px;color:#666;">暂无奖品</div>
@@ -1941,6 +1942,10 @@
         const DEFAULT_LOTTERY_CONFIG = {
             cost: 50,
             badDeduct: 30,
+            starThreshold: 5000,
+            dailyLimit: 1,
+            dailySpendLimit: 500,
+            redeemUnlock: true,
             prizes: [
                 { emoji: '🍔', name: '汉堡', weight: 0.01, type: 'good', cost: 2000 },
                 { emoji: '🍦', name: '冰激凌', weight: 0.01, type: 'good', cost: 1800 },
@@ -1965,6 +1970,37 @@
             let items = config.prizes.filter(p => p.type === 'good' && p.cost > 0).map(p => ({ emoji: p.emoji, name: p.name, cost: p.cost }));
             if (config.wishPrize) items.unshift(config.wishPrize);
             return items;
+        }
+
+        function getLotteryEligibility() {
+            let config = getLotteryConfig();
+            let u = safeUser(getUser());
+            let stars = u.stars || 0;
+            let todayStr = todayKey();
+            let todayLogs = [];
+            try { todayLogs = JSON.parse(localStorage.getItem('lottery_logs') || '[]').filter(l => l.date && l.date.startsWith(todayStr) && l.user === user); } catch {}
+            let todayLotteryCount = todayLogs.filter(l => l.type === 'lottery').length;
+            let todaySpend = todayLogs.filter(l => l.type === 'lottery').reduce((s, l) => s + Math.abs(l.starChange), 0);
+            let redeemUnlockData = u.lotteryRedeemUnlock || null;
+            let hasRedeemUnlock = false;
+            if (redeemUnlockData) {
+                let elapsed = Date.now() - redeemUnlockData.time;
+                if (elapsed < 7 * 24 * 3600 * 1000 && !redeemUnlockData.used) hasRedeemUnlock = true;
+            }
+            let starsEnough = stars >= config.starThreshold;
+            let dailyCountOk = todayLotteryCount < (config.dailyLimit || 1);
+            let dailySpendOk = todaySpend < (config.dailySpendLimit || 500);
+            let redeemOk = config.redeemUnlock ? hasRedeemUnlock : true;
+            let costEnough = stars >= config.cost;
+            return {
+                canLottery: starsEnough && dailyCountOk && dailySpendOk && redeemOk && costEnough,
+                starsEnough, dailyCountOk, dailySpendOk, redeemOk, costEnough,
+                stars, starThreshold: config.starThreshold,
+                starsNeeded: Math.max(0, config.starThreshold - stars),
+                todayLotteryCount, dailyLimit: config.dailyLimit || 1,
+                todaySpend, dailySpendLimit: config.dailySpendLimit || 500,
+                hasRedeemUnlock, cost: config.cost
+            };
         }
 
         function renderRules() {
@@ -2002,7 +2038,11 @@
                 </ul>
                 <h3 style="font-size:15px;color:#ffc75f;margin-bottom:6px;">🎰 抽奖规则</h3>
                 <ul style="padding-left:20px;margin-bottom:12px;">
+                    <li>积分须达 ${config.starThreshold || 5000}⭐ 才能抽奖</li>
+                    <li>需先完成一次兑奖，解锁抽奖资格（7天有效）</li>
                     <li>每次抽奖消耗 ${config.cost}⭐</li>
+                    <li>每日最多抽奖 ${config.dailyLimit || 1} 次</li>
+                    <li>每日抽奖消耗上限 ${config.dailySpendLimit || 500}⭐</li>
                     ${lotteryItems}
                 </ul>
                 <h3 style="font-size:15px;color:#66bb6a;margin-bottom:6px;">🛒 兑奖规则</h3>
@@ -2023,21 +2063,100 @@
             box.innerHTML = prizes.map((p, i) =>
                 `<div class="lottery-item" id="lottery-item-${i}"><span class="lottery-emoji">${p.emoji}</span><span>${p.name}</span></div>`
             ).join('');
-            let costEl = document.getElementById("lottery-cost-display");
-            if (costEl) costEl.innerText = config.cost;
+            renderLotteryEligibility();
+            renderWishProgressWall();
+        }
+
+        function renderLotteryEligibility() {
+            let bar = document.getElementById("lottery-eligibility-bar");
+            let btn = document.getElementById("lottery-btn");
+            if (!bar) return;
+            let elig = getLotteryEligibility();
+            let config = getLotteryConfig();
+            let html = '';
+            if (!elig.starsEnough) {
+                let pct = Math.min(100, Math.round(elig.stars / elig.starThreshold * 100));
+                html = `<div style="background:#f5f5f5;border-radius:8px;padding:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span style="font-size:12px;color:#999;">积分门槛 ${elig.starThreshold}⭐</span>
+                        <span style="font-size:12px;color:#ef5350;">还差 ${elig.starsNeeded}⭐</span>
+                    </div>
+                    <div style="background:#e0e0e0;border-radius:4px;height:8px;overflow:hidden;">
+                        <div style="background:linear-gradient(90deg,#ffc75f,#fbbc04);height:100%;width:${pct}%;border-radius:4px;transition:width 0.5s;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                        <span style="font-size:11px;color:#bbb;">${pct}%</span>
+                        <button class="btn btn-primary" style="padding:4px 12px;font-size:12px;" onclick="showRedeem()">🛒 去兑奖</button>
+                    </div>
+                </div>`;
+            } else if (!elig.redeemOk) {
+                html = `<div style="background:#fff3e0;border-radius:8px;padding:10px;text-align:center;">
+                    <span style="font-size:13px;color:#e65100;">🔒 需先完成一次兑奖解锁抽奖资格</span>
+                    <button class="btn btn-primary" style="margin-left:8px;padding:4px 12px;font-size:12px;" onclick="showRedeem()">🛒 去兑奖</button>
+                </div>`;
+            } else if (!elig.dailyCountOk) {
+                html = `<div style="background:#e8f5e9;border-radius:8px;padding:10px;text-align:center;">
+                    <span style="font-size:13px;color:#2e7d32;">✅ 今日抽奖次数已用完（${elig.todayLotteryCount}/${elig.dailyLimit}），明天再来！</span>
+                </div>`;
+            } else {
+                html = `<div style="background:#e8f5e9;border-radius:8px;padding:8px;text-align:center;">
+                    <span style="font-size:12px;color:#2e7d32;">✅ 抽奖资格已解锁</span>
+                    <span style="font-size:11px;color:#999;margin-left:8px;">今日已抽 ${elig.todayLotteryCount}/${elig.dailyLimit} 次</span>
+                </div>`;
+            }
+            bar.innerHTML = html;
+            if (btn) {
+                if (elig.canLottery) {
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                } else {
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                }
+            }
+        }
+
+        function renderWishProgressWall() {
+            let wall = document.getElementById("wish-progress-wall");
+            if (!wall) return;
+            let config = getLotteryConfig();
+            let wish = config.wishPrize;
+            if (!wish) { wall.innerHTML = ''; return; }
+            let u = safeUser(getUser());
+            let stars = u.stars || 0;
+            let pct = Math.min(100, Math.round(stars / wish.cost * 100));
+            let filledBlocks = Math.floor(pct / 5);
+            let blocks = '';
+            for (let i = 0; i < 20; i++) {
+                blocks += i < filledBlocks
+                    ? '<span style="font-size:16px;">🌟</span>'
+                    : '<span style="font-size:16px;opacity:0.2;">⬜</span>';
+            }
+            wall.innerHTML = `<div style="background:linear-gradient(135deg,#fffde7,#fff8e1);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:18px;margin-bottom:6px;">${wish.emoji} ${wish.name}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-bottom:8px;">${blocks}</div>
+                <div style="font-size:12px;color:#999;">${stars} / ${wish.cost}⭐（${pct}%）</div>
+            </div>`;
         }
 
         function doLottery() {
             if (lotterySpinning) return;
-            let config = getLotteryConfig();
-            let prizes = getLotteryPrizes();
-            let u = safeUser(getUser());
-            if ((u.stars || 0) < config.cost) {
-                toast(`星星不足${config.cost}个，无法抽奖`, 'warning');
+            let elig = getLotteryEligibility();
+            if (!elig.canLottery) {
+                let msgs = [];
+                if (!elig.starsEnough) msgs.push(`积分需达${elig.starThreshold}（还差${elig.starsNeeded}⭐）`);
+                if (!elig.redeemOk) msgs.push('需先完成一次兑奖解锁抽奖资格');
+                if (!elig.dailyCountOk) msgs.push(`今日已抽${elig.todayLotteryCount}次，上限${elig.dailyLimit}次`);
+                if (!elig.dailySpendOk) msgs.push(`今日抽奖消耗已达上限${elig.dailySpendLimit}⭐`);
+                if (!elig.costEnough) msgs.push(`积分不足${elig.cost}⭐`);
+                toast(msgs.join('；'), 'warning');
                 return;
             }
             lotterySpinning = true;
+            let config = getLotteryConfig();
+            let u = safeUser(getUser());
             u.stars -= config.cost;
+            if (u.lotteryRedeemUnlock && !u.lotteryRedeemUnlock.used) u.lotteryRedeemUnlock.used = true;
             setUser(u);
             renderStarDisplay();
 
@@ -2173,6 +2292,7 @@
             u.stars -= cost;
             if (!u.prizes) u.prizes = [];
             u.prizes.push({ emoji: item.emoji, name: item.name, date: todayKey() });
+            u.lotteryRedeemUnlock = { time: Date.now(), used: false };
             setUser(u);
             let resultEl = document.getElementById("redeem-result");
             resultEl.style.display = 'block';
