@@ -1974,7 +1974,7 @@
             let stars = u.stars || 0;
             let todayStr = todayKey();
             let todayLogs = [];
-            try { todayLogs = JSON.parse(localStorage.getItem('lottery_logs') || '[]').filter(l => l.date && l.date.startsWith(todayStr) && l.user === user); } catch {}
+            try { todayLogs = JSON.parse(localStorage.getItem('lottery_logs') || '[]').filter(l => l.dateKey === todayStr && l.user === user); } catch {}
             let todayLotteryCount = todayLogs.filter(l => l.type === 'lottery').length;
             let todaySpend = todayLogs.filter(l => l.type === 'lottery').reduce((s, l) => s + Math.abs(l.starChange), 0);
             let redeemUnlockData = u.lotteryRedeemUnlock || null;
@@ -2069,6 +2069,7 @@
             if (!bar) return;
             let elig = getLotteryEligibility();
             let config = getLotteryConfig();
+            let remaining = Math.max(0, elig.dailyLimit - elig.todayLotteryCount);
             let html = '';
             if (!elig.starsEnough) {
                 let pct = Math.min(100, Math.round(elig.stars / elig.starThreshold * 100));
@@ -2093,13 +2094,15 @@
                     </div>
                 </div>`;
             } else if (!elig.dailyCountOk) {
-                html = `<div style="background:#e8f5e9;border-radius:8px;padding:10px;text-align:center;">
-                    <span style="font-size:13px;color:#2e7d32;">✅ 今日抽奖次数已用完（${elig.todayLotteryCount}/${elig.dailyLimit}），明天再来！</span>
+                html = `<div style="background:#fce4ec;border-radius:8px;padding:10px;text-align:center;">
+                    <div style="font-size:15px;font-weight:bold;color:#c62828;">🎰 今日抽奖次数已用完</div>
+                    <div style="font-size:12px;color:#999;margin-top:4px;">已抽 ${elig.todayLotteryCount} 次 / 上限 ${elig.dailyLimit} 次，明天再来</div>
                 </div>`;
             } else {
                 html = `<div style="background:#e8f5e9;border-radius:8px;padding:8px;text-align:center;">
-                    <span style="font-size:12px;color:#2e7d32;">✅ 抽奖资格已解锁</span>
-                    <span style="font-size:11px;color:#999;margin-left:8px;">今日已抽 ${elig.todayLotteryCount}/${elig.dailyLimit} 次</span>
+                    <span style="font-size:13px;color:#2e7d32;font-weight:bold;">✅ 抽奖资格已解锁</span>
+                    <span style="font-size:13px;color:#1b5e20;font-weight:bold;margin-left:10px;">剩余 ${remaining} 次</span>
+                    <span style="font-size:11px;color:#999;margin-left:6px;">（今日已抽 ${elig.todayLotteryCount}/${elig.dailyLimit}）</span>
                 </div>`;
             }
             bar.innerHTML = html;
@@ -2108,6 +2111,7 @@
                 btn.style.opacity = canDo ? '1' : '0.4';
                 btn.style.cursor = canDo ? 'pointer' : 'not-allowed';
                 btn.disabled = !canDo;
+                btn.innerText = canDo ? `🎰 抽奖（剩余${remaining}次）` : '🎰 抽奖';
             }
         }
 
@@ -2294,7 +2298,7 @@
         function addLotteryLog(type, emoji, name, starChange) {
             let logs = [];
             try { logs = JSON.parse(localStorage.getItem('lottery_logs') || '[]'); } catch {}
-            logs.unshift({ type, emoji, name, starChange, date: new Date().toLocaleString('zh-CN'), user: user });
+            logs.unshift({ type, emoji, name, starChange, date: new Date().toLocaleString('zh-CN'), dateKey: todayKey(), user: user });
             if (logs.length > 100) logs = logs.slice(0, 100);
             localStorage.setItem('lottery_logs', JSON.stringify(logs));
         }
