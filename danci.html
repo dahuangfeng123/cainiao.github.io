@@ -1423,6 +1423,10 @@
                     <h3 style="font-size:15px;margin-bottom:8px;">🎁 我的奖品</h3>
                     <div id="my-prizes" style="font-size:13px;color:#666;">暂无奖品</div>
                 </div>
+                <div style="margin-top:16px;">
+                    <h3 style="font-size:15px;margin-bottom:8px;">📜 最近抽奖/兑奖记录</h3>
+                    <div id="lottery-history" style="max-height:200px;overflow-y:auto;font-size:12px;color:#666;">暂无记录</div>
+                </div>
             </div>
             <div class="card">
                 <h2>📋 规则说明</h2>
@@ -1670,23 +1674,6 @@
                     <p><strong>形状：</strong>如名词变形容词（fashion → fashionable）</p>
                     <p><strong>字典使用：</strong>查找单词时，词性缩写（如 n., v., adj.）直接决定了用法</p>
                 </div>
-            </div>
-            <div class="card">
-                <h2>⚙️ 数据管理</h2>
-                <button class="btn btn-red" onclick="resetUser()">重置我的所有学习记录</button>
-                <p style="margin-top:10px;color:#999;font-size:13px;">只清空当前用户，不影响对方</p>
-                <hr style="margin:15px 0;border:none;border-top:1px solid #eee;">
-                <h3 style="margin-bottom:10px;">📦 数据导出 / 导入</h3>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <button class="btn btn-blue" onclick="exportData()">📤 导出学习数据</button>
-                    <button class="btn btn-green" onclick="document.getElementById('import-file').click()">📥 导入学习数据</button>
-                    <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)">
-                </div>
-                <p style="margin-top:10px;color:#999;font-size:13px;">导出为JSON文件，可在另一台电脑上导入恢复学习进度</p>
-            </div>
-            <div class="card" style="text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-                <button class="btn btn-blue" onclick="downloadXlsx()">📥 下载所有单词（xlsx）</button>
-                <button class="btn btn-green" onclick="downloadJson()">📥 下载所有单词（json）</button>
             </div>
         </div>
 
@@ -1991,37 +1978,57 @@
             if (wrongStarEl) wrongStarEl.innerText = stars;
         }
 
-        const LOTTERY_PRIZES = [
-            { emoji: '🍔', name: '汉堡', weight: 0.01, type: 'good' },
-            { emoji: '🍦', name: '冰激凌', weight: 0.01, type: 'good' },
-            { emoji: '🍗', name: '鸡腿', weight: 0.01, type: 'good' },
-            { emoji: '🖊️', name: '圆珠笔', weight: 0.02, type: 'good' },
-            { emoji: '📓', name: '记事本', weight: 0.02, type: 'good' },
-            { emoji: '🍭', name: '棒棒糖', weight: 0.05, type: 'good' },
-            { emoji: '🫧', name: '泡泡糖', weight: 0.05, type: 'good' },
-            { emoji: '💔', name: '积分减30', weight: 0.15, type: 'bad' },
-            { emoji: '💨', name: '什么也没有', weight: 0.68, type: 'neutral' }
-        ];
+        const DEFAULT_LOTTERY_CONFIG = {
+            cost: 50,
+            badDeduct: 30,
+            prizes: [
+                { emoji: '🍔', name: '汉堡', weight: 0.01, type: 'good', cost: 2000 },
+                { emoji: '🍦', name: '冰激凌', weight: 0.01, type: 'good', cost: 1800 },
+                { emoji: '🍗', name: '鸡腿', weight: 0.01, type: 'good', cost: 1800 },
+                { emoji: '🖊️', name: '圆珠笔', weight: 0.02, type: 'good', cost: 1600 },
+                { emoji: '📓', name: '记事本', weight: 0.02, type: 'good', cost: 1600 },
+                { emoji: '🍭', name: '棒棒糖', weight: 0.05, type: 'good', cost: 400 },
+                { emoji: '🫧', name: '泡泡糖', weight: 0.05, type: 'good', cost: 200 },
+                { emoji: '💔', name: '积分减30', weight: 0.15, type: 'bad', cost: 0 },
+                { emoji: '💨', name: '什么也没有', weight: 0.68, type: 'neutral', cost: 0 }
+            ],
+            wishPrize: { emoji: '🌟', name: '心愿大奖', cost: 30000 }
+        };
+
+        function getLotteryConfig() {
+            try { let c = JSON.parse(localStorage.getItem('lottery_config')); return c || DEFAULT_LOTTERY_CONFIG; } catch { return DEFAULT_LOTTERY_CONFIG; }
+        }
+
+        function getLotteryPrizes() { return getLotteryConfig().prizes; }
+        function getRedeemItems() {
+            let config = getLotteryConfig();
+            let items = config.prizes.filter(p => p.type === 'good' && p.cost > 0).map(p => ({ emoji: p.emoji, name: p.name, cost: p.cost }));
+            if (config.wishPrize) items.unshift(config.wishPrize);
+            return items;
+        }
 
         let lotterySpinning = false;
 
         function renderLotteryBox() {
             let box = document.getElementById("lottery-box");
             if (!box) return;
-            box.innerHTML = LOTTERY_PRIZES.map((p, i) =>
+            let prizes = getLotteryPrizes();
+            box.innerHTML = prizes.map((p, i) =>
                 `<div class="lottery-item" id="lottery-item-${i}"><span class="lottery-emoji">${p.emoji}</span><span>${p.name}</span></div>`
             ).join('');
         }
 
         function doLottery() {
             if (lotterySpinning) return;
+            let config = getLotteryConfig();
+            let prizes = getLotteryPrizes();
             let u = safeUser(getUser());
-            if ((u.stars || 0) < 50) {
-                toast('星星不足50个，无法抽奖', 'warning');
+            if ((u.stars || 0) < config.cost) {
+                toast(`星星不足${config.cost}个，无法抽奖`, 'warning');
                 return;
             }
             lotterySpinning = true;
-            u.stars -= 50;
+            u.stars -= config.cost;
             setUser(u);
             renderStarDisplay();
 
@@ -2031,12 +2038,12 @@
             });
             document.getElementById("lottery-result").style.display = 'none';
 
-            let totalWeight = LOTTERY_PRIZES.reduce((s, p) => s + p.weight, 0);
+            let totalWeight = prizes.reduce((s, p) => s + p.weight, 0);
             let rand = Math.random() * totalWeight;
             let hitIndex = 0;
             let cumWeight = 0;
-            for (let i = 0; i < LOTTERY_PRIZES.length; i++) {
-                cumWeight += LOTTERY_PRIZES[i].weight;
+            for (let i = 0; i < prizes.length; i++) {
+                cumWeight += prizes[i].weight;
                 if (rand < cumWeight) { hitIndex = i; break; }
             }
 
@@ -2047,7 +2054,7 @@
             let currentStep = 0;
             let interval = setInterval(() => {
                 document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
-                let idx = currentStep % LOTTERY_PRIZES.length;
+                let idx = currentStep % prizes.length;
                 document.getElementById('lottery-item-' + idx).classList.add('lottery-active');
                 currentStep++;
                 if (currentStep >= steps) {
@@ -2055,10 +2062,10 @@
                     document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
                     document.getElementById('lottery-item-' + hitIndex).classList.add('lottery-hit');
 
-                    let prize = LOTTERY_PRIZES[hitIndex];
+                    let prize = prizes[hitIndex];
                     u = safeUser(getUser());
                     if (prize.type === 'bad') {
-                        u.stars = Math.max(0, (u.stars || 0) - 30);
+                        u.stars = Math.max(0, (u.stars || 0) - config.badDeduct);
                         setUser(u);
                         resultEl.style.background = '#ffcdd2';
                         resultEl.style.color = '#c5221f';
@@ -2084,6 +2091,7 @@
 
                     renderStarDisplay();
                     renderPrizes();
+                    addLotteryLog('lottery', prize.emoji, prize.name, -config.cost);
                     lotterySpinning = false;
                 }
             }, 80 + currentStep * 5);
@@ -2109,6 +2117,7 @@
                 ).join('');
             }
             renderRedeemList();
+            renderLotteryHistory();
         }
 
         function redeemPrizeTag(emoji, name) {
@@ -2122,17 +2131,6 @@
             renderPrizes();
         }
 
-        const REDEEM_ITEMS = [
-            { emoji: '🌟', name: '心愿大奖', cost: 30000 },
-            { emoji: '🍔', name: '汉堡', cost: 2000 },
-            { emoji: '🍦', name: '冰激凌', cost: 1800 },
-            { emoji: '🍗', name: '鸡腿', cost: 1800 },
-            { emoji: '🖊️', name: '圆珠笔', cost: 1600 },
-            { emoji: '📓', name: '记事本', cost: 1600 },
-            { emoji: '🍭', name: '棒棒糖', cost: 400 },
-            { emoji: '🫧', name: '泡泡糖', cost: 200 }
-        ];
-
         function showRedeem() {
             let panel = document.getElementById("redeem-panel");
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
@@ -2144,7 +2142,8 @@
             if (!el) return;
             let u = safeUser(getUser());
             let stars = u.stars || 0;
-            el.innerHTML = REDEEM_ITEMS.map(item => {
+            let items = getRedeemItems();
+            el.innerHTML = items.map(item => {
                 let canAfford = stars >= item.cost;
                 return `<div class="lottery-item" style="${canAfford ? '' : 'opacity:0.4;cursor:not-allowed;'}" onclick="${canAfford ? `redeemPrize('${item.name}',${item.cost})` : ''}">
                     <span class="lottery-emoji">${item.emoji}</span>
@@ -2159,7 +2158,8 @@
                 toast('星星不足，无法兑奖', 'warning');
                 return;
             }
-            let item = REDEEM_ITEMS.find(i => i.name === name);
+            let items = getRedeemItems();
+            let item = items.find(i => i.name === name);
             if (!item) return;
             u.stars -= cost;
             if (!u.prizes) u.prizes = [];
@@ -2176,6 +2176,31 @@
             playSound('victory');
             renderStarDisplay();
             renderPrizes();
+            addLotteryLog('redeem', item.emoji, item.name, -cost);
+        }
+
+        function addLotteryLog(type, emoji, name, starChange) {
+            let logs = [];
+            try { logs = JSON.parse(localStorage.getItem('lottery_logs') || '[]'); } catch {}
+            logs.unshift({ type, emoji, name, starChange, date: new Date().toLocaleString('zh-CN'), user: user });
+            if (logs.length > 100) logs = logs.slice(0, 100);
+            localStorage.setItem('lottery_logs', JSON.stringify(logs));
+        }
+
+        function renderLotteryHistory() {
+            let el = document.getElementById("lottery-history");
+            if (!el) return;
+            let logs = [];
+            try { logs = JSON.parse(localStorage.getItem('lottery_logs') || '[]'); } catch {}
+            if (logs.length === 0) {
+                el.innerHTML = '暂无记录';
+                return;
+            }
+            el.innerHTML = logs.slice(0, 20).map(l => {
+                let typeLabel = l.type === 'lottery' ? '🎰抽奖' : '🛒兑奖';
+                let starLabel = l.starChange < 0 ? `<span style="color:#ef5350;">${l.starChange}⭐</span>` : `<span style="color:#66bb6a;">+${l.starChange}⭐</span>`;
+                return `<div style="padding:3px 0;border-bottom:1px solid #f0f0f0;">${typeLabel} ${l.emoji} ${l.name} ${starLabel} <span style="color:#bbb;">${l.date}</span></div>`;
+            }).join('');
         }
 
         const PERIOD = [0, 1, 2, 4, 7, 15, 30];
@@ -3945,6 +3970,13 @@
         }
 
         function startExam() {
+            let u = safeUser(getUser());
+            let todayStr = todayKey();
+            let todayExams = (u.examScores || []).filter(s => s.date && s.date.startsWith(todayStr));
+            if (todayExams.length > 0) {
+                toast('今日考试任务已完成，明天再来吧！', 'warning');
+                return;
+            }
             let pool = getExamPool();
             if (pool.length < 1) {
                 toast("暂无已学习的单词，请先学习一些单词再考试", "warning");
@@ -4032,9 +4064,13 @@
             } else {
                 playSound('wrong');
                 resetCombo();
+                let u = safeUser(getUser());
+                u.stars = Math.max(0, (u.stars || 0) - 1);
+                setUser(u);
+                renderStarDisplay();
                 fb.style.background = "#ffcdd2";
                 fb.style.color = "#c5221f";
-                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? w.meaning : w.word}</strong>`;
+                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，-1⭐，正确答案：<strong>${mode === 1 ? w.meaning : w.word}</strong>`;
             }
             document.getElementById("exam-answer").disabled = true;
             setTimeout(() => {
@@ -4108,9 +4144,6 @@
                 return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') === todayStr;
             });
             saveExamScore(score, correctCount, examWords.length, mode, duration);
-            if (existingTodayScores.length === 0) {
-                addStars(50, '考试完成！');
-            }
             let u = safeUser(getUser());
             examAnswers.forEach(a => {
                 if (a.simScore < 100 && !u.wrongPool[a.idx]) {
@@ -4118,7 +4151,26 @@
                 }
             });
             setUser(u);
+            if (existingTodayScores.length === 0) {
+                if (correctCount === examWords.length) {
+                    addStars(100, '考试全对奖励！');
+                }
+            }
+            checkExamAndWrongClearBonus();
             renderWrongPool();
+        }
+
+        function checkExamAndWrongClearBonus() {
+            let u = safeUser(getUser());
+            let todayStr = todayKey();
+            let todayExams = (u.examScores || []).filter(s => s.date && s.date.startsWith(todayStr));
+            if (todayExams.length === 0) return;
+            let wrongCount = Object.keys(u.wrongPool || {}).length;
+            if (wrongCount > 0) return;
+            let key = 'examWrongClearBonus_' + todayStr;
+            if (localStorage.getItem(key)) return;
+            localStorage.setItem(key, '1');
+            addStars(50, '考试完成且错题清零！');
         }
 
         function saveExamScore(score, correct, total, m, duration) {
@@ -4240,7 +4292,6 @@
             fb.style.display = 'block';
             if (result.correct) {
                 playSound('correct');
-                addComboStar();
                 let u = safeUser(getUser());
                 let info = u.wrongPool[item.idx];
                 if (info) {
@@ -4259,7 +4310,6 @@
                 setUser(u);
             } else {
                 playSound('wrong');
-                resetCombo();
                 let u = safeUser(getUser());
                 let info = u.wrongPool[item.idx];
                 if (info) info.c = 0;
@@ -4294,6 +4344,7 @@
             if (remainingWrongCount === 0) {
                 playSound('victory');
             }
+            checkExamAndWrongClearBonus();
             document.getElementById("wrong-exam-progress").style.display = 'none';
             document.getElementById("wrong-pool-card").style.display = 'block';
             let correctCount = wrongExamAnswers.filter(a => a.correct).length;
