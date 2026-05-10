@@ -2063,6 +2063,21 @@
             let costEl = document.getElementById("lottery-cost-display");
             if (costEl) costEl.innerText = config.cost;
             let html = '';
+            if (config.wishPrize) {
+                let wp = config.wishPrize;
+                let canAfford = stars >= wp.cost;
+                let pct = Math.min(100, Math.round(stars / wp.cost * 100));
+                let isSelected = selectedRedeemItem && selectedRedeemItem.name === wp.name;
+                let selectedClass = isSelected ? ' redeem-selected' : '';
+                let opacityStyle = canAfford ? '' : 'opacity:0.5;';
+                html += `<div class="lottery-item${selectedClass}" id="lottery-item-wish" style="${opacityStyle};border-color:#845ec2;background:linear-gradient(135deg,#f3e5f5,#ede7f6);" onclick="selectRedeemItem('${wp.name}',${wp.cost})">
+                    <span class="lottery-emoji">${wp.emoji}</span>
+                    <span style="font-size:11px;">${wp.name}</span>
+                    <span style="font-size:10px;color:#845ec2;font-weight:bold;">${wp.cost}⭐</span>
+                    <div style="background:#e0e0e0;border-radius:3px;height:3px;width:90%;margin-top:2px;overflow:hidden;"><div style="background:linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2);height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div></div>
+                    <span style="font-size:9px;font-weight:bold;background:linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${pct}%</span>
+                </div>`;
+            }
             prizes.forEach((p, i) => {
                 if (p.type === 'good' && p.cost > 0) {
                     let canAfford = stars >= p.cost;
@@ -2091,21 +2106,6 @@
                     </div>`;
                 }
             });
-            if (config.wishPrize) {
-                let wp = config.wishPrize;
-                let canAfford = stars >= wp.cost;
-                let pct = Math.min(100, Math.round(stars / wp.cost * 100));
-                let isSelected = selectedRedeemItem && selectedRedeemItem.name === wp.name;
-                let selectedClass = isSelected ? ' redeem-selected' : '';
-                let opacityStyle = canAfford ? '' : 'opacity:0.5;';
-                html += `<div class="lottery-item${selectedClass}" id="lottery-item-wish" style="${opacityStyle};border-color:#845ec2;background:linear-gradient(135deg,#f3e5f5,#ede7f6);" onclick="selectRedeemItem('${wp.name}',${wp.cost})">
-                    <span class="lottery-emoji">${wp.emoji}</span>
-                    <span style="font-size:11px;">${wp.name}</span>
-                    <span style="font-size:10px;color:#845ec2;font-weight:bold;">${wp.cost}⭐</span>
-                    <div style="background:#e0e0e0;border-radius:3px;height:3px;width:90%;margin-top:2px;overflow:hidden;"><div style="background:linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2);height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div></div>
-                    <span style="font-size:9px;font-weight:bold;background:linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${pct}%</span>
-                </div>`;
-            }
             box.innerHTML = html;
             renderLotteryEligibility();
             updateRedeemBtn();
