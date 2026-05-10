@@ -634,15 +634,6 @@
             transform: scale(1.08);
         }
 
-        .lottery-item.redeem-item {
-            border-color: #66bb6a;
-            background: #e8f5e9;
-        }
-
-        .lottery-item.redeem-item:hover {
-            box-shadow: 0 4px 15px rgba(102, 187, 106, 0.4);
-        }
-
         .prize-tag {
             display: inline-flex;
             align-items: center;
@@ -1424,11 +1415,6 @@
                     <span style="font-size:14px;color:#666;margin-left:16px;">抽奖消耗：<span id="lottery-cost-display"></span>⭐</span>
                 </div>
                 <div id="lottery-eligibility-bar" style="margin-bottom:12px;"></div>
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                    <span style="font-size:13px;color:#ffc75f;font-weight:bold;">🎰 抽奖池</span>
-                    <span style="font-size:11px;color:#999;">|</span>
-                    <span style="font-size:13px;color:#66bb6a;font-weight:bold;">🛒 兑换区</span>
-                </div>
                 <div id="lottery-box" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px;">
                 </div>
                 <div id="lottery-result" style="display:none;text-align:center;padding:20px;border-radius:16px;margin-bottom:12px;font-size:22px;font-weight:bold;animation:lotteryPop 0.5s ease;"></div>
@@ -2076,28 +2062,42 @@
             if (!box) return;
             let config = getLotteryConfig();
             let prizes = getLotteryPrizes();
-            let redeemItems = getRedeemItems();
             let u = safeUser(getUser());
             let stars = u.stars || 0;
             let costEl = document.getElementById("lottery-cost-display");
             if (costEl) costEl.innerText = config.cost;
             let html = '';
             prizes.forEach((p, i) => {
-                html += `<div class="lottery-item" id="lottery-item-${i}"><span class="lottery-emoji">${p.emoji}</span><span style="font-size:11px;">${p.name}</span></div>`;
+                if (p.type === 'good' && p.cost > 0) {
+                    let canAfford = stars >= p.cost;
+                    let pct = Math.min(100, Math.round(stars / p.cost * 100));
+                    let isSelected = selectedRedeemItem && selectedRedeemItem.name === p.name;
+                    let selectedClass = isSelected ? ' redeem-selected' : '';
+                    let opacityStyle = canAfford ? '' : 'opacity:0.5;';
+                    html += `<div class="lottery-item${selectedClass}" id="lottery-item-${i}" style="${opacityStyle}" onclick="selectRedeemItem('${p.name}',${p.cost})">
+                        <span class="lottery-emoji">${p.emoji}</span>
+                        <span style="font-size:11px;">${p.name}</span>
+                        <span style="font-size:10px;color:#fbbc04;font-weight:bold;">${p.cost}⭐</span>
+                        <div style="background:#e0e0e0;border-radius:3px;height:3px;width:90%;margin-top:2px;overflow:hidden;"><div style="background:#66bb6a;height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div></div>
+                        <span style="font-size:9px;color:#999;">${pct}%</span>
+                    </div>`;
+                }
             });
-            redeemItems.forEach((item, i) => {
-                let canAfford = stars >= item.cost;
-                let pct = Math.min(100, Math.round(stars / item.cost * 100));
-                let isSelected = selectedRedeemItem && selectedRedeemItem.name === item.name;
+            if (config.wishPrize) {
+                let wp = config.wishPrize;
+                let canAfford = stars >= wp.cost;
+                let pct = Math.min(100, Math.round(stars / wp.cost * 100));
+                let isSelected = selectedRedeemItem && selectedRedeemItem.name === wp.name;
                 let selectedClass = isSelected ? ' redeem-selected' : '';
                 let opacityStyle = canAfford ? '' : 'opacity:0.5;';
-                html += `<div class="lottery-item redeem-item${selectedClass}" style="${opacityStyle}" onclick="selectRedeemItem('${item.name}',${item.cost})" id="redeem-item-${i}">
-                    <span class="lottery-emoji">${item.emoji}</span>
-                    <span style="font-size:11px;">${item.name}</span>
-                    <span style="font-size:10px;color:#fbbc04;font-weight:bold;">${item.cost}⭐</span>
-                    <div style="background:#e0e0e0;border-radius:3px;height:3px;width:90%;margin-top:2px;overflow:hidden;"><div style="background:#66bb6a;height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div></div>
+                html += `<div class="lottery-item${selectedClass}" id="lottery-item-wish" style="${opacityStyle};border-color:#845ec2;background:linear-gradient(135deg,#f3e5f5,#ede7f6);" onclick="selectRedeemItem('${wp.name}',${wp.cost})">
+                    <span class="lottery-emoji">${wp.emoji}</span>
+                    <span style="font-size:11px;">${wp.name}</span>
+                    <span style="font-size:10px;color:#845ec2;font-weight:bold;">${wp.cost}⭐</span>
+                    <div style="background:#e0e0e0;border-radius:3px;height:3px;width:90%;margin-top:2px;overflow:hidden;"><div style="background:linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2);height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div></div>
+                    <span style="font-size:9px;font-weight:bold;background:linear-gradient(90deg,#ff6f91,#ffc75f,#845ec2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${pct}%</span>
                 </div>`;
-            });
+            }
             box.innerHTML = html;
             renderLotteryEligibility();
             updateRedeemConfirmBar();
@@ -2150,12 +2150,12 @@
         function scrollToRedeem() {
             let box = document.getElementById("lottery-box");
             if (box) {
-                let firstRedeem = box.querySelector('.redeem-item');
-                if (firstRedeem) {
-                    firstRedeem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    firstRedeem.style.transition = 'box-shadow 0.3s';
-                    firstRedeem.style.boxShadow = '0 0 20px rgba(102,187,106,0.8)';
-                    setTimeout(() => { firstRedeem.style.boxShadow = ''; }, 1500);
+                let firstItem = box.querySelector('.lottery-item');
+                if (firstItem) {
+                    firstItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstItem.style.transition = 'box-shadow 0.3s';
+                    firstItem.style.boxShadow = '0 0 20px rgba(255,199,95,0.8)';
+                    setTimeout(() => { firstItem.style.boxShadow = ''; }, 1500);
                 }
             }
         }
@@ -2234,7 +2234,11 @@
             setUser(u);
             renderStarDisplay();
 
-            document.querySelectorAll('.lottery-item:not(.redeem-item)').forEach(el => {
+            let goodPrizeIds = [];
+            prizes.forEach((p, i) => { if (p.type === 'good' && p.cost > 0) goodPrizeIds.push(i); });
+            if (config.wishPrize) goodPrizeIds.push('wish');
+
+            document.querySelectorAll('.lottery-item').forEach(el => {
                 el.classList.remove('lottery-hit');
                 el.classList.remove('lottery-active');
             });
@@ -2255,16 +2259,19 @@
             let steps = 20 + Math.floor(Math.random() * 10);
             let currentStep = 0;
             let interval = setInterval(() => {
-                document.querySelectorAll('.lottery-item:not(.redeem-item)').forEach(el => el.classList.remove('lottery-active'));
-                let idx = currentStep % prizes.length;
-                document.getElementById('lottery-item-' + idx).classList.add('lottery-active');
+                document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
+                let animIdx = goodPrizeIds[currentStep % goodPrizeIds.length];
+                let animEl = document.getElementById('lottery-item-' + animIdx);
+                if (animEl) animEl.classList.add('lottery-active');
                 currentStep++;
                 if (currentStep >= steps) {
                     clearInterval(interval);
-                    document.querySelectorAll('.lottery-item:not(.redeem-item)').forEach(el => el.classList.remove('lottery-active'));
-                    document.getElementById('lottery-item-' + hitIndex).classList.add('lottery-hit');
+                    document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
 
                     let prize = prizes[hitIndex];
+                    let hitEl = document.getElementById('lottery-item-' + hitIndex);
+                    if (prize.type === 'good' && hitEl) hitEl.classList.add('lottery-hit');
+
                     u = safeUser(getUser());
                     if (prize.type === 'bad') {
                         u.stars = Math.max(0, (u.stars || 0) - config.badDeduct);
