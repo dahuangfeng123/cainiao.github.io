@@ -174,13 +174,6 @@ async function doLogin() {
     }
 }
 
-if (sessionStorage.getItem('admin_auth') === '1') {
-    isAuthenticated = true;
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('admin-content').style.display = 'block';
-    renderOverview();
-}
-
 const KEYS = { A: 'wuserA', B: 'wuserB', words: 'ALL_WORDS_DATA', theme: 'wtheme' };
 
 const DEFAULT_LOTTERY_CONFIG = {
@@ -203,6 +196,13 @@ const DEFAULT_LOTTERY_CONFIG = {
     ],
     wishPrize: { emoji: '🌟', name: '心愿大奖', cost: 30000 }
 };
+
+if (sessionStorage.getItem('admin_auth') === '1') {
+    isAuthenticated = true;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-content').style.display = 'block';
+    renderOverview();
+}
 
 function getLotteryConfig() {
     try { let c = JSON.parse(localStorage.getItem('lottery_config')); return c || DEFAULT_LOTTERY_CONFIG; } catch { return DEFAULT_LOTTERY_CONFIG; }
