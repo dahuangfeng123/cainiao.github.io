@@ -306,6 +306,21 @@
             box-shadow: 0 0 0 3px rgba(255, 111, 145, 0.2);
         }
 
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            font-size: 22px;
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.2s;
+            z-index: 10;
+        }
+        .modal-close:hover {
+            color: #ff6f91;
+        }
+
         .modal {
             position: fixed;
             top: 0;
@@ -328,6 +343,7 @@
             overflow: auto;
             border: 4px solid #ffc75f;
             box-shadow: 6px 6px 0px #ff6f91, 0 8px 30px rgba(0,0,0,0.15);
+            position: relative;
         }
 
         .calendar {
@@ -1803,6 +1819,7 @@
     <!-- 答题弹窗 -->
     <div class="modal" id="modal">
         <div class="modal-body" style="max-width:600px;">
+            <span class="modal-close" onclick="closeModal()">✕</span>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                 <div id="review-round-info" style="font-size:14px;color:#666;"></div>
                 <div style="display:flex;align-items:center;gap:12px;">
@@ -1817,7 +1834,6 @@
                 <button class="btn btn-blue" onclick="submitReviewAnswer()" id="btn-submit-review">提交答案</button>
                 <button class="btn btn-gray" onclick="viewReviewAns()" id="btn-view-ans">查看答案</button>
                 <button class="btn btn-gray" onclick="skipReviewWord()" id="btn-skip-review">跳过</button>
-                <button class="btn" onclick="closeModal()">关闭</button>
             </div>
             <div id="ans-show" style="margin-top:18px;line-height:1.7;color:#333;"></div>
             <div id="review-feedback" style="margin-top:12px;padding:12px;border-radius:8px;display:none;"></div>
@@ -1827,6 +1843,7 @@
     <!-- 学习展示弹窗 -->
     <div class="modal" id="learn-modal">
         <div class="modal-body" style="text-align:center;max-width:600px;display:flex;flex-direction:column;max-height:80vh;">
+            <span class="modal-close" onclick="closeLearnModal()">✕</span>
             <div style="flex:1;overflow-y:auto;padding-bottom:10px;">
                 <div id="learn-word" style="font-size:32px;font-weight:bold;margin-bottom:8px;"></div>
                 <div id="learn-phonetic" style="font-size:14px;color:#666;margin-bottom:8px;"></div>
@@ -1838,7 +1855,6 @@
                 <button class="btn btn-blue" onclick="addToReview()">加入复习</button>
                 <button class="btn btn-gray" onclick="speakWord()">🔊 朗读单词</button>
                 <button class="btn btn-gray" onclick="openIciba()">📖 金山词霸</button>
-                <button class="btn" onclick="closeLearnModal()">关闭</button>
             </div>
         </div>
     </div>
@@ -4450,6 +4466,9 @@
             document.getElementById("wrong-total").innerText = wrongExamList.length;
             document.getElementById("wrong-pool-card").style.display = 'none';
             document.getElementById("wrong-exam-progress").style.display = 'block';
+            document.getElementById("exam-result").style.display = 'none';
+            let scoresCard = document.getElementById("exam-scores-list");
+            if (scoresCard) scoresCard.closest('.card').style.display = 'none';
             renderWrongQuestion();
         }
 
@@ -4549,6 +4568,8 @@
             checkExamAndWrongClearBonus();
             document.getElementById("wrong-exam-progress").style.display = 'none';
             document.getElementById("wrong-pool-card").style.display = 'block';
+            let scoresCard = document.getElementById("exam-scores-list");
+            if (scoresCard) scoresCard.closest('.card').style.display = '';
             let correctCount = wrongExamAnswers.filter(a => a.correct).length;
             let total = wrongExamAnswers.length;
             toast(`错题重考完成！正确 ${correctCount}/${total}`, correctCount === total ? 'success' : 'info');
