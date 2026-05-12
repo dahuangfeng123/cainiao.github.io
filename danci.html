@@ -1470,6 +1470,8 @@
                 <div id="collins-list"></div>
                 <div style="margin-top:10px;color:#666;font-size:13px;">考试范围：</div>
                 <div id="exam-list"></div>
+                <div style="margin-top:10px;color:#666;font-size:13px;">学习状态：</div>
+                <div id="status-list"></div>
             </div>
             <div class="card">
                 <h2>📚 单词库（<span id="word-count">0</span> 个）</h2>
@@ -2428,6 +2430,7 @@
         let learnAudioUrl = "";
         let currCollins = "";
         let currExam = "";
+        let currStatus = "";
         let selectedDate = null;
         let calYear = new Date().getFullYear();
         let calMonth = new Date().getMonth();
@@ -2616,6 +2619,7 @@
         function filterCollins(c) {
             currCollins = c;
             renderCollins();
+            renderStatusFilter();
             renderWordList(true);
         }
 
@@ -2624,6 +2628,42 @@
             currCollins = "";
             renderExam();
             renderCollins();
+            renderStatusFilter();
+            renderWordList(true);
+        }
+
+        function renderStatusFilter() {
+            let u = safeUser(getUser());
+            let all = getWords();
+            let base = currExam ? all.filter(w => w.exam.split(" ").includes(currExam)) : all;
+            let learnSet = new Set(u.learn || []);
+            let doneSet = new Set(u.done || []);
+            let skilledSet = new Set(u.skilled || []);
+            let counts = { '': 0, 'new': 0, 'review': 0, 'done': 0, 'skilled': 0 };
+            base.forEach((w, i) => {
+                let realIdx = all.indexOf(w);
+                counts['']++;
+                if (skilledSet.has(realIdx)) counts['skilled']++;
+                else if (doneSet.has(realIdx)) counts['done']++;
+                else if (learnSet.has(realIdx)) counts['review']++;
+                else counts['new']++;
+            });
+            let items = [
+                { key: '', label: '全部', icon: '📋' },
+                { key: 'new', label: '待学习', icon: '📖' },
+                { key: 'review', label: '已复习', icon: '🔄' },
+                { key: 'done', label: '已学会', icon: '✅' },
+                { key: 'skilled', label: '已熟练', icon: '🏆' },
+            ];
+            let html = items.map(it =>
+                `<span class="tag ${currStatus === it.key ? 'on' : ''}" onclick="filterStatus('${it.key}')">${it.icon} ${it.label}(${counts[it.key]})</span>`
+            ).join('');
+            document.getElementById("status-list").innerHTML = html;
+        }
+
+        function filterStatus(s) {
+            currStatus = s;
+            renderStatusFilter();
             renderWordList(true);
         }
 
@@ -2639,11 +2679,24 @@
             let list = all;
             if (currExam) list = list.filter(w => w.exam.split(" ").includes(currExam));
             if (currCollins) list = list.filter(w => w.collins == currCollins);
+            if (currStatus) {
+                let learnSet = new Set(u.learn || []);
+                let doneSet = new Set(u.done || []);
+                let skilledSet = new Set(u.skilled || []);
+                list = list.filter(w => {
+                    let realIdx = all.indexOf(w);
+                    if (currStatus === 'new') return !learnSet.has(realIdx) && !doneSet.has(realIdx) && !skilledSet.has(realIdx);
+                    if (currStatus === 'review') return learnSet.has(realIdx) && !doneSet.has(realIdx) && !skilledSet.has(realIdx);
+                    if (currStatus === 'done') return doneSet.has(realIdx) && !skilledSet.has(realIdx);
+                    if (currStatus === 'skilled') return skilledSet.has(realIdx);
+                    return true;
+                });
+            }
             let kw = (document.getElementById("word-search").value || "").trim().toLowerCase();
             if (kw) {
                 list = list.filter(w => w.word.toLowerCase().includes(kw) || w.meaning.toLowerCase().includes(kw));
             }
-            let filterKey = currExam + "|" + currCollins + "|" + kw;
+            let filterKey = currExam + "|" + currCollins + "|" + currStatus + "|" + kw;
             if (forceReset || filterKey !== lastFilterKey) {
                 filteredList = list;
                 wordPage = 0;
@@ -4752,6 +4805,7 @@
         function renderAll() {
             renderExam();
             renderCollins();
+            renderStatusFilter();
             renderWordList();
             renderStats();
             renderToday();
