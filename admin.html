@@ -742,7 +742,7 @@ function downloadWordsJson() {
     URL.revokeObjectURL(url);
 }
 
-let wordPageSize = 500;
+let wordPageSize = 1000;
 let wordLoadedCount = 0;
 let wordSearchKeyword = '';
 
@@ -864,11 +864,45 @@ function editCombo(who) {
 function clearWrongPool(who) { if (!confirm(`确定清空同学${who}的错题库？`)) return; let u = getStudent(who); u.wrongPool = {}; setStudent(who, u); renderStudent(who); showToast('错题库已清空', 'success'); }
 function clearPrizes(who) { if (!confirm(`确定清空同学${who}的所有奖品？`)) return; let u = getStudent(who); u.prizes = []; setStudent(who, u); renderStudent(who); showToast('奖品已清空', 'success'); }
 function resetStudent(who) { if (!confirm(`⚠️ 确定重置同学${who}的所有数据？`)) return; localStorage.removeItem(KEYS[who]); renderStudent(who); showToast(`同学${who}数据已重置`, 'success'); }
-function removePrize(who, idx) { let u = getStudent(who); u.prizes.splice(idx, 1); setStudent(who, u); renderStudent(who); }
-function removeWrong(who, key) { let u = getStudent(who); delete u.wrongPool[key]; setStudent(who, u); renderStudent(who); }
-function removeLearnIdx(who, idx) { let u = getStudent(who); u.learn = (u.learn || []).filter(i => i !== idx); setStudent(who, u); renderStudent(who); showToast('已移除', 'success'); }
-function removeSkilledIdx(who, idx) { let u = getStudent(who); u.skilled = (u.skilled || []).filter(i => i !== idx); setStudent(who, u); renderStudent(who); showToast('已移除', 'success'); }
-function removeReviewItem(who, idx) { let u = getStudent(who); delete u.log[idx]; setStudent(who, u); renderStudent(who); showToast('已从复习计划删除', 'success'); }
+function saveScrollPositions() {
+    let positions = {};
+    document.querySelectorAll('.table-wrap').forEach((el, i) => { positions[i] = el.scrollTop; });
+    return positions;
+}
+function restoreScrollPositions(positions) {
+    document.querySelectorAll('.table-wrap').forEach((el, i) => { if (positions[i] !== undefined) el.scrollTop = positions[i]; });
+}
+function removePrize(who, idx) { let sp = saveScrollPositions(); let u = getStudent(who); u.prizes.splice(idx, 1); setStudent(who, u); renderStudent(who); restoreScrollPositions(sp); }
+function removeWrong(who, key) { let sp = saveScrollPositions(); let u = getStudent(who); delete u.wrongPool[key]; setStudent(who, u); renderStudent(who); restoreScrollPositions(sp); }
+function removeLearnIdx(who, idx) {
+    let sp = saveScrollPositions();
+    let u = getStudent(who);
+    u.learn = (u.learn || []).filter(i => i !== idx);
+    if (u.log && u.log[idx] !== undefined) { delete u.log[idx]; }
+    if (!u.skilled) u.skilled = [];
+    if (!u.skilled.includes(idx)) u.skilled.push(idx);
+    if (u.done) u.done = u.done.filter(i => i !== idx);
+    if (u.wrongPool && u.wrongPool[idx] !== undefined) delete u.wrongPool[idx];
+    setStudent(who, u);
+    renderStudent(who);
+    restoreScrollPositions(sp);
+    showToast('已移至熟练列表', 'success');
+}
+function removeSkilledIdx(who, idx) { let sp = saveScrollPositions(); let u = getStudent(who); u.skilled = (u.skilled || []).filter(i => i !== idx); setStudent(who, u); renderStudent(who); restoreScrollPositions(sp); showToast('已移除', 'success'); }
+function removeReviewItem(who, idx) {
+    let sp = saveScrollPositions();
+    let u = getStudent(who);
+    delete u.log[idx];
+    u.learn = (u.learn || []).filter(i => i !== idx);
+    if (!u.skilled) u.skilled = [];
+    if (!u.skilled.includes(idx)) u.skilled.push(idx);
+    if (u.done) u.done = u.done.filter(i => i !== idx);
+    if (u.wrongPool && u.wrongPool[idx] !== undefined) delete u.wrongPool[idx];
+    setStudent(who, u);
+    renderStudent(who);
+    restoreScrollPositions(sp);
+    showToast('已移至熟练列表', 'success');
+}
 function clearReviewPlan(who) { if (!confirm('确定清空复习计划？')) return; let u = getStudent(who); u.log = {}; setStudent(who, u); renderStudent(who); showToast('复习计划已清空', 'success'); }
 function initStudent(who) { let u = { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0, lastTodayMilestone: {}, prizes: [] }; setStudent(who, u); renderStudent(who); showToast(`同学${who}已初始化`, 'success'); }
 
