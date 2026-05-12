@@ -271,6 +271,7 @@ function renderStudent(who) {
     let examScores = u.examScores || [];
     let prizes = u.prizes || [];
     let wrongPoolKeys = Object.keys(u.wrongPool || {});
+    let wrongPoolActive = wrongPoolKeys.filter(k => u.wrongPool[k].status === 1).length;
     let html = `
     <div class="card">
         <h2>👤 同学${who} — 基本数据</h2>
@@ -279,7 +280,7 @@ function renderStudent(who) {
             <div class="stat-item"><div class="value">${u.combo || 0}</div><div class="label">连击</div></div>
             <div class="stat-item"><div class="value">${(u.learn || []).length}</div><div class="label">已学习</div></div>
             <div class="stat-item"><div class="value">${(u.skilled || []).length}</div><div class="label">已熟练</div></div>
-            <div class="stat-item"><div class="value">${wrongPoolKeys.length}</div><div class="label">错题数</div></div>
+            <div class="stat-item"><div class="value">${wrongPoolActive}</div><div class="label">活跃错题</div></div>
             <div class="stat-item"><div class="value">${prizes.length}</div><div class="label">奖品数</div></div>
         </div>
         <div class="btn-group">
@@ -315,11 +316,15 @@ function renderStudent(who) {
         </table></div>`}
     </div>
     <div class="card">
-        <h2>❌ 错题库</h2>
+        <h2>❌ 错题库（活跃 ${wrongPoolActive} / 总计 ${wrongPoolKeys.length}）</h2>
         ${wrongPoolKeys.length === 0 ? '<div class="empty">暂无</div>' : `
-        <div class="table-wrap"><table>
-            <tr><th>索引</th><th>错误次数</th><th>操作</th></tr>
-            ${wrongPoolKeys.map(k => `<tr><td>${k}</td><td>${u.wrongPool[k].c || 0}</td><td><button class="btn btn-danger" style="padding:2px 8px;font-size:12px;" onclick="removeWrong('${who}','${k}')">删除</button></td></tr>`).join('')}
+        <div class="table-wrap" style="max-height:300px;overflow-y:auto;"><table>
+            <tr><th>索引</th><th>状态</th><th>出错次数</th><th>重考进度</th><th>操作</th></tr>
+            ${wrongPoolKeys.map(k => {
+                let info = u.wrongPool[k];
+                let statusText = info.status === 1 ? '<span style="color:#ef5350">🔴 出错</span>' : '<span style="color:#43a047">✅ 掌握</span>';
+                return `<tr><td>${k}</td><td>${statusText}</td><td>${info.c || 0}</td><td>${info.pass || 0}/3</td><td><button class="btn btn-danger" style="padding:2px 8px;font-size:12px;" onclick="removeWrong('${who}','${k}')">删除</button></td></tr>`;
+            }).join('')}
         </table></div>`}
     </div>
     <div class="card">
