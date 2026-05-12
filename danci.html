@@ -2697,7 +2697,7 @@
             if (kw) {
                 list = list.filter(w => w.word.toLowerCase().includes(kw) || w.meaning.toLowerCase().includes(kw));
             }
-            let filterKey = currExam + "|" + currCollins + "|" + currStatus + "|" + kw;
+            let filterKey = user + "|" + currExam + "|" + currCollins + "|" + currStatus + "|" + kw;
             if (forceReset || filterKey !== lastFilterKey) {
                 filteredList = list;
                 wordPage = 0;
