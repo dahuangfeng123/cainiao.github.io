@@ -4275,10 +4275,15 @@
             fb.style.display = "block";
             if (result.correct) {
                 playSound('correct');
-                addComboStar();
+                if (scorePct === 100) {
+                    addComboStar();
+                    fb.innerHTML = `✅ 完美！匹配度 ${scorePct}% +1⭐`;
+                } else {
+                    resetCombo();
+                    fb.innerHTML = `✅ 继续努力，匹配度 ${scorePct}%`;
+                }
                 fb.style.background = "#c8e6c9";
                 fb.style.color = "#1e7e34";
-                fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
             } else {
                 playSound('wrong');
                 resetCombo();
