@@ -2625,7 +2625,6 @@
 
         function filterExam(e) {
             currExam = e;
-            currCollins = "";
             renderExam();
             renderCollins();
             renderStatusFilter();
@@ -2635,14 +2634,15 @@
         function renderStatusFilter() {
             let u = safeUser(getUser());
             let all = getWords();
-            let base = currExam ? all.filter(w => w.exam.split(" ").includes(currExam)) : all;
+            let base = all;
+            if (currExam) base = base.filter(w => w.exam.split(" ").includes(currExam));
+            if (currCollins) base = base.filter(w => w.collins == currCollins);
             let learnSet = new Set(u.learn || []);
             let doneSet = new Set(u.done || []);
             let skilledSet = new Set(u.skilled || []);
-            let counts = { '': 0, 'new': 0, 'review': 0, 'done': 0, 'skilled': 0 };
-            base.forEach((w, i) => {
+            let counts = { 'new': 0, 'review': 0, 'done': 0, 'skilled': 0 };
+            base.forEach(w => {
                 let realIdx = all.indexOf(w);
-                counts['']++;
                 if (skilledSet.has(realIdx)) counts['skilled']++;
                 else if (doneSet.has(realIdx)) counts['done']++;
                 else if (learnSet.has(realIdx)) counts['review']++;
@@ -2655,9 +2655,10 @@
                 { key: 'done', label: '已学会', icon: '✅' },
                 { key: 'skilled', label: '已熟练', icon: '🏆' },
             ];
-            let html = items.map(it =>
-                `<span class="tag ${currStatus === it.key ? 'on' : ''}" onclick="filterStatus('${it.key}')">${it.icon} ${it.label}(${counts[it.key]})</span>`
-            ).join('');
+            let html = items.map(it => {
+                let countStr = it.key === '' ? '' : `(${counts[it.key] || 0})`;
+                return `<span class="tag ${currStatus === it.key ? 'on' : ''}" onclick="filterStatus('${it.key}')">${it.icon} ${it.label}${countStr}</span>`;
+            }).join('');
             document.getElementById("status-list").innerHTML = html;
         }
 
