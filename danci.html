@@ -306,6 +306,10 @@
             box-shadow: 0 0 0 3px rgba(255, 111, 145, 0.2);
         }
 
+        #back-top{position:fixed;right:20px;bottom:30px;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#ff6f91,#ffc75f);color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:0 4px 12px rgba(255,111,145,0.4);display:none;align-items:center;justify-content:center;z-index:100;transition:all 0.3s;opacity:0;transform:translateY(10px)}
+        #back-top.show{display:flex;opacity:1;transform:translateY(0)}
+        #back-top:hover{transform:translateY(-3px) scale(1.1);box-shadow:0 6px 16px rgba(255,111,145,0.5)}
+
         .modal-close {
             position: absolute;
             top: 2px;
@@ -349,19 +353,20 @@
         .calendar {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
+            gap: 4px;
             text-align: center;
         }
 
         .calendar-day {
-            padding: 10px;
+            padding: 6px 2px;
             border: 2px solid #ffc75f;
-            border-radius: 12px;
+            border-radius: 8px;
             background: #fffde7;
             color: #333;
             text-align: center;
             transition: all 0.2s;
             cursor: pointer;
+            font-size: 13px;
         }
 
         .calendar-day:hover {
@@ -445,12 +450,12 @@
         }
 
         .calendar-nav button {
-            padding: 6px 16px;
+            padding: 4px 10px;
             border: 2px solid #ffc75f;
             border-radius: 20px;
             background: #fff;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             transition: all 0.2s;
             font-weight: bold;
             color: #ff6f91;
@@ -462,7 +467,7 @@
         }
 
         .calendar-nav .cal-title {
-            font-size: 18px;
+            font-size: 15px;
             font-weight: bold;
             color: #845ec2;
         }
@@ -785,6 +790,12 @@
             .flex {
                 flex-direction: column;
                 gap: 12px;
+            }
+            .flex .col[style*="sticky"] {
+                position: static !important;
+                flex: 0 0 auto !important;
+                max-width: none !important;
+                width: 100% !important;
             }
             .tag {
                 padding: 4px 10px;
@@ -1451,36 +1462,48 @@
 
         <!-- 复习计划 -->
         <div class="page" id="page-plan">
-            <div class="card">
-                <h2>📅 复习日历</h2>
-                <div id="calendar-nav"></div>
-                <div class="calendar" id="calendar"></div>
-            </div>
-            <div class="card">
-                <h2>📖 <span id="review-date-label">今日</span>待复习列表</h2>
-                <div id="today-list"></div>
+            <div class="flex">
+                <div class="col" style="flex:0 0 300px;max-width:300px;position:sticky;top:80px;align-self:flex-start;">
+                    <div class="card" style="padding:14px;overflow:hidden;">
+                        <h2 style="font-size:16px;">📅 复习日历</h2>
+                        <div id="calendar-nav"></div>
+                        <div class="calendar" id="calendar"></div>
+                    </div>
+                </div>
+                <div class="col" style="flex:1;min-width:0;">
+                    <div class="card">
+                        <h2>📖 <span id="review-date-label">今日</span>待复习列表</h2>
+                        <div id="today-list"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- 单词库 -->
         <div class="page" id="page-lib">
-            <div class="card">
-                <h2>🔍 分类筛选</h2>
-                <div style="margin-bottom:8px;color:#666;font-size:13px;">柯林斯分级：</div>
-                <div id="collins-list"></div>
-                <div style="margin-top:10px;color:#666;font-size:13px;">考试范围：</div>
-                <div id="exam-list"></div>
-                <div style="margin-top:10px;color:#666;font-size:13px;">学习状态：</div>
-                <div id="status-list"></div>
-            </div>
-            <div class="card">
-                <h2>📚 单词库（<span id="word-count">0</span> 个）</h2>
-                <div style="margin:10px 0;">
-                    <input type="text" id="word-search" placeholder="搜索单词或释义..." oninput="renderWordList(true)" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            <div class="flex">
+                <div class="col" style="flex:0 0 300px;max-width:300px;position:sticky;top:80px;align-self:flex-start;">
+                    <div class="card" style="padding:14px;">
+                        <h2 style="font-size:16px;">🔍 分类筛选</h2>
+                        <div style="margin-bottom:8px;color:#666;font-size:13px;">柯林斯分级：</div>
+                        <div id="collins-list"></div>
+                        <div style="margin-top:10px;color:#666;font-size:13px;">考试范围：</div>
+                        <div id="exam-list"></div>
+                        <div style="margin-top:10px;color:#666;font-size:13px;">学习状态：</div>
+                        <div id="status-list"></div>
+                    </div>
                 </div>
-                <div id="word-list" style="margin-top:15px;"></div>
-                <div id="word-more" style="text-align:center;padding:15px;display:none;">
-                    <button class="btn btn-gray" onclick="loadMoreWords()">加载更多（已显示 <span id="word-shown">0</span>/<span id="word-total2">0</span>）</button>
+                <div class="col" style="flex:1;min-width:0;">
+                    <div class="card">
+                        <h2>📚 单词库（<span id="word-count">0</span> 个）</h2>
+                        <div style="margin:10px 0;">
+                            <input type="text" id="word-search" placeholder="搜索单词或释义..." oninput="renderWordList(true)" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                        </div>
+                        <div id="word-list" style="margin-top:15px;"></div>
+                        <div id="word-more" style="text-align:center;padding:15px;display:none;">
+                            <button class="btn btn-gray" onclick="loadMoreWords()">加载更多（已显示 <span id="word-shown">0</span>/<span id="word-total2">0</span>）</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3609,7 +3632,7 @@
             document.getElementById("calendar-nav").innerHTML = navHtml;
             let html = '';
             let weekNames = ["日", "一", "二", "三", "四", "五", "六"];
-            weekNames.forEach(w => { html += `<div style="font-weight:bold;padding:8px;text-align:center;">${w}</div>`; });
+            weekNames.forEach(w => { html += `<div style="font-weight:bold;padding:4px 2px;text-align:center;font-size:12px;">${w}</div>`; });
             for (let i = 0; i < firstDay; i++) { html += `<div class="calendar-day"></div>`; }
             for (let d = 1; d <= daysInMonth; d++) {
                 let cls = "calendar-day";
@@ -4833,7 +4856,13 @@
             renderRules();
             show("home");
             startReminderTimer();
+            window.addEventListener('scroll', function() {
+                let btn = document.getElementById('back-top');
+                if (window.scrollY > window.innerHeight) btn.classList.add('show');
+                else btn.classList.remove('show');
+            });
         };
     </script>
-</body>
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">⬆</button>
+    </body>
 </html>
