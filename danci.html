@@ -1719,7 +1719,7 @@
             </div>
             <div class="card" id="wrong-pool-card">
                 <h2>🔄 错题重考</h2>
-                <p style="color:#666;font-size:13px;margin-bottom:12px;">考试中匹配度低于100%的单词自动进入错题库，连续答对3次即可移除</p>
+                <p style="color:#666;font-size:13px;margin-bottom:12px;">考试中匹配度低于100%的单词自动进入错题库，重考连续答对3次标记为掌握</p>
                 <div style="margin-bottom:12px;color:#666;font-size:13px;">
                     错题数量：<span id="wrong-pool-count" style="font-weight:bold;color:#ef5350;">0</span> 个
                 </div>
@@ -4266,10 +4266,15 @@
             examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: input.trim(), correct: result.correct, simScore: scorePct, skipped: false });
             if (scorePct < 100) {
                 let u = safeUser(getUser());
-                if (!u.wrongPool[examWords[examIndex].idx]) {
-                    u.wrongPool[examWords[examIndex].idx] = { c: 0, date: Date.now() };
-                    setUser(u);
+                let idx = examWords[examIndex].idx;
+                if (!u.wrongPool[idx]) {
+                    u.wrongPool[idx] = { status: 1, c: 1, pass: 0, date: Date.now() };
+                } else {
+                    u.wrongPool[idx].status = 1;
+                    u.wrongPool[idx].c = (u.wrongPool[idx].c || 0) + 1;
+                    u.wrongPool[idx].date = Date.now();
                 }
+                setUser(u);
             }
             let fb = document.getElementById("exam-feedback");
             fb.style.display = "block";
@@ -4309,10 +4314,15 @@
             let w = examWords[examIndex].word;
             examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: "", correct: false, simScore: 0, skipped: true });
             let u = safeUser(getUser());
-            if (!u.wrongPool[examWords[examIndex].idx]) {
-                u.wrongPool[examWords[examIndex].idx] = { c: 0, date: Date.now() };
-                setUser(u);
+            let idx = examWords[examIndex].idx;
+            if (!u.wrongPool[idx]) {
+                u.wrongPool[idx] = { status: 1, c: 1, pass: 0, date: Date.now() };
+            } else {
+                u.wrongPool[idx].status = 1;
+                u.wrongPool[idx].c = (u.wrongPool[idx].c || 0) + 1;
+                u.wrongPool[idx].date = Date.now();
             }
+            setUser(u);
             examIndex++;
             renderExamQuestion();
         }
@@ -4369,8 +4379,14 @@
             saveExamScore(score, correctCount, examWords.length, mode, duration);
             let u = safeUser(getUser());
             examAnswers.forEach(a => {
-                if (a.simScore < 100 && !u.wrongPool[a.idx]) {
-                    u.wrongPool[a.idx] = { c: 0, date: Date.now() };
+                if (a.simScore < 100) {
+                    if (!u.wrongPool[a.idx]) {
+                        u.wrongPool[a.idx] = { status: 1, c: 1, pass: 0, date: Date.now() };
+                    } else {
+                        u.wrongPool[a.idx].status = 1;
+                        u.wrongPool[a.idx].c = (u.wrongPool[a.idx].c || 0) + 1;
+                        u.wrongPool[a.idx].date = Date.now();
+                    }
                 }
             });
             setUser(u);
@@ -4388,7 +4404,7 @@
             let todayStr = todayKey();
             let todayExams = (u.examScores || []).filter(s => s.date && s.date.startsWith(todayStr));
             if (todayExams.length === 0) return;
-            let wrongCount = Object.keys(u.wrongPool || {}).length;
+            let wrongCount = Object.values(u.wrongPool || {}).filter(w => w.status === 1).length;
             if (wrongCount > 0) return;
             let key = 'examWrongClearBonus_' + todayStr;
             if (localStorage.getItem(key)) return;
@@ -4424,34 +4440,33 @@
         let wrongExamIndex = 0;
         let wrongExamAnswers = [];
 
-        const WRONG_STATUS = ['学习中', '初步掌握', '已掌握'];
-
         function renderWrongPool() {
             let u = safeUser(getUser());
             let words = getWords();
             let pool = u.wrongPool || {};
-            let keys = Object.keys(pool);
-            document.getElementById("wrong-pool-count").innerText = keys.length;
+            let activeKeys = Object.keys(pool).filter(idx => pool[idx].status === 1);
+            document.getElementById("wrong-pool-count").innerText = activeKeys.length;
             let btn = document.getElementById("wrong-exam-btn");
-            btn.style.display = keys.length > 0 ? '' : 'none';
-            if (keys.length === 0) {
+            btn.style.display = activeKeys.length > 0 ? '' : 'none';
+            if (activeKeys.length === 0) {
                 document.getElementById("wrong-pool-list").innerHTML = '<p style="color:#999;font-size:13px;">暂无错题，继续加油！</p>';
                 return;
             }
             let html = '';
-            keys.forEach(idx => {
+            activeKeys.forEach(idx => {
                 let w = words[idx];
                 if (!w) return;
                 let info = pool[idx];
-                let statusText = WRONG_STATUS[Math.min(info.c, 2)];
-                let statusColor = info.c === 0 ? '#ef5350' : info.c === 1 ? '#ffa726' : '#66bb6a';
+                let passCount = info.pass || 0;
+                let errCount = info.c || 0;
                 html += `<div class="word-item">
                     <div>
                         <span class="word-text">${w.word}</span>
                         <span class="word-meaning">${w.meaning}</span>
                     </div>
                     <div>
-                        <span style="font-size:12px;color:${statusColor};font-weight:bold;">${statusText}(${info.c}/3)</span>
+                        <span style="font-size:12px;color:#ef5350;font-weight:bold;">出错${errCount}次</span>
+                        <span style="font-size:12px;color:#ffa726;margin-left:4px;">重考${passCount}/3</span>
                     </div>
                 </div>`;
             });
@@ -4462,7 +4477,7 @@
             let u = safeUser(getUser());
             let words = getWords();
             let pool = u.wrongPool || {};
-            let keys = Object.keys(pool);
+            let keys = Object.keys(pool).filter(idx => pool[idx].status === 1);
             if (keys.length === 0) { toast('暂无错题', 'warning'); return; }
             wrongExamList = keys.map(idx => ({ idx: parseInt(idx), word: words[idx] })).filter(x => x.word);
             wrongExamList.sort(() => Math.random() - 0.5);
@@ -4521,16 +4536,16 @@
                 let u = safeUser(getUser());
                 let info = u.wrongPool[item.idx];
                 if (info) {
-                    info.c += 1;
-                    if (info.c >= 3) {
-                        delete u.wrongPool[item.idx];
+                    info.pass = (info.pass || 0) + 1;
+                    if (info.pass >= 3) {
+                        info.status = 0;
                         fb.style.background = '#c8e6c9';
                         fb.style.color = '#1e7e34';
-                        fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，连续答对3次，已从错题库移除！`;
+                        fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，连续答对3次，已标记为掌握！`;
                     } else {
                         fb.style.background = '#c8e6c9';
                         fb.style.color = '#1e7e34';
-                        fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，状态：${WRONG_STATUS[Math.min(info.c, 2)]}(${info.c}/3)`;
+                        fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，重考进度：${info.pass}/3`;
                     }
                 }
                 setUser(u);
@@ -4538,10 +4553,13 @@
                 playSound('wrong');
                 let u = safeUser(getUser());
                 let info = u.wrongPool[item.idx];
-                if (info) info.c = 0;
+                if (info) {
+                    info.pass = 0;
+                    info.status = 1;
+                }
                 fb.style.background = '#ffcdd2';
                 fb.style.color = '#c5221f';
-                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? item.word.meaning : item.word.word}</strong>，计数已重置`;
+                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? item.word.meaning : item.word.word}</strong>，重考进度已重置`;
                 setUser(u);
             }
             document.getElementById("wrong-answer").disabled = true;
@@ -4557,7 +4575,7 @@
             let item = wrongExamList[wrongExamIndex];
             let u = safeUser(getUser());
             let info = u.wrongPool[item.idx];
-            if (info) info.c = 0;
+            if (info) { info.pass = 0; info.status = 1; }
             setUser(u);
             wrongExamAnswers.push({ idx: item.idx, word: item.word, input: '', correct: false, simScore: 0 });
             wrongExamIndex++;
@@ -4566,7 +4584,7 @@
 
         function finishWrongExam() {
             let u = safeUser(getUser());
-            let remainingWrongCount = Object.keys(u.wrongPool || {}).length;
+            let remainingWrongCount = Object.values(u.wrongPool || {}).filter(w => w.status === 1).length;
             if (remainingWrongCount === 0) {
                 playSound('victory');
             }
