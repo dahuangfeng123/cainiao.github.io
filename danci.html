@@ -2384,14 +2384,19 @@
             if (prizes.length === 0) {
                 el.innerHTML = '暂无奖品';
             } else {
+                let config = getLotteryConfig();
+                let costMap = {};
+                config.prizes.forEach(p => { costMap[p.emoji + p.name] = p.cost || 0; });
+                if (config.wishPrize) costMap[config.wishPrize.emoji + config.wishPrize.name] = config.wishPrize.cost || 0;
                 let counts = {};
                 prizes.forEach((p, idx) => {
                     let key = p.emoji + p.name;
-                    if (!counts[key]) counts[key] = { emoji: p.emoji, name: p.name, count: 0, indices: [] };
+                    if (!counts[key]) counts[key] = { emoji: p.emoji, name: p.name, count: 0, indices: [], cost: costMap[key] || 0 };
                     counts[key].count++;
                     counts[key].indices.push(idx);
                 });
-                el.innerHTML = Object.values(counts).map(c =>
+                let sorted = Object.values(counts).sort((a, b) => b.cost - a.cost);
+                el.innerHTML = sorted.map(c =>
                     `<span class="prize-tag">${c.emoji} ${c.name} ×${c.count}<span class="prize-close" onclick="redeemPrizeTag('${c.emoji}','${c.name}')">✕</span></span>`
                 ).join('');
             }
