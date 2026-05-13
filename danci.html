@@ -2203,9 +2203,7 @@
             }
         }
 
-        let lotteryCountdownTimer = null;
         function renderLotteryEligibility() {
-            if (lotteryCountdownTimer) { clearInterval(lotteryCountdownTimer); lotteryCountdownTimer = null; }
             let bar = document.getElementById("lottery-eligibility-bar");
             let btn = document.getElementById("lottery-btn");
             if (!bar) return;
@@ -2231,27 +2229,8 @@
             } else if (!elig.dailyCountOk) {
                 html = `<div style="background:#fce4ec;border-radius:8px;padding:10px;text-align:center;">
                     <div style="font-size:15px;font-weight:bold;color:#c62828;">🎰 今日抽奖次数已用完</div>
-                    <div style="font-size:12px;color:#999;margin-top:4px;">已抽 ${elig.todayLotteryCount} 次 / 上限 ${elig.dailyLimit} 次</div>
-                    <div id="lottery-countdown" style="font-size:13px;color:#e65100;margin-top:4px;"></div>
+                    <div style="font-size:12px;color:#999;margin-top:4px;">已抽 ${elig.todayLotteryCount} 次 / 上限 ${elig.dailyLimit} 次，明天再来</div>
                 </div>`;
-                lotteryCountdownTimer = setInterval(() => {
-                    let el = document.getElementById('lottery-countdown');
-                    if (!el) { clearInterval(lotteryCountdownTimer); lotteryCountdownTimer = null; return; }
-                    let n = new Date();
-                    let t = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1);
-                    let d = t - n;
-                    if (d <= 0) { clearInterval(lotteryCountdownTimer); lotteryCountdownTimer = null; renderLotteryEligibility(); return; }
-                    let h = Math.floor(d / 3600000);
-                    let m = Math.floor((d % 3600000) / 60000);
-                    let s = Math.floor((d % 60000) / 1000);
-                    el.textContent = `⏳ 距下次刷新：${h}时${m}分${s}秒`;
-                }, 1000);
-                let el0 = document.getElementById('lottery-countdown');
-                if (el0) {
-                    let n0 = new Date(), t0 = new Date(n0.getFullYear(), n0.getMonth(), n0.getDate() + 1);
-                    let d0 = t0 - n0;
-                    el0.textContent = `⏳ 距下次刷新：${Math.floor(d0/3600000)}时${Math.floor((d0%3600000)/60000)}分${Math.floor((d0%60000)/1000)}秒`;
-                }
             } else if (config.redeemUnlock && !elig.redeemOk) {
                 html = `<div style="background:#fff3e0;border-radius:8px;padding:10px;text-align:center;">
                     <span style="font-size:13px;color:#e65100;">🔒 需先完成一次兑奖，解锁今日抽奖资格</span>
