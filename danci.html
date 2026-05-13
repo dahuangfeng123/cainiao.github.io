@@ -3015,13 +3015,15 @@
                 u = safeUser(getUser());
                 
                 let todayLearn = (u.dailyLog[today]?.learn || 0);
-                let todayMilestone = Math.floor(todayLearn / 10);
+                let learnTarget = u.dailyLearnTarget || 10;
+                let learnReward = u.dailyLearnReward || 30;
+                let todayMilestone = Math.floor(todayLearn / learnTarget);
                 let lastTodayMilestone = u.lastTodayMilestone || {};
                 if (todayMilestone > (lastTodayMilestone[today] || 0)) {
                     if (!u.lastTodayMilestone) u.lastTodayMilestone = {};
                     u.lastTodayMilestone[today] = todayMilestone;
                     setUser(u);
-                    addStars(30, '今天学习' + (todayMilestone * 10) + '个单词！');
+                    addStars(learnReward, '今天学习' + (todayMilestone * learnTarget) + '个单词！');
                 }
             }
             closeLearnModal();
@@ -3236,7 +3238,7 @@
             reviewPendingStars = 0;
             reviewPendingCombo = 0;
             setUser(u);
-            if (reviewed.length > 0) addStars(30, '复习任务完成！');
+            if (reviewed.length > 0) addStars(u.dailyReviewReward || 30, '复习任务完成！');
             closeModal();
             renderAll();
             if (reviewed.length > 0) {
@@ -3371,7 +3373,11 @@
                 let d = new Date(s.date);
                 return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') === today;
             });
-            let learnDone = todayLearn >= 10;
+            let learnTarget = u.dailyLearnTarget || 10;
+            let learnReward = u.dailyLearnReward || 30;
+            let reviewReward = u.dailyReviewReward || 30;
+            let examReward = u.dailyExamReward || 0;
+            let learnDone = todayLearn >= learnTarget;
             let reviewDone = todayReview > 0;
             let examDone = todayExamScores.length > 0;
             let allDone = learnDone && reviewDone && examDone;
@@ -3383,11 +3389,11 @@
                 title: '学习任务',
                 desc: learnDone
                     ? `✅ 今日已学习 ${todayLearn} 个单词，任务完成！`
-                    : `今日已学习 ${todayLearn}/10 个单词，完成10个奖励30⭐`,
+                    : `今日已学习 ${todayLearn}/${learnTarget} 个单词，完成${learnTarget}个奖励${learnReward}⭐`,
                 done: learnDone,
                 urgent: !learnDone,
                 action: learnDone ? null : { label: '去学习', fn: "show('lib')" },
-                potentialStars: learnDone ? 0 : 30
+                potentialStars: learnDone ? 0 : learnReward
             });
 
             reminders.push({
@@ -3395,11 +3401,11 @@
                 title: '复习任务',
                 desc: reviewDone
                     ? `✅ 今日已完成复习，任务完成！`
-                    : `今日待复习 ${reviewCount} 个单词，完成复习奖励30⭐`,
+                    : `今日待复习 ${reviewCount} 个单词，完成复习奖励${reviewReward}⭐`,
                 done: reviewDone,
                 urgent: !reviewDone && reviewCount > 0,
                 action: reviewDone ? null : (reviewCount > 0 ? { label: '去复习', fn: "startReviewSession()" } : null),
-                potentialStars: reviewDone ? 0 : 30
+                potentialStars: reviewDone ? 0 : reviewReward
             });
 
             reminders.push({
@@ -3407,11 +3413,13 @@
                 title: '考试任务',
                 desc: examDone
                     ? `✅ 今日已完成考试，任务完成！`
-                    : `完成考试且错题清零奖励50⭐，考试全对奖励100⭐`,
+                    : examReward > 0
+                        ? `完成考试奖励${examReward}⭐，错题清零奖励50⭐，全对奖励100⭐`
+                        : `完成考试且错题清零奖励50⭐，考试全对奖励100⭐`,
                 done: examDone,
                 urgent: !examDone,
                 action: examDone ? null : { label: '去考试', fn: "show('exam')" },
-                potentialStars: examDone ? 0 : 150
+                potentialStars: examDone ? 0 : examReward + 150
             });
 
             let el = document.getElementById("reminder-list");
@@ -4457,6 +4465,8 @@
             });
             saveExamScore(score, correctCount, examWords.length, mode, duration);
             if (existingTodayScores.length === 0) {
+                let examReward = u.dailyExamReward || 0;
+                if (examReward > 0) addStars(examReward, '完成考试奖励！');
                 if (correctCount === examWords.length) {
                     addStars(100, '考试全对奖励！');
                 }
