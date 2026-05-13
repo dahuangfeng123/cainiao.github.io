@@ -329,6 +329,14 @@ function renderStudent(who) {
                 <label>考试完成奖励（星星数）</label>
                 <input type="number" id="daily-exam-reward-${who}" value="${(u.dailyExamReward || 0)}" min="0" max="9999">
             </div>
+            <div class="field">
+                <label>错题清零奖励（星星数）</label>
+                <input type="number" id="daily-exam-wrong-clear-reward-${who}" value="${(u.dailyExamWrongClearReward || 50)}" min="0" max="9999">
+            </div>
+            <div class="field">
+                <label>考试全对奖励（星星数）</label>
+                <input type="number" id="daily-exam-perfect-reward-${who}" value="${(u.dailyExamPerfectReward || 100)}" min="0" max="9999">
+            </div>
         </div>
         <div class="btn-group">
             <button class="btn btn-primary" onclick="saveDailyTaskConfig('${who}')">💾 保存配置</button>
@@ -911,6 +919,8 @@ function saveDailyTaskConfig(who) {
     u.dailyLearnReward = parseInt(document.getElementById('daily-learn-reward-' + who).value) || 30;
     u.dailyReviewReward = parseInt(document.getElementById('daily-review-reward-' + who).value) || 30;
     u.dailyExamReward = parseInt(document.getElementById('daily-exam-reward-' + who).value) || 0;
+    u.dailyExamWrongClearReward = parseInt(document.getElementById('daily-exam-wrong-clear-reward-' + who).value) || 50;
+    u.dailyExamPerfectReward = parseInt(document.getElementById('daily-exam-perfect-reward-' + who).value) || 100;
     setStudent(who, u);
     showToast(`同学${who}每日任务配置已保存`, 'success');
 }
