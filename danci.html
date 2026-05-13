@@ -3131,6 +3131,7 @@
         function submitReviewAnswer() {
             if (reviewIndex >= reviewQueue.length) return;
             let input = document.getElementById("input-ans").value;
+            if (!input.trim()) { toast('请输入答案', 'warning'); return; }
             let w = curr.item;
             let result = checkExamAnswer(input, w);
             let scorePct = Math.round(result.score * 100);
@@ -4337,6 +4338,7 @@
             if (examSubmitted || examIndex >= examWords.length) return;
             if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
             let input = document.getElementById("exam-answer").value;
+            if (!input.trim()) { toast('请输入答案', 'warning'); return; }
             let w = examWords[examIndex].word;
             let result = checkExamAnswer(input, w);
             let scorePct = Math.round(result.score * 100);
@@ -4454,19 +4456,6 @@
                 return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') === todayStr;
             });
             saveExamScore(score, correctCount, examWords.length, mode, duration);
-            let u = safeUser(getUser());
-            examAnswers.forEach(a => {
-                if (a.simScore < 100) {
-                    if (!u.wrongPool[a.idx]) {
-                        u.wrongPool[a.idx] = { status: 1, c: 1, pass: 0, date: Date.now() };
-                    } else {
-                        u.wrongPool[a.idx].status = 1;
-                        u.wrongPool[a.idx].c = (u.wrongPool[a.idx].c || 0) + 1;
-                        u.wrongPool[a.idx].date = Date.now();
-                    }
-                }
-            });
-            setUser(u);
             if (existingTodayScores.length === 0) {
                 if (correctCount === examWords.length) {
                     addStars(100, '考试全对奖励！');
@@ -4602,6 +4591,7 @@
         function submitWrongAnswer() {
             if (wrongExamIndex >= wrongExamList.length) return;
             let input = document.getElementById("wrong-answer").value;
+            if (!input.trim()) { toast('请输入答案', 'warning'); return; }
             let item = wrongExamList[wrongExamIndex];
             let result = checkExamAnswer(input, item.word);
             let scorePct = Math.round(result.score * 100);
