@@ -2057,14 +2057,16 @@
                 let suffix = item.name === '心愿大奖' ? '（满足一次心愿）' : '';
                 return `<li>${item.emoji} ${item.name} — ${item.cost}⭐${suffix}</li>`;
             }).join('');
+            let tc = myTaskConfig();
             el.innerHTML = `
                 <h3 style="font-size:15px;color:#ff6f91;margin-bottom:6px;">⭐ 星星获取规则</h3>
                 <ul style="padding-left:20px;margin-bottom:12px;">
                     <li>每答对1题 +1⭐</li>
-                    <li>今日学习每满10个新单词 +30⭐</li>
-                    <li>完成复习任务（3轮全部通过）+30⭐</li>
-                    <li>考试全对 +100⭐</li>
-                    <li>完成考试且错题清零 +50⭐</li>
+                    <li>今日学习每满${tc.learnTarget}个新单词 +${tc.learnReward}⭐</li>
+                    <li>完成复习任务（3轮全部通过）+${tc.reviewReward}⭐</li>
+                    <li>完成考试 +${tc.examCompleteReward}⭐</li>
+                    <li>考试全对 +${tc.examPerfectReward}⭐</li>
+                    <li>错题清零 +${tc.examClearReward}⭐</li>
                     <li>考试答错1题 -1⭐</li>
                 </ul>
                 <h3 style="font-size:15px;color:#845ec2;margin-bottom:6px;">🔥 连击奖励规则</h3>
@@ -2446,6 +2448,28 @@
         }
 
         const PERIOD = [0, 1, 2, 4, 7, 15, 30];
+        const DEFAULT_TASK_CONFIG = {
+            learnTarget: 10,
+            learnReward: 30,
+            reviewReward: 30,
+            examCompleteReward: 20,
+            examPerfectReward: 100,
+            examClearReward: 50
+        };
+        function getTaskConfig() {
+            try {
+                let c = JSON.parse(localStorage.getItem('task_config'));
+                if (!c) return { A: { ...DEFAULT_TASK_CONFIG }, B: { ...DEFAULT_TASK_CONFIG } };
+                return {
+                    A: { ...DEFAULT_TASK_CONFIG, ...(c.A || {}) },
+                    B: { ...DEFAULT_TASK_CONFIG, ...(c.B || {}) }
+                };
+            } catch { return { A: { ...DEFAULT_TASK_CONFIG }, B: { ...DEFAULT_TASK_CONFIG } }; }
+        }
+        function myTaskConfig() {
+            let all = getTaskConfig();
+            return all[user] || { ...DEFAULT_TASK_CONFIG };
+        }
         let user = "A";
         let mode = 1;
         let curr = null;
@@ -3015,15 +3039,14 @@
                 u = safeUser(getUser());
                 
                 let todayLearn = (u.dailyLog[today]?.learn || 0);
-                let learnTarget = u.dailyLearnTarget || 10;
-                let learnReward = u.dailyLearnReward || 30;
-                let todayMilestone = Math.floor(todayLearn / learnTarget);
+                let tc = myTaskConfig();
+                let todayMilestone = Math.floor(todayLearn / tc.learnTarget);
                 let lastTodayMilestone = u.lastTodayMilestone || {};
                 if (todayMilestone > (lastTodayMilestone[today] || 0)) {
                     if (!u.lastTodayMilestone) u.lastTodayMilestone = {};
                     u.lastTodayMilestone[today] = todayMilestone;
                     setUser(u);
-                    addStars(learnReward, '今天学习' + (todayMilestone * learnTarget) + '个单词！');
+                    addStars(tc.learnReward, '今天学习' + (todayMilestone * tc.learnTarget) + '个单词！');
                 }
             }
             closeLearnModal();
@@ -3238,7 +3261,7 @@
             reviewPendingStars = 0;
             reviewPendingCombo = 0;
             setUser(u);
-            if (reviewed.length > 0) addStars(u.dailyReviewReward || 30, '复习任务完成！');
+            if (reviewed.length > 0) addStars(myTaskConfig().reviewReward, '复习任务完成！');
             closeModal();
             renderAll();
             if (reviewed.length > 0) {
@@ -3373,13 +3396,8 @@
                 let d = new Date(s.date);
                 return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') === today;
             });
-            let learnTarget = u.dailyLearnTarget || 10;
-            let learnReward = u.dailyLearnReward || 30;
-            let reviewReward = u.dailyReviewReward || 30;
-            let examReward = u.dailyExamReward || 0;
-            let wrongClearReward = u.dailyExamWrongClearReward || 50;
-            let perfectReward = u.dailyExamPerfectReward || 100;
-            let learnDone = todayLearn >= learnTarget;
+            let tc = myTaskConfig();
+            let learnDone = todayLearn >= tc.learnTarget;
             let reviewDone = todayReview > 0;
             let examDone = todayExamScores.length > 0;
             let allDone = learnDone && reviewDone && examDone;
@@ -3391,11 +3409,11 @@
                 title: '学习任务',
                 desc: learnDone
                     ? `✅ 今日已学习 ${todayLearn} 个单词，任务完成！`
-                    : `今日已学习 ${todayLearn}/${learnTarget} 个单词，完成${learnTarget}个奖励${learnReward}⭐`,
+                    : `今日已学习 ${todayLearn}/${tc.learnTarget} 个单词，完成${tc.learnTarget}个奖励${tc.learnReward}⭐`,
                 done: learnDone,
                 urgent: !learnDone,
                 action: learnDone ? null : { label: '去学习', fn: "show('lib')" },
-                potentialStars: learnDone ? 0 : learnReward
+                potentialStars: learnDone ? 0 : tc.learnReward
             });
 
             reminders.push({
@@ -3403,11 +3421,11 @@
                 title: '复习任务',
                 desc: reviewDone
                     ? `✅ 今日已完成复习，任务完成！`
-                    : `今日待复习 ${reviewCount} 个单词，完成复习奖励${reviewReward}⭐`,
+                    : `今日待复习 ${reviewCount} 个单词，完成复习奖励${tc.reviewReward}⭐`,
                 done: reviewDone,
                 urgent: !reviewDone && reviewCount > 0,
                 action: reviewDone ? null : (reviewCount > 0 ? { label: '去复习', fn: "startReviewSession()" } : null),
-                potentialStars: reviewDone ? 0 : reviewReward
+                potentialStars: reviewDone ? 0 : tc.reviewReward
             });
 
             reminders.push({
@@ -3415,13 +3433,11 @@
                 title: '考试任务',
                 desc: examDone
                     ? `✅ 今日已完成考试，任务完成！`
-                    : examReward > 0
-                        ? `完成考试奖励${examReward}⭐，错题清零奖励${wrongClearReward}⭐，全对奖励${perfectReward}⭐`
-                        : `错题清零奖励${wrongClearReward}⭐，全对奖励${perfectReward}⭐`,
+                    : `完成考试+${tc.examCompleteReward}⭐，全对+${tc.examPerfectReward}⭐，错题清零+${tc.examClearReward}⭐`,
                 done: examDone,
                 urgent: !examDone,
                 action: examDone ? null : { label: '去考试', fn: "show('exam')" },
-                potentialStars: examDone ? 0 : examReward + wrongClearReward + perfectReward
+                potentialStars: examDone ? 0 : (tc.examCompleteReward + tc.examPerfectReward + tc.examClearReward)
             });
 
             let el = document.getElementById("reminder-list");
@@ -4467,29 +4483,26 @@
             });
             saveExamScore(score, correctCount, examWords.length, mode, duration);
             if (existingTodayScores.length === 0) {
-                let examReward = u.dailyExamReward || 0;
-                let perfectReward = u.dailyExamPerfectReward || 100;
-                if (examReward > 0) addStars(examReward, '完成考试奖励！');
+                addStars(myTaskConfig().examCompleteReward, '考试完成奖励！');
                 if (correctCount === examWords.length) {
-                    addStars(perfectReward, '考试全对奖励！');
+                    addStars(myTaskConfig().examPerfectReward, '考试全对奖励！');
                 }
             }
-            checkExamAndWrongClearBonus();
+            checkWrongClearBonus();
             renderWrongPool();
         }
 
-        function checkExamAndWrongClearBonus() {
+        function checkWrongClearBonus() {
             let u = safeUser(getUser());
             let todayStr = todayKey();
             let todayExams = (u.examScores || []).filter(s => s.date && s.date.startsWith(todayStr));
             if (todayExams.length === 0) return;
             let wrongCount = Object.values(u.wrongPool || {}).filter(w => w.status === 1).length;
             if (wrongCount > 0) return;
-            let key = 'examWrongClearBonus_' + todayStr;
+            let key = 'wrongClearBonus_' + user + '_' + todayStr;
             if (localStorage.getItem(key)) return;
             localStorage.setItem(key, '1');
-            let wrongClearReward = u.dailyExamWrongClearReward || 50;
-            addStars(wrongClearReward, '考试完成且错题清零！');
+            addStars(myTaskConfig().examClearReward, '考试完成且错题清零！');
         }
 
         function saveExamScore(score, correct, total, m, duration) {
@@ -4669,7 +4682,7 @@
             if (remainingWrongCount === 0) {
                 playSound('victory');
             }
-            checkExamAndWrongClearBonus();
+            checkWrongClearBonus();
             document.getElementById("wrong-exam-progress").style.display = 'none';
             document.getElementById("wrong-pool-card").style.display = 'block';
             let scoresCard = document.getElementById("exam-scores-list");
