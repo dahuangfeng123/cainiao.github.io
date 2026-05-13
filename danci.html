@@ -3377,6 +3377,8 @@
             let learnReward = u.dailyLearnReward || 30;
             let reviewReward = u.dailyReviewReward || 30;
             let examReward = u.dailyExamReward || 0;
+            let wrongClearReward = u.dailyExamWrongClearReward || 50;
+            let perfectReward = u.dailyExamPerfectReward || 100;
             let learnDone = todayLearn >= learnTarget;
             let reviewDone = todayReview > 0;
             let examDone = todayExamScores.length > 0;
@@ -3414,12 +3416,12 @@
                 desc: examDone
                     ? `✅ 今日已完成考试，任务完成！`
                     : examReward > 0
-                        ? `完成考试奖励${examReward}⭐，错题清零奖励50⭐，全对奖励100⭐`
-                        : `完成考试且错题清零奖励50⭐，考试全对奖励100⭐`,
+                        ? `完成考试奖励${examReward}⭐，错题清零奖励${wrongClearReward}⭐，全对奖励${perfectReward}⭐`
+                        : `错题清零奖励${wrongClearReward}⭐，全对奖励${perfectReward}⭐`,
                 done: examDone,
                 urgent: !examDone,
                 action: examDone ? null : { label: '去考试', fn: "show('exam')" },
-                potentialStars: examDone ? 0 : examReward + 150
+                potentialStars: examDone ? 0 : examReward + wrongClearReward + perfectReward
             });
 
             let el = document.getElementById("reminder-list");
@@ -4466,9 +4468,10 @@
             saveExamScore(score, correctCount, examWords.length, mode, duration);
             if (existingTodayScores.length === 0) {
                 let examReward = u.dailyExamReward || 0;
+                let perfectReward = u.dailyExamPerfectReward || 100;
                 if (examReward > 0) addStars(examReward, '完成考试奖励！');
                 if (correctCount === examWords.length) {
-                    addStars(100, '考试全对奖励！');
+                    addStars(perfectReward, '考试全对奖励！');
                 }
             }
             checkExamAndWrongClearBonus();
@@ -4485,7 +4488,8 @@
             let key = 'examWrongClearBonus_' + todayStr;
             if (localStorage.getItem(key)) return;
             localStorage.setItem(key, '1');
-            addStars(50, '考试完成且错题清零！');
+            let wrongClearReward = u.dailyExamWrongClearReward || 50;
+            addStars(wrongClearReward, '考试完成且错题清零！');
         }
 
         function saveExamScore(score, correct, total, m, duration) {
