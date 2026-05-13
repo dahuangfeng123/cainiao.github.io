@@ -216,6 +216,26 @@ function getLotteryConfig() {
 }
 function setLotteryConfig(c) { localStorage.setItem('lottery_config', JSON.stringify(c)); }
 
+const DEFAULT_TASK_CONFIG = {
+    learnTarget: 10,
+    learnReward: 30,
+    reviewReward: 30,
+    examCompleteReward: 20,
+    examPerfectReward: 100,
+    examClearReward: 50
+};
+function getTaskConfig() {
+    try {
+        let c = JSON.parse(localStorage.getItem('task_config'));
+        if (!c) return { A: { ...DEFAULT_TASK_CONFIG }, B: { ...DEFAULT_TASK_CONFIG } };
+        return {
+            A: { ...DEFAULT_TASK_CONFIG, ...(c.A || {}) },
+            B: { ...DEFAULT_TASK_CONFIG, ...(c.B || {}) }
+        };
+    } catch { return { A: { ...DEFAULT_TASK_CONFIG }, B: { ...DEFAULT_TASK_CONFIG } }; }
+}
+function setTaskConfig(c) { localStorage.setItem('task_config', JSON.stringify(c)); }
+
 function getStudent(who) {
     try { return JSON.parse(localStorage.getItem(KEYS[who])) || null; } catch { return null; }
 }
@@ -310,37 +330,41 @@ function renderStudent(who) {
         </div>
     </div>
     <div class="card">
-        <h2>🎯 每日学习任务配置</h2>
-        <div style="font-size:12px;color:#999;margin-bottom:12px;">配置该同学每日学习任务的单词数量和完成奖励，danci 页面会读取此配置</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-            <div class="field">
-                <label>每日学习目标（单词数）</label>
-                <input type="number" id="daily-learn-target-${who}" value="${(u.dailyLearnTarget || 10)}" min="1" max="100">
+        <h2>⚙️ 任务配置</h2>
+        ${(() => {
+            let tc = getTaskConfig()[who] || { ...DEFAULT_TASK_CONFIG };
+            return `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div>
+                    <label style="font-size:12px;color:#888;">学习目标（单词数）</label>
+                    <input type="number" id="tc-learnTarget-${who}" value="${tc.learnTarget}" min="1" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;margin-top:2px;">
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#888;">学习奖励（⭐）</label>
+                    <input type="number" id="tc-learnReward-${who}" value="${tc.learnReward}" min="0" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;margin-top:2px;">
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#888;">复习奖励（⭐）</label>
+                    <input type="number" id="tc-reviewReward-${who}" value="${tc.reviewReward}" min="0" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;margin-top:2px;">
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#888;">考试完成奖励（⭐）</label>
+                    <input type="number" id="tc-examCompleteReward-${who}" value="${tc.examCompleteReward}" min="0" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;margin-top:2px;">
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#888;">考试全对奖励（⭐）</label>
+                    <input type="number" id="tc-examPerfectReward-${who}" value="${tc.examPerfectReward}" min="0" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;margin-top:2px;">
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#888;">错题清零奖励（⭐）</label>
+                    <input type="number" id="tc-examClearReward-${who}" value="${tc.examClearReward}" min="0" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;margin-top:2px;">
+                </div>
             </div>
-            <div class="field">
-                <label>完成奖励（星星数）</label>
-                <input type="number" id="daily-learn-reward-${who}" value="${(u.dailyLearnReward || 30)}" min="0" max="9999">
-            </div>
-            <div class="field">
-                <label>复习完成奖励（星星数）</label>
-                <input type="number" id="daily-review-reward-${who}" value="${(u.dailyReviewReward || 30)}" min="0" max="9999">
-            </div>
-            <div class="field">
-                <label>考试完成奖励（星星数）</label>
-                <input type="number" id="daily-exam-reward-${who}" value="${(u.dailyExamReward || 0)}" min="0" max="9999">
-            </div>
-            <div class="field">
-                <label>错题清零奖励（星星数）</label>
-                <input type="number" id="daily-exam-wrong-clear-reward-${who}" value="${(u.dailyExamWrongClearReward || 50)}" min="0" max="9999">
-            </div>
-            <div class="field">
-                <label>考试全对奖励（星星数）</label>
-                <input type="number" id="daily-exam-perfect-reward-${who}" value="${(u.dailyExamPerfectReward || 100)}" min="0" max="9999">
-            </div>
-        </div>
-        <div class="btn-group">
-            <button class="btn btn-primary" onclick="saveDailyTaskConfig('${who}')">💾 保存配置</button>
-        </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="saveTaskConfig('${who}')">💾 保存配置</button>
+                <button class="btn btn-danger" onclick="resetTaskConfig('${who}')">🔄 恢复默认</button>
+            </div>`;
+        })()}
     </div>
     <div class="card">
         <h2>📅 每日学习记录</h2>
@@ -913,18 +937,6 @@ function syntaxHighlight(json) {
         .replace(/: (null)/g, ': <span class="null">$1</span>');
 }
 
-function saveDailyTaskConfig(who) {
-    let u = getStudent(who);
-    u.dailyLearnTarget = parseInt(document.getElementById('daily-learn-target-' + who).value) || 10;
-    u.dailyLearnReward = parseInt(document.getElementById('daily-learn-reward-' + who).value) || 30;
-    u.dailyReviewReward = parseInt(document.getElementById('daily-review-reward-' + who).value) || 30;
-    u.dailyExamReward = parseInt(document.getElementById('daily-exam-reward-' + who).value) || 0;
-    u.dailyExamWrongClearReward = parseInt(document.getElementById('daily-exam-wrong-clear-reward-' + who).value) || 50;
-    u.dailyExamPerfectReward = parseInt(document.getElementById('daily-exam-perfect-reward-' + who).value) || 100;
-    setStudent(who, u);
-    showToast(`同学${who}每日任务配置已保存`, 'success');
-}
-
 function editStars(who) {
     let u = getStudent(who);
     document.getElementById('modal-title').innerText = `修改同学${who}的星星`;
@@ -942,6 +954,27 @@ function editCombo(who) {
 function clearWrongPool(who) { if (!confirm(`确定清空同学${who}的错题库？`)) return; let u = getStudent(who); u.wrongPool = {}; setStudent(who, u); renderStudent(who); showToast('错题库已清空', 'success'); }
 function clearPrizes(who) { if (!confirm(`确定清空同学${who}的所有奖品？`)) return; let u = getStudent(who); u.prizes = []; setStudent(who, u); renderStudent(who); showToast('奖品已清空', 'success'); }
 function resetStudent(who) { if (!confirm(`⚠️ 确定重置同学${who}的所有数据？`)) return; localStorage.removeItem(KEYS[who]); renderStudent(who); showToast(`同学${who}数据已重置`, 'success'); }
+function saveTaskConfig(who) {
+    let all = getTaskConfig();
+    all[who] = {
+        learnTarget: parseInt(document.getElementById('tc-learnTarget-' + who).value) || DEFAULT_TASK_CONFIG.learnTarget,
+        learnReward: parseInt(document.getElementById('tc-learnReward-' + who).value) || DEFAULT_TASK_CONFIG.learnReward,
+        reviewReward: parseInt(document.getElementById('tc-reviewReward-' + who).value) || DEFAULT_TASK_CONFIG.reviewReward,
+        examCompleteReward: parseInt(document.getElementById('tc-examCompleteReward-' + who).value) || DEFAULT_TASK_CONFIG.examCompleteReward,
+        examPerfectReward: parseInt(document.getElementById('tc-examPerfectReward-' + who).value) || DEFAULT_TASK_CONFIG.examPerfectReward,
+        examClearReward: parseInt(document.getElementById('tc-examClearReward-' + who).value) || DEFAULT_TASK_CONFIG.examClearReward
+    };
+    setTaskConfig(all);
+    showToast(`同学${who}任务配置已保存`, 'success');
+}
+function resetTaskConfig(who) {
+    if (!confirm(`确定恢复同学${who}的任务配置为默认值？`)) return;
+    let all = getTaskConfig();
+    all[who] = { ...DEFAULT_TASK_CONFIG };
+    setTaskConfig(all);
+    renderStudent(who);
+    showToast(`同学${who}任务配置已恢复默认`, 'success');
+}
 function saveScrollPositions() {
     let positions = {};
     document.querySelectorAll('.table-wrap').forEach((el, i) => { positions[i] = el.scrollTop; });
