@@ -1045,8 +1045,8 @@ function getLocalStorageSpace(){
     // 使用示例：
     const spaceInfo = estimateLocalStorageSpace();
     document.getElementById('show-local-storage-space').innerHTML = `
-        <div style="background:#FAEEDA;color:#633806;border-radius:8px;padding:8px 10px;font-size:12px;margin-top:8px;line-height:1.6;">
-            已使用空间:, ${spaceInfo.usedSpace}<br>剩余空间:, ${spaceInfo.remainingSpace}
+        <div style="padding:8px 10px;font-size:12px;margin-top:8px;line-height:1.6;">
+            已用空间: ${spaceInfo.usedSpace}&nbsp;&nbsp;剩余空间: ${spaceInfo.remainingSpace}
         </div>
     `;
 }
