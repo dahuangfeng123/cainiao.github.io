@@ -4304,6 +4304,10 @@
                 toast("暂无已学习的单词，请先学习一些单词再考试", "warning");
                 return;
             }
+            if (pool.length < 10) {
+                toast("考试不足10个单词，请多学习一些单词再考试", "warning");
+                return;
+            }
             let shuffled = pool.sort(() => Math.random() - 0.5);
             examWords = shuffled.slice(0, Math.min(100, shuffled.length));
             examIndex = 0;
