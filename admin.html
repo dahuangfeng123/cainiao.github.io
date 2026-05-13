@@ -155,6 +155,9 @@ tr:hover { background: #f8f9fa; }
 <script>
 const PASSWORD_HASH = 'ba4bc8bc08e87b8f509310eef8ac3a65ba8b677de3818c15f635ee8ddfb06ef5';
 let isAuthenticated = false;
+let wordCache = null;
+let wordCacheKey = '';
+let wordFilteredCache = null;
 
 async function sha256(str) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -226,6 +229,17 @@ function setWords(data) {
     localStorage.setItem(KEYS.words, JSON.stringify(data));
 }
 
+function getWordsCached() {
+    if (!wordCache) wordCache = getWords();
+    return wordCache;
+}
+
+function invalidateWordCache() {
+    wordCache = null;
+    wordCacheKey = '';
+    wordFilteredCache = null;
+}
+
 function switchTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -247,7 +261,7 @@ function renderPanel(name) {
 function renderOverview() {
     let a = getStudent('A') || {};
     let b = getStudent('B') || {};
-    let words = getWords();
+    let words = getWordsCached();
     let html = `<div class="stats">
         <div class="stat-item"><div class="value">${(a.learn || []).length}</div><div class="label">A 已学习</div></div>
         <div class="stat-item"><div class="value">${(b.learn || []).length}</div><div class="label">B 已学习</div></div>
@@ -264,7 +278,7 @@ function renderOverview() {
 
 function renderStudent(who) {
     let u = getStudent(who);
-    let words = getWords();
+    let words = getWordsCached();
     let panel = document.getElementById('panel-student' + who);
     if (!u) {
         panel.innerHTML = `<div class="card"><div class="empty">该学生暂无数据</div>
@@ -323,11 +337,12 @@ function renderStudent(who) {
         <h2>❌ 错题库（活跃 ${wrongPoolActive} / 总计 ${wrongPoolKeys.length}）</h2>
         ${wrongPoolKeys.length === 0 ? '<div class="empty">暂无</div>' : `
         <div class="table-wrap" style="max-height:300px;overflow-y:auto;"><table>
-            <tr><th>索引</th><th>状态</th><th>出错次数</th><th>重考进度</th><th>操作</th></tr>
+            <tr><th>索引</th><th>单词</th><th>状态</th><th>出错次数</th><th>重考进度</th><th>操作</th></tr>
             ${wrongPoolKeys.map(k => {
                 let info = u.wrongPool[k];
+                let w = words[k];
                 let statusText = info.status === 1 ? '<span style="color:#ef5350">🔴 出错</span>' : '<span style="color:#43a047">✅ 掌握</span>';
-                return `<tr><td>${k}</td><td>${statusText}</td><td>${info.c || 0}</td><td>${info.pass || 0}/3</td><td><button class="btn btn-danger" style="padding:2px 8px;font-size:12px;" onclick="removeWrong('${who}','${k}')">删除</button></td></tr>`;
+                return `<tr><td>${k}</td><td><strong>${w ? w.word : '-'}</strong></td><td>${statusText}</td><td>${info.c || 0}</td><td>${info.pass || 0}/3</td><td><button class="btn btn-danger" style="padding:2px 8px;font-size:12px;" onclick="removeWrong('${who}','${k}')">删除</button></td></tr>`;
             }).join('')}
         </table></div>`}
     </div>
@@ -725,7 +740,7 @@ function importStudentData(event) {
 }
 
 function downloadWordsXlsx() {
-    let words = getWords();
+    let words = getWordsCached();
     if (words.length === 0) { showToast('单词库为空', 'warning'); return; }
     let script = document.createElement('script');
     script.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
@@ -742,7 +757,7 @@ function downloadWordsXlsx() {
 }
 
 function downloadWordsJson() {
-    let words = getWords();
+    let words = getWordsCached();
     let json = JSON.stringify(words, null, 2);
     let blob = new Blob([json], { type: 'application/json' });
     let url = URL.createObjectURL(blob);
@@ -751,12 +766,24 @@ function downloadWordsJson() {
     URL.revokeObjectURL(url);
 }
 
-let wordPageSize = 1000;
+let wordPageSize = 50;
 let wordLoadedCount = 0;
 let wordSearchKeyword = '';
 
+function getFilteredWords() {
+    let kw = wordSearchKeyword;
+    let key = kw;
+    if (key === wordCacheKey && wordFilteredCache) return wordFilteredCache;
+    let words = getWordsCached();
+    if (!kw) { wordFilteredCache = words; wordCacheKey = key; return words; }
+    let kwLower = kw.toLowerCase();
+    wordFilteredCache = words.filter(w => (w.word.toLowerCase() + ' ' + w.meaning.toLowerCase()).includes(kwLower));
+    wordCacheKey = key;
+    return wordFilteredCache;
+}
+
 function renderWords() {
-    let words = getWords();
+    let words = getWordsCached();
     let panel = document.getElementById('panel-words');
     let html = `
     <div class="card">
@@ -779,26 +806,23 @@ function renderWords() {
     panel.innerHTML = html;
     wordLoadedCount = 0;
     wordSearchKeyword = '';
+    wordCacheKey = '';
+    wordFilteredCache = null;
     document.getElementById('word-table-wrap').addEventListener('scroll', onWordScroll);
     loadMoreWords();
 }
 
-function getFilteredWords() {
-    let words = getWords();
-    if (!wordSearchKeyword) return words;
-    return words.filter(w => (w.word.toLowerCase() + ' ' + w.meaning.toLowerCase()).includes(wordSearchKeyword));
-}
-
 function loadMoreWords() {
     let filtered = getFilteredWords();
+    let allWords = getWordsCached();
     let tbody = document.getElementById('words-tbody');
     if (!tbody) return;
     let end = Math.min(wordLoadedCount + wordPageSize, filtered.length);
     let html = '';
     for (let i = wordLoadedCount; i < end; i++) {
         let w = filtered[i];
-        let realIdx = wordSearchKeyword ? getWords().indexOf(w) : i;
-        html += `<tr data-search="${w.word.toLowerCase()} ${w.meaning.toLowerCase()}">
+        let realIdx = wordSearchKeyword ? allWords.indexOf(w) : i;
+        html += `<tr>
             <td>${realIdx}</td><td><strong>${w.word}</strong></td><td>${'★'.repeat(w.collins)}</td><td>${w.exam}</td><td style="max-width:300px;word-break:break-all;">${w.meaning}</td>
             <td><button class="btn btn-primary" style="padding:2px 8px;font-size:12px;" onclick="editWordItem(${realIdx})">✏️</button> <button class="btn btn-danger" style="padding:2px 8px;font-size:12px;" onclick="deleteWordItem(${realIdx})">🗑️</button></td>
         </tr>`;
@@ -916,23 +940,23 @@ function clearReviewPlan(who) { if (!confirm('确定清空复习计划？')) ret
 function initStudent(who) { let u = { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0, lastTodayMilestone: {}, prizes: [] }; setStudent(who, u); renderStudent(who); showToast(`同学${who}已初始化`, 'success'); }
 
 function editWordItem(idx) {
-    let words = getWords(); let w = words[idx];
+    let words = getWordsCached(); let w = words[idx];
     document.getElementById('modal-title').innerText = `编辑单词 #${idx}`;
     document.getElementById('modal-content').innerHTML = `<div class="field"><label>单词</label><input type="text" id="edit-w-word" value="${w.word}"></div><div class="field"><label>柯林斯</label><input type="number" id="edit-w-collins" value="${w.collins}" min="1" max="5"></div><div class="field"><label>考试范围</label><input type="text" id="edit-w-exam" value="${w.exam}"></div><div class="field"><label>释义</label><textarea id="edit-w-meaning">${w.meaning}</textarea></div>`;
     document.getElementById('edit-modal').classList.add('show');
-    document.getElementById('edit-modal')._save = () => { words[idx].word = document.getElementById('edit-w-word').value.trim(); words[idx].collins = parseInt(document.getElementById('edit-w-collins').value) || 1; words[idx].exam = document.getElementById('edit-w-exam').value.trim(); words[idx].meaning = document.getElementById('edit-w-meaning').value.trim(); setWords(words); renderWords(); showToast('已更新', 'success'); };
+    document.getElementById('edit-modal')._save = () => { words[idx].word = document.getElementById('edit-w-word').value.trim(); words[idx].collins = parseInt(document.getElementById('edit-w-collins').value) || 1; words[idx].exam = document.getElementById('edit-w-exam').value.trim(); words[idx].meaning = document.getElementById('edit-w-meaning').value.trim(); setWords(words); invalidateWordCache(); renderWords(); showToast('已更新', 'success'); };
 }
-function deleteWordItem(idx) { let words = getWords(); if (!confirm(`确定删除 "${words[idx].word}"？`)) return; words.splice(idx, 1); setWords(words); renderWords(); showToast('已删除', 'success'); }
+function deleteWordItem(idx) { let words = getWordsCached(); if (!confirm(`确定删除 "${words[idx].word}"？`)) return; words.splice(idx, 1); setWords(words); invalidateWordCache(); renderWords(); showToast('已删除', 'success'); }
 function addWord() {
     document.getElementById('modal-title').innerText = '添加单词';
     document.getElementById('modal-content').innerHTML = `<div class="field"><label>单词</label><input type="text" id="add-w-word"></div><div class="field"><label>柯林斯</label><input type="number" id="add-w-collins" value="3" min="1" max="5"></div><div class="field"><label>考试范围</label><input type="text" id="add-w-exam"></div><div class="field"><label>释义</label><textarea id="add-w-meaning"></textarea></div>`;
     document.getElementById('edit-modal').classList.add('show');
-    document.getElementById('edit-modal')._save = () => { let words = getWords(); words.push({ word: document.getElementById('add-w-word').value.trim(), collins: parseInt(document.getElementById('add-w-collins').value) || 3, exam: document.getElementById('add-w-exam').value.trim(), meaning: document.getElementById('add-w-meaning').value.trim() }); setWords(words); renderWords(); showToast('已添加', 'success'); };
+    document.getElementById('edit-modal')._save = () => { let words = getWordsCached(); words.push({ word: document.getElementById('add-w-word').value.trim(), collins: parseInt(document.getElementById('add-w-collins').value) || 3, exam: document.getElementById('add-w-exam').value.trim(), meaning: document.getElementById('add-w-meaning').value.trim() }); setWords(words); invalidateWordCache(); renderWords(); showToast('已添加', 'success'); };
 }
 function uploadWordsAdmin(event) {
     let file = event.target.files[0]; if (!file) return;
     let reader = new FileReader();
-    reader.onload = function(e) { try { let data = JSON.parse(e.target.result); if (!Array.isArray(data)) throw new Error('格式错误'); setWords(data); renderWords(); showToast(`已更新，共 ${data.length} 个`, 'success'); } catch(err) { showToast('解析失败：' + err.message, 'error'); } };
+    reader.onload = function(e) { try { let data = JSON.parse(e.target.result); if (!Array.isArray(data)) throw new Error('格式错误'); setWords(data); invalidateWordCache(); renderWords(); showToast(`已更新，共 ${data.length} 个`, 'success'); } catch(err) { showToast('解析失败：' + err.message, 'error'); } };
     reader.readAsText(file); event.target.value = '';
 }
 function editRawKey(key) {
@@ -1054,3 +1078,4 @@ getLocalStorageSpace();
 </script>
 </body>
 </html>
+<!--开发者VX：myedifier-->
