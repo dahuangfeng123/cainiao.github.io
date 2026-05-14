@@ -3087,6 +3087,7 @@
         let reviewPendingStars = 0;
         let reviewPendingCombo = 0;
         let isInReview = false;
+        let isTaskReview = false;
 
         function startReviewSession() {
             let tasks = getTodayTasks();
@@ -3099,6 +3100,7 @@
             reviewPendingStars = 0;
             reviewPendingCombo = 0;
             isInReview = true;
+            isTaskReview = true;
             setMode(1);
             document.getElementById("modal").style.display = "flex";
             renderReviewWord();
@@ -3169,8 +3171,8 @@
             fb.style.display = 'block';
             if (result.correct) {
                 playSound('correct');
-                addComboStar();
-                recordDaily('review');
+                if (isTaskReview) addComboStar();
+                if (isTaskReview) recordDaily('review');
                 fb.style.background = '#c8e6c9';
                 fb.style.color = '#1e7e34';
                 fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
@@ -3186,7 +3188,7 @@
                 }, 1000);
             } else {
                 playSound('wrong');
-                resetCombo();
+                if (isTaskReview) resetCombo();
                 fb.style.background = '#ffcdd2';
                 fb.style.color = '#c5221f';
                 fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${reviewRound === 1 ? w.meaning : w.word}</strong>`;
@@ -3199,7 +3201,7 @@
 
         function viewReviewAns() {
             if (!curr) return;
-            resetCombo();
+            if (isTaskReview) resetCombo();
             let w = curr.item;
             document.getElementById("ans-show").innerText = `${w.word}\n${w.meaning}`;
             document.getElementById("btn-submit-review").disabled = true;
@@ -3211,7 +3213,7 @@
 
         function skipReviewWord() {
             if (reviewIndex >= reviewQueue.length) return;
-            resetCombo();
+            if (isTaskReview) resetCombo();
             let idx = reviewQueue.splice(reviewIndex, 1)[0];
             reviewQueue.push(idx);
             renderReviewWord();
@@ -3238,42 +3240,50 @@
         }
 
         function finishReviewAll() {
-            let u = safeUser(getUser());
             let reviewed = Object.keys(reviewPassed).filter(idx => {
                 let p = reviewPassed[idx];
                 return p.includes(1) && p.includes(2) && p.includes(3);
             });
-            reviewed.forEach(idx => {
-                let i = parseInt(idx);
-                let log = u.log[i];
-                if (!log) return;
-                log.c += 1;
-                let interval = PERIOD[log.c] - PERIOD[log.c - 1];
-                if (log.c >= PERIOD.length) {
-                    if (!u.done.includes(i)) u.done.push(i);
-                    log.next = null;
-                } else {
-                    let d = new Date();
-                    d.setDate(d.getDate() + interval);
-                    log.next = d.getTime();
+            if (isTaskReview) {
+                let u = safeUser(getUser());
+                reviewed.forEach(idx => {
+                    let i = parseInt(idx);
+                    let log = u.log[i];
+                    if (!log) return;
+                    log.c += 1;
+                    let interval = PERIOD[log.c] - PERIOD[log.c - 1];
+                    if (log.c >= PERIOD.length) {
+                        if (!u.done.includes(i)) u.done.push(i);
+                        log.next = null;
+                    } else {
+                        let d = new Date();
+                        d.setDate(d.getDate() + interval);
+                        log.next = d.getTime();
+                    }
+                });
+                if (reviewPendingStars > 0) {
+                    u.stars = (u.stars || 0) + reviewPendingStars;
                 }
-            });
-            if (reviewPendingStars > 0) {
-                u.stars = (u.stars || 0) + reviewPendingStars;
+                u.combo = reviewPendingCombo;
+                setUser(u);
+                if (reviewed.length > 0) addStars(myTaskConfig().reviewReward, '复习任务完成！');
             }
-            u.combo = reviewPendingCombo;
             isInReview = false;
+            let wasTaskReview = isTaskReview;
+            isTaskReview = false;
             reviewPendingStars = 0;
             reviewPendingCombo = 0;
-            setUser(u);
-            if (reviewed.length > 0) addStars(myTaskConfig().reviewReward, '复习任务完成！');
             closeModal();
             renderAll();
-            if (reviewed.length > 0) {
-                playSound('victory');
-                toast(`复习完成！${reviewed.length} 个单词已通过三轮复习`, 'success');
+            if (wasTaskReview) {
+                if (reviewed.length > 0) {
+                    playSound('victory');
+                    toast(`复习完成！${reviewed.length} 个单词已通过三轮复习`, 'success');
+                } else {
+                    toast('本轮无单词通过全部三轮复习', 'warning');
+                }
             } else {
-                toast('本轮无单词通过全部三轮复习', 'warning');
+                toast('自由复习结束', 'info');
             }
         }
 
@@ -3287,16 +3297,18 @@
             reviewPendingStars = 0;
             reviewPendingCombo = 0;
             isInReview = true;
+            isTaskReview = false;
             setMode(1);
             document.getElementById("modal").style.display = "flex";
             renderReviewWord();
         }
 
         function closeModal() {
-            if (isInReview && reviewPendingStars > 0) {
+            if (isInReview && isTaskReview && reviewPendingStars > 0) {
                 toast('复习未完成，' + reviewPendingStars + '颗星星未保存', 'warning');
             }
             isInReview = false;
+            isTaskReview = false;
             reviewPendingStars = 0;
             reviewPendingCombo = 0;
             document.getElementById("modal").style.display = "none";
