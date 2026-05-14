@@ -2852,7 +2852,11 @@
                 delete u.log[idx];
             }
             setUser(u);
-            renderAll();
+            renderStatusFilter();
+            renderWordList(true);
+            renderStats();
+            renderToday();
+            renderTodayList();
         }
 
         // ==============================
