@@ -3403,7 +3403,7 @@
             });
             let tc = myTaskConfig();
             let learnDone = todayLearn >= tc.learnTarget;
-            let reviewDone = todayReview > 0;
+            let reviewDone = reviewCount === 0;
             let examDone = todayExamScores.length > 0;
             let allDone = learnDone && reviewDone && examDone;
 
