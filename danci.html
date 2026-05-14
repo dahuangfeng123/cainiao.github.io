@@ -3429,7 +3429,7 @@
                     : `今日待复习 ${reviewCount} 个单词，完成复习奖励${tc.reviewReward}⭐`,
                 done: reviewDone,
                 urgent: !reviewDone && reviewCount > 0,
-                action: reviewDone ? null : (reviewCount > 0 ? { label: '去复习', fn: "startReviewSession()" } : null),
+                action: reviewDone ? null : (reviewCount > 0 ? { label: '去复习', fn: "show('plan')" } : null),
                 potentialStars: reviewDone ? 0 : tc.reviewReward
             });
 
