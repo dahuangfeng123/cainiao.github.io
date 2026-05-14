@@ -1423,6 +1423,7 @@
                         <p>已学：<span id="a-total">0</span></p>
                         <p>待复习：<span id="a-wait">0</span></p>
                         <p>已掌握：<span id="a-done">0</span></p>
+                        <p>已熟练：<span id="a-skilled">0</span></p>
                         <p>⭐ 星星：<span id="a-stars" style="font-weight:bold;color:#fbbc04;">0</span></p>
                     </div>
                     <div class="col card">
@@ -1430,6 +1431,7 @@
                         <p>已学：<span id="b-total">0</span></p>
                         <p>待复习：<span id="b-wait">0</span></p>
                         <p>已掌握：<span id="b-done">0</span></p>
+                        <p>已熟练：<span id="b-skilled">0</span></p>
                         <p>⭐ 星星：<span id="b-stars" style="font-weight:bold;color:#fbbc04;">0</span></p>
                     </div>
                 </div>
@@ -1553,6 +1555,7 @@
                 <p>已学习：<span id="my-total">0</span> 个 <span style="color:#999;font-size:12px;">（点击过"学习/复习"的单词总数）</span></p>
                 <p>待复习：<span id="my-wait">0</span> 个 <span style="color:#999;font-size:12px;">（已学习但未完成全部复习周期，且下次复习时间≤今日的单词）</span></p>
                 <p>已掌握：<span id="my-done">0</span> 个 <span style="color:#999;font-size:12px;">（完成全部艾宾浩斯复习周期（1/2/4/7/15/30天）的单词）</span></p>
+                <p>已熟练：<span id="my-skilled">0</span> 个 <span style="color:#999;font-size:12px;">（手动标记为已熟练的单词，不再参与复习）</span></p>
             </div>
             <div class="card">
                 <h2>🏆 考试成绩记录</h2>
@@ -2771,13 +2774,12 @@
             for (let i = 0; i < end; i++) {
                 let w = filteredList[i];
                 let realIdx = all.indexOf(w);
-                let learned = u.learn.includes(realIdx);
                 let skilled = u.skilled && u.skilled.includes(realIdx);
-                let btnText = learned ? "复习" : "学习";
-                let btnClass = learned ? "btn-blue" : "btn-green";
+                let btnText = skilled ? '' : (u.learn.includes(realIdx) ? "复习" : "学习");
+                let btnClass = u.learn.includes(realIdx) ? "btn-blue" : "btn-green";
                 let examHtml = w.exam.split(" ").map(t => EXAM_LABELS[t] ? `<span class="exam-tag">${EXAM_LABELS[t]}</span>` : "").join("");
                 html += `
-        <div class="word-item" style="${skilled ? 'opacity:0.5;' : ''}">
+        <div class="word-item">
             <div>
                 <span class="word-text">${w.word}</span>
                 <span class="collins-star">${"★".repeat(w.collins)}</span>
@@ -2786,7 +2788,7 @@
             </div>
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                 ${skilled ? '' : `<button class="btn ${btnClass}" onclick="start(${realIdx})">${btnText}</button>`}
-                <button class="btn ${skilled ? 'btn-green' : 'btn-gray'}" onclick="toggleSkilled(${realIdx})">${skilled ? '✅ 熟练' : '熟练'}</button>
+                <button class="btn ${skilled ? 'btn-green' : 'btn-gray'}" onclick="toggleSkilled(${realIdx})">${skilled ? '✅ 取消熟练' : '熟练'}</button>
                 <button class="btn btn-gray" onclick="editWord(${realIdx})" style="font-size:12px;padding:4px 8px;">✏️</button>
             </div>
         </div>`;
@@ -2836,10 +2838,21 @@
             let u = safeUser(getUser());
             if (!u.skilled) u.skilled = [];
             let pos = u.skilled.indexOf(idx);
-            if (pos >= 0) u.skilled.splice(pos, 1);
-            else u.skilled.push(idx);
+            if (pos >= 0) {
+                u.skilled.splice(pos, 1);
+                if (!u.learn.includes(idx)) {
+                    u.learn.push(idx);
+                }
+            } else {
+                u.skilled.push(idx);
+                let learnPos = u.learn.indexOf(idx);
+                if (learnPos >= 0) u.learn.splice(learnPos, 1);
+                let donePos = u.done.indexOf(idx);
+                if (donePos >= 0) u.done.splice(donePos, 1);
+                delete u.log[idx];
+            }
             setUser(u);
-            renderWordList();
+            renderAll();
         }
 
         // ==============================
@@ -2847,6 +2860,7 @@
         // ==============================
         function start(idx) {
             let u = safeUser(getUser());
+            if (u.skilled && u.skilled.includes(idx)) { toast('该单词已标记为熟练，无法学习/复习', 'warning'); return; }
             if (u.learn.includes(idx)) {
                 openModal(idx);
             } else {
@@ -3031,6 +3045,7 @@
             let idx = learnIdx;
             if (idx === null) return;
             let u = safeUser(getUser());
+            if (u.skilled && u.skilled.includes(idx)) { toast('该单词已标记为熟练', 'warning'); closeLearnModal(); return; }
             let now = Date.now();
             let todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
@@ -3387,18 +3402,21 @@
             let today = new Date();
             today.setHours(0, 0, 0, 0);
             let ts = today.getTime();
-            let countWait = (usr) => usr.learn.filter(x => !usr.done.includes(x) && usr.log[x] && usr.log[x].next && usr.log[x].next <= ts + 86400000).length;
+            let countWait = (usr) => usr.learn.filter(x => !usr.done.includes(x) && !(usr.skilled && usr.skilled.includes(x)) && usr.log[x] && usr.log[x].next && usr.log[x].next <= ts + 86400000).length;
             document.getElementById("a-total").innerText = a.learn.length;
             document.getElementById("a-wait").innerText = countWait(a);
             document.getElementById("a-done").innerText = a.done.length;
+            document.getElementById("a-skilled").innerText = (a.skilled || []).length;
             document.getElementById("a-stars").innerText = a.stars || 0;
             document.getElementById("b-total").innerText = b.learn.length;
             document.getElementById("b-wait").innerText = countWait(b);
             document.getElementById("b-done").innerText = b.done.length;
+            document.getElementById("b-skilled").innerText = (b.skilled || []).length;
             document.getElementById("b-stars").innerText = b.stars || 0;
             document.getElementById("my-total").innerText = u.learn.length;
             document.getElementById("my-wait").innerText = countWait(u);
             document.getElementById("my-done").innerText = u.done.length;
+            document.getElementById("my-skilled").innerText = (u.skilled || []).length;
         }
 
         function renderToday() {
@@ -3609,6 +3627,7 @@
             let needSave = false;
             u.learn.forEach(i => {
                 if (u.done.includes(i)) return;
+                if (u.skilled && u.skilled.includes(i)) return;
                 if (!u.log[i] || !u.log[i].next) return;
                 let nt = u.log[i].next;
                 if (nt <= ts + 86400000) {
@@ -3630,6 +3649,7 @@
             let tasks = [];
             u.learn.forEach(i => {
                 if (u.done.includes(i)) return;
+                if (u.skilled && u.skilled.includes(i)) return;
                 if (!u.log[i] || !u.log[i].next) return;
                 let nt = u.log[i].next;
                 if (nt >= ts && nt < ts + 86400000) {
@@ -3655,6 +3675,7 @@
             let overdueDays = {};
             u.learn.forEach(i => {
                 if (u.done.includes(i)) return;
+                if (u.skilled && u.skilled.includes(i)) return;
                 if (!u.log[i] || !u.log[i].next) return;
                 let nt = u.log[i].next;
                 let d = new Date(nt);
@@ -4286,9 +4307,11 @@
         function getExamPool() {
             let u = safeUser(getUser());
             let words = getWords();
+            let skilledSet = new Set(u.skilled || []);
             let pool = [];
             let indices = new Set([...u.learn]);
             indices.forEach(i => {
+                if (skilledSet.has(i)) return;
                 if (words[i]) pool.push({ idx: i, word: words[i] });
             });
             return pool;
