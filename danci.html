@@ -4275,7 +4275,7 @@
             let u = safeUser(getUser());
             let words = getWords();
             let pool = [];
-            let indices = new Set([...u.learn, ...u.done]);
+            let indices = new Set([...u.learn]);
             indices.forEach(i => {
                 if (words[i]) pool.push({ idx: i, word: words[i] });
             });
