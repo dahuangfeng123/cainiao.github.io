@@ -2755,8 +2755,12 @@
             let filterKey = user + "|" + currExam + "|" + currCollins + "|" + currStatus + "|" + kw;
             if (forceReset || filterKey !== lastFilterKey) {
                 filteredList = list;
-                wordPage = 0;
-                wordLoadedCount = 0;
+                if (forceReset === 'keepPage') {
+                    if (wordLoadedCount > filteredList.length) wordLoadedCount = filteredList.length;
+                } else {
+                    wordPage = 0;
+                    wordLoadedCount = 0;
+                }
                 lastFilterKey = filterKey;
             }
             document.getElementById("word-count").innerText = filteredList.length;
@@ -2853,7 +2857,7 @@
             }
             setUser(u);
             renderStatusFilter();
-            renderWordList(true);
+            renderWordList('keepPage');
             renderStats();
             renderToday();
             renderTodayList();
