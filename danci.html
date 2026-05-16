@@ -1559,7 +1559,7 @@
             </div>
             <div class="card">
                 <h2>❌ 错题库</h2>
-                <p style="color:#999;font-size:13px;margin-bottom:12px;">考试中答错的单词，连续答对3次后自动移出</p>
+                <p style="color:#999;font-size:13px;margin-bottom:12px;">考试中曾经答错的单词</p>
                 <div id="my-wrong-list"></div>
             </div>
             <div class="card">
@@ -3437,7 +3437,7 @@
             if (!u) u = safeUser(getUser());
             let words = getWords();
             let pool = u.wrongPool || {};
-            let activeKeys = Object.keys(pool).filter(idx => pool[idx].status === 1);
+            let activeKeys = Object.keys(pool).filter(idx => pool[idx].status === 0);
             let el = document.getElementById("my-wrong-list");
             if (!el) return;
             if (activeKeys.length === 0) {
