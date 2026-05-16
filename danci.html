@@ -3437,21 +3437,22 @@
             if (!u) u = safeUser(getUser());
             let words = getWords();
             let pool = u.wrongPool || {};
-            let activeKeys = Object.keys(pool).filter(idx => pool[idx].status === 0);
+            let allKeys = Object.keys(pool);
             let el = document.getElementById("my-wrong-list");
             if (!el) return;
-            if (activeKeys.length === 0) {
+            if (allKeys.length === 0) {
                 el.innerHTML = '<p style="color:#999;font-size:13px;">暂无错题，继续加油！</p>';
                 return;
             }
-            activeKeys.sort((a, b) => (pool[b].date || 0) - (pool[a].date || 0));
-            let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#fff3e0;"><th style="padding:8px;border:1px solid #ddd;text-align:left;">单词</th><th style="padding:8px;border:1px solid #ddd;text-align:left;">释义</th><th style="padding:8px;border:1px solid #ddd;text-align:center;">错误次数</th><th style="padding:8px;border:1px solid #ddd;text-align:left;">最后出错</th></tr></thead><tbody>';
-            activeKeys.forEach(idx => {
+            allKeys.sort((a, b) => (pool[b].date || 0) - (pool[a].date || 0));
+            let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#fff3e0;"><th style="padding:8px;border:1px solid #ddd;text-align:left;">单词</th><th style="padding:8px;border:1px solid #ddd;text-align:left;">释义</th><th style="padding:8px;border:1px solid #ddd;text-align:center;">错误次数</th><th style="padding:8px;border:1px solid #ddd;text-align:left;">最后出错</th><th style="padding:8px;border:1px solid #ddd;text-align:center;">状态</th></tr></thead><tbody>';
+            allKeys.forEach(idx => {
                 let info = pool[idx];
                 let w = words[parseInt(idx)];
                 if (!w) return;
                 let dateStr = info.date ? new Date(info.date).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
-                html += `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">${w.word}</td><td style="padding:8px;border:1px solid #ddd;">${w.meaning}</td><td style="padding:8px;border:1px solid #ddd;text-align:center;color:#ef5350;font-weight:bold;">${info.c || 1}</td><td style="padding:8px;border:1px solid #ddd;color:#999;">${dateStr}</td></tr>`;
+                let statusHtml = info.status === 1 ? '<span style="color:#ef5350;">❌ 未掌握</span>' : '<span style="color:#66bb6a;">✅ 已掌握</span>';
+                html += `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">${w.word}</td><td style="padding:8px;border:1px solid #ddd;">${w.meaning}</td><td style="padding:8px;border:1px solid #ddd;text-align:center;color:#ef5350;font-weight:bold;">${info.c || 1}</td><td style="padding:8px;border:1px solid #ddd;color:#999;">${dateStr}</td><td style="padding:8px;border:1px solid #ddd;text-align:center;">${statusHtml}</td></tr>`;
             });
             html += '</tbody></table></div>';
             el.innerHTML = html;
