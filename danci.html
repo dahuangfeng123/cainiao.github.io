@@ -1512,6 +1512,7 @@
 
         <!-- 个人中心 -->
         <div class="page" id="page-mine">
+            <div id="mine-nav" style="position:sticky;top:0;z-index:20;background:linear-gradient(135deg,#fff9c4,#e1f5fe,#f3e5f5);padding:10px 12px;border-radius:12px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;gap:8px;flex-wrap:wrap;align-items:center;"></div>
             <div class="card">
                 <h2>🎨 页面风格</h2>
                 <div style="display:flex;gap:12px;flex-wrap:wrap;">
@@ -4946,7 +4947,24 @@
             renderPrizes();
             let u = safeUser(getUser());
             document.getElementById("translate-toggle").checked = !!u.translate;
+            renderMineNav();
             applyInlineThemeOverrides();
+        }
+
+        function renderMineNav() {
+            let page = document.getElementById("page-mine");
+            let nav = document.getElementById("mine-nav");
+            if (!page || !nav) return;
+            let cards = page.querySelectorAll(":scope > .card");
+            let html = '<span style="font-weight:bold;color:#845ec2;margin-right:4px;">📍</span>';
+            cards.forEach((card, i) => {
+                let h2 = card.querySelector("h2");
+                if (!h2) return;
+                if (!h2.id) h2.id = "mine-sec-" + i;
+                let text = h2.textContent.trim();
+                html += `<a href="#${h2.id}" onclick="event.preventDefault();document.getElementById('${h2.id}').scrollIntoView({behavior:'smooth',block:'start'})" style="display:inline-block;padding:4px 10px;border-radius:16px;background:rgba(132,94,194,0.1);color:#845ec2;text-decoration:none;font-size:12px;white-space:nowrap;transition:all 0.2s;" onmouseover="this.style.background='rgba(132,94,194,0.25)'" onmouseout="this.style.background='rgba(132,94,194,0.1)'">${text}</a>`;
+            });
+            nav.innerHTML = html;
         }
 
         window.onload = function () {
