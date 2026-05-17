@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>诗词复习工具 - 艾宾浩斯双用户版</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/cnchar/cnchar.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/cnchar-draw/cnchar.draw.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/cnchar-voice/cnchar.voice.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #f8f9fa;
+            color: #222;
+        }
+
+        .top {
+            height: 60px;
+            background: #4285F4;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+        }
+
+        .nav a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 16px;
+            font-size: 15px;
+        }
+
+        .mode-bar {
+            height: 40px;
+            background: #e8f0fe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .mode-bar .mbtn {
+            padding: 5px 16px;
+            border: none;
+            border-radius: 20px;
+            background: #fff;
+            color: #4285F4;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .mode-bar .mbtn.on {
+            background: #4285F4;
+            color: #fff;
+        }
+
+        .user button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #fff;
+            color: #4285F4;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 25px 0;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 22px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.06);
+        }
+
+        h2 {
+            color: #4285F4;
+            margin-bottom: 14px;
+            font-size: 20px;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 4px;
+        }
+
+        .btn-blue {
+            background: #4285F4;
+            color: #fff;
+        }
+
+        .btn-gray {
+            background: #f1f3f4;
+            color: #333;
+        }
+
+        .btn-red {
+            background: #ea4335;
+            color: #fff;
+        }
+
+        .btn-green {
+            background: #34a853;
+            color: #fff;
+        }
+
+        .hide {
+            display: none;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .flex {
+            display: flex;
+            gap: 20px;
+        }
+
+        .col {
+            flex: 1;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 5px 11px;
+            background: #e8f0fe;
+            border-radius: 20px;
+            margin: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .tag.on {
+            background: #4285F4;
+            color: #fff;
+        }
+
+        .poem-item {
+            padding: 14px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .poem-item:last-child {
+            border-bottom: none;
+        }
+
+        .poem-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .poem-author {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .poem-content {
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        .answer-box {
+            margin: 16px 0;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .modal-body {
+            width: 650px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 30px;
+            max-height: 85vh;
+            overflow: auto;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+
+        .calendar-day {
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+
+        .calendar-day.today {
+            background: #ff0000;
+            color: #fff;
+        }
+
+        .calendar-day.has-task {
+            background: #4fa0eb;
+        }
+        .calendar-day.selected {
+            background: #4285F4;
+            color: #fff;
+        }
+        .calendar-day.selected span {
+            color: #fff;
+        }
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .nav-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 998;
+        }
+        .nav-overlay.active {
+            display: block;
+        }
+        .nav-drawer {
+            position: fixed;
+            top: 0;
+            left: -260px;
+            width: 260px;
+            height: 100%;
+            background: #3b78e7;
+            z-index: 999;
+            transition: left 0.3s ease;
+            padding: 20px 0;
+        }
+        .nav-drawer.active {
+            left: 0;
+        }
+        .nav-drawer a {
+            display: block;
+            color: #fff;
+            text-decoration: none;
+            padding: 14px 24px;
+            font-size: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+        .nav-drawer a:active {
+            background: rgba(255,255,255,0.1);
+        }
+        .nav-drawer-close {
+            text-align: right;
+            padding: 0 16px 10px;
+        }
+        .nav-drawer-close button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .top {
+                height: 50px;
+                padding: 0 12px;
+            }
+            .nav a {
+                display: none;
+            }
+            .hamburger {
+                display: block;
+            }
+            .user {
+                font-size: 13px;
+            }
+            .user button {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            .mode-bar {
+                height: 36px;
+                gap: 4px;
+                padding: 0 8px;
+                flex-wrap: wrap;
+            }
+            .mode-bar .mbtn {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+            .container {
+                width: 96%;
+                padding: 12px 0;
+            }
+            .card {
+                padding: 14px;
+                margin-bottom: 12px;
+                border-radius: 8px;
+            }
+            h2 {
+                font-size: 17px;
+                margin-bottom: 10px;
+            }
+            .btn {
+                padding: 6px 10px;
+                font-size: 13px;
+                margin: 3px;
+            }
+            .flex {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .tag {
+                padding: 4px 8px;
+                font-size: 12px;
+                margin: 2px;
+            }
+            .modal-body {
+                width: 95%;
+                padding: 16px;
+                border-radius: 8px;
+                max-height: 90vh;
+            }
+            .calendar-day {
+                padding: 6px 2px;
+                font-size: 12px;
+            }
+            .calendar {
+                gap: 4px;
+            }
+            textarea {
+                height: 80px;
+                font-size: 14px;
+            }
+            #exam-answer {
+                font-size: 16px;
+                padding: 10px 12px;
+            }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .container {
+                width: 94%;
+                max-width: 960px;
+            }
+            .nav a {
+                margin: 0 10px;
+                font-size: 14px;
+            }
+            .modal-body {
+                width: 90%;
+                max-width: 600px;
+            }
+        }
+        .toast-item {
+            pointer-events: auto;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            max-width: 90vw;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .toast-success { background: #34a853; }
+        .toast-error { background: #ea4335; }
+        .toast-info { background: #4285f4; }
+        .toast-warning { background: #fbbc04; color: #333; }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast-container" style="position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;"></div>
+
+    <div class="top">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <button class="hamburger" onclick="openNav()">☰</button>
+            <div class="nav">
+                <a href="javascript:show('home')">首页</a>
+                <a href="javascript:show('plan')">复习计划</a>
+                <a href="javascript:show('lib')">诗词库</a>
+                <a href="javascript:show('exam')">考试</a>
+                <a href="javascript:show('mine')">个人中心</a>
+            </div>
+        </div>
+        <div class="user">
+            当前：<span id="show-user">同学A</span>
+            <button onclick="toggleUser()">切换 A/B</button>
+        </div>
+    </div>
+
+    <div class="nav-overlay" id="nav-overlay" onclick="closeNav()"></div>
+    <div class="nav-drawer" id="nav-drawer">
+        <div class="nav-drawer-close"><button onclick="closeNav()">✕</button></div>
+        <a href="javascript:navTo('home')">🏠 首页</a>
+        <a href="javascript:navTo('plan')">📅 复习计划</a>
+        <a href="javascript:navTo('lib')">📚 诗词库</a>
+        <a href="javascript:navTo('exam')">📝 考试</a>
+        <a href="javascript:navTo('mine')">👤 个人中心</a>
+    </div>
+
+    <div class="mode-bar">
+        <button class="mbtn on" onclick="setMode(1)">题目背全文</button>
+        <button class="mbtn" onclick="setMode(2)">上句填下句</button>
+        <button class="mbtn" onclick="setMode(3)">下句填上句</button>
+        <button class="mbtn" onclick="setMode(4)">诗句猜题目</button>
+    </div>
+
+    <div class="container">
+        <!-- 首页 -->
+        <div class="page" id="page-home">
+            <div class="card">
+                <h2>📌 今日待复习</h2>
+                <p>今日需复习：<span id="today-count" style="font-weight:bold;color:red">0</span> 首</p>
+                <button class="btn btn-blue" onclick="show('plan')">前往复习</button>
+            </div>
+            <div class="card">
+                <h2>📊 同学 A / B 学习对比</h2>
+                <div class="flex">
+                    <div class="col card">
+                        <h3>同学A</h3>
+                        <p>已学：<span id="a-total">0</span></p>
+                        <p>待复习：<span id="a-wait">0</span></p>
+                        <p>已掌握：<span id="a-done">0</span></p>
+                    </div>
+                    <div class="col card">
+                        <h3>同学B</h3>
+                        <p>已学：<span id="b-total">0</span></p>
+                        <p>待复习：<span id="b-wait">0</span></p>
+                        <p>已掌握：<span id="b-done">0</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 复习计划 -->
+        <div class="page" id="page-plan">
+            <div class="card">
+                <h2>📅 复习日历</h2>
+                <div class="calendar" id="calendar"></div>
+            </div>
+            <div class="card">
+                <h2>📖 <span id="review-date-label">今日</span>待复习列表</h2>
+                <div id="today-list"></div>
+            </div>
+        </div>
+
+        <!-- 诗词库 -->
+        <div class="page" id="page-lib">
+            <div class="card">
+                <h2>🔍 分类筛选</h2>
+                <div style="margin-bottom:8px;color:#666;font-size:13px;">年级：</div>
+                <div id="grade-list"></div>
+                <div style="margin-top:10px;color:#666;font-size:13px;">分类：</div>
+                <div id="cate-list"></div>
+            </div>
+            <div class="card">
+                <h2>📚 诗词题库（<span id="poem-count">0</span> 首）</h2>
+                <div style="margin:10px 0;">
+                    <input type="text" id="poem-search" placeholder="搜索诗人、诗名或内容..." oninput="renderPoemList()" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                </div>
+                <div id="poem-list" style="margin-top:15px;"></div>
+            </div>
+        </div>
+
+        <!-- 个人中心 -->
+        <div class="page" id="page-exam">
+            <div class="card" id="exam-setup">
+                <h2>📝 诗词考试</h2>
+                <p style="color:#666;font-size:13px;margin-bottom:16px;">从已学习和已复习的诗词中随机抽取组成试卷，完成后自动打分</p>
+                <div style="margin-bottom:16px;color:#666;font-size:13px;">
+                    当前考试模式：<span id="exam-mode-label" style="font-weight:bold;color:#4285F4;">题目背全文</span>（使用顶部全局模式）
+                </div>
+                <div style="margin-bottom:16px;color:#666;font-size:13px;">
+                    可用诗词池：<span id="exam-pool-count" style="font-weight:bold;color:#4285F4;">0</span> 首（已学习 + 已掌握的诗词）
+                </div>
+                <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px;color:#666;font-size:13px;">
+                    考试数量：<input type="number" id="exam-count-input" min="1" max="100" value="10" style="width:70px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:14px;text-align:center;"> 首
+                </div>
+                <button class="btn btn-blue" onclick="startExam()" id="exam-start-btn">开始考试</button>
+            </div>
+            <div class="card" id="exam-progress" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <h2 style="margin-bottom:0;">📝 考试进行中</h2>
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <span style="color:#666;font-size:14px;">⏱ <span id="exam-timer">00:00</span></span>
+                        <span style="color:#666;font-size:14px;">进度：<span id="exam-current">0</span> / <span id="exam-total">0</span></span>
+                    </div>
+                </div>
+                <div style="background:#f1f3f4;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden;">
+                    <div id="exam-bar" style="background:#4285F4;height:100%;border-radius:8px;transition:width 0.3s;width:0%;"></div>
+                </div>
+                <div id="exam-question-area" style="min-height:200px;">
+                    <div id="exam-question" style="font-size:20px;font-weight:bold;margin-bottom:16px;text-align:center;"></div>
+                    <div id="exam-speak-btn" style="text-align:center;margin-bottom:16px;display:none;">
+                        <button class="btn btn-gray" onclick="speakExamPoem()">🔊 朗读诗词</button>
+                    </div>
+                    <input type="text" id="exam-answer" placeholder="请输入答案..." style="width:100%;padding:12px 16px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;" onkeydown="if(event.key==='Enter')submitExamAnswer()">
+                    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+                        <button class="btn btn-blue" onclick="submitExamAnswer()">提交答案</button>
+                        <button class="btn btn-gray" onclick="skipExamAnswer()">跳过</button>
+                    </div>
+                    <div id="exam-feedback" style="margin-top:16px;padding:12px;border-radius:8px;display:none;"></div>
+                </div>
+            </div>
+            <div class="card" id="exam-result" style="display:none;">
+                <h2>📊 考试成绩</h2>
+                <div style="text-align:center;padding:20px 0;">
+                    <div style="font-size:48px;font-weight:bold;" id="exam-score">0</div>
+                    <div style="color:#666;font-size:14px;margin-top:4px;">得分（满分100分）</div>
+                    <div style="color:#999;font-size:13px;margin-top:6px;">用时：<span id="exam-duration">0</span></div>
+                </div>
+                <div style="display:flex;justify-content:center;gap:30px;margin-bottom:20px;">
+                    <div style="text-align:center;">
+                        <div style="font-size:24px;font-weight:bold;color:#34a853;" id="exam-correct">0</div>
+                        <div style="color:#666;font-size:13px;">正确</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:24px;font-weight:bold;color:#ea4335;" id="exam-wrong">0</div>
+                        <div style="color:#666;font-size:13px;">错误</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:24px;font-weight:bold;color:#999;" id="exam-skip">0</div>
+                        <div style="color:#666;font-size:13px;">跳过</div>
+                    </div>
+                </div>
+                <div id="exam-detail-list" style="max-height:400px;overflow-y:auto;"></div>
+                <div style="text-align:center;margin-top:20px;">
+                    <button class="btn btn-blue" onclick="retakeExam()">再考一次</button>
+                    <button class="btn btn-gray" onclick="show('mine')">查看成绩记录</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 个人中心 -->
+        <div class="page" id="page-mine">
+            <div class="card">
+                <h2>🎓 我的年级</h2>
+                <div id="grade-setting"></div>
+                <p style="margin-top:8px;color:#999;font-size:13px;">设置年级后，今日待复习列表仅推荐对应年级的诗词</p>
+            </div>
+            <div class="card">
+                <h2>📈 我的学习数据</h2>
+                <p>已学习：<span id="my-total">0</span> 首 <span style="color:#999;font-size:12px;">（点击过"学习/复习"的诗词总数）</span></p>
+                <p>待复习：<span id="my-wait">0</span> 首 <span style="color:#999;font-size:12px;">（已学习但未完成全部复习周期，且下次复习时间≤今日的诗词）</span></p>
+                <p>已掌握：<span id="my-done">0</span> 首 <span style="color:#999;font-size:12px;">（完成全部艾宾浩斯复习周期（1/2/4/7/15/30天）的诗词）</span></p>
+            </div>
+            <div class="card">
+                <h2>🏆 考试成绩记录</h2>
+                <p style="color:#999;font-size:13px;margin-bottom:12px;">保留最近10次考试成绩</p>
+                <div id="exam-scores-list"></div>
+            </div>
+            <div class="card">
+                <h2>📊 近30天学习统计</h2>
+                <div style="display:flex;gap:6px;margin-bottom:12px;">
+                    <button class="btn btn-blue" onclick="renderDailyChart('A')" id="chart-btn-A">同学A</button>
+                    <button class="btn btn-gray" onclick="renderDailyChart('B')" id="chart-btn-B">同学B</button>
+                </div>
+                <div style="position:relative;height:280px;">
+                    <canvas id="daily-chart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2>⚙️ 数据管理</h2>
+                <button class="btn btn-red" onclick="resetUser()">重置我的所有学习记录</button>
+                <p style="margin-top:10px;color:#999;font-size:13px;">只清空当前用户，不影响对方</p>
+            </div>
+            <div class="card" style="text-align:center;">
+                <button class="btn btn-blue" onclick="downloadXlsx()">📥 下载所有诗词（xlsx）</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 答题弹窗 -->
+    <div class="modal" id="modal">
+        <div class="modal-body">
+            <div id="q-text" style="font-size:17px;line-height:1.7;margin-bottom:15px;"></div>
+            <textarea id="input-ans" placeholder="请输入答案..."></textarea>
+            <div style="margin-top:10px;">
+                <button class="btn btn-gray" onclick="showAns()">查看答案</button>
+                <button class="btn btn-blue" onclick="doneReview()">已复习</button>
+                <button class="btn btn-gray" onclick="openBaiduHanyu()">📖 百度汉语</button>
+                <button class="btn" onclick="closeModal()">关闭</button>
+            </div>
+            <div id="ans-show" style="margin-top:18px;line-height:1.7;color:#333;"></div>
+        </div>
+    </div>
+
+    <!-- 学习展示弹窗 -->
+    <div class="modal" id="learn-modal">
+        <div class="modal-body" style="text-align:center;max-width:600px;">
+            <div id="learn-title" style="font-size:25px;font-weight:bold;margin-bottom:8px;"></div>
+            <div id="learn-author" style="font-size:12px;margin-bottom:8px;"></div>
+            <div id="learn-poem" style="font-size:15px;margin-bottom:30px;font-family:'KaiTi','STKaiti','楷体',serif;"></div>
+            <div id="learn-draw-canvas" style="margin-bottom:10px;"></div>
+            <div>
+                <button class="btn btn-blue" onclick="addToReview()">加入复习</button>
+                <button class="btn btn-gray" id="btn-pinyin" onclick="togglePinyin()">拼音</button>
+                <button class="btn btn-gray" id="btn-draw" onclick="toggleDraw()">笔画</button>
+                <button class="btn btn-gray" onclick="speakPoem()">朗读</button>
+                <button class="btn btn-gray" onclick="openBaiduHanyu()">📖 百度汉语</button>
+                <button class="btn" onclick="closeLearnModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toast(msg, type) {
+            type = type || 'info';
+            let el = document.createElement('div');
+            el.className = 'toast-item toast-' + type;
+            el.innerText = msg;
+            document.getElementById('toast-container').appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
+        }
+
+        // ==============================
+        // 配置
+        // ==============================
+        const PERIOD = [0, 1, 2, 4, 7, 15, 30];
+        let user = "A";
+        let mode = 1;
+        let curr = null;
+        let learnIdx = null;
+
+        // ==============================
+        // 诗词内置
+        // ==============================
+        let ALL_POEMS = [];
+        let CHAODAI = [];
+        async function loadData() {
+            try {
+                let res1 = await fetch('shici.json');
+                ALL_POEMS = await res1.json();
+            } catch (e) { console.error('加载 shici.json 失败', e); }
+            try {
+                let res2 = await fetch('chaodai.json');
+                CHAODAI = await res2.json();
+            } catch (e) { console.error('加载 chaodai.json 失败', e); }
+        }
+        function getDynasty(author) {
+            let found = CHAODAI.find(c => c.author === author);
+            return found ? found.dynasty : "";
+        }
+        function authorLabel(poem) {
+            let d = getDynasty(poem.author);
+            return d ? `〔${d}〕${poem.author}` : poem.author;
+        }
+        // ==============================
+        // 存储初始化
+        // ==============================
+        function initStorage() {
+            if (!localStorage.getItem("poems") || JSON.parse(localStorage.getItem("poems")).length === 0) {
+                localStorage.setItem("poems", JSON.stringify(ALL_POEMS));
+            }
+            if (!localStorage.getItem("userA")) localStorage.setItem("userA", JSON.stringify({ learn: [], done: [], log: {} }));
+            if (!localStorage.getItem("userB")) localStorage.setItem("userB", JSON.stringify({ learn: [], done: [], log: {} }));
+        }
+        function getPoems() { return JSON.parse(localStorage.getItem("poems")); }
+        function getUser() { return JSON.parse(localStorage.getItem("user" + user)); }
+        function setUser(u) { localStorage.setItem("user" + user, JSON.stringify(u)); }
+
+        // ==============================
+        // 页面切换
+        // ==============================
+        function show(p) {
+            document.querySelectorAll(".page").forEach(e => e.classList.remove("active"));
+            document.getElementById("page-" + p).classList.add("active");
+            if (p === 'exam') {
+                document.getElementById("exam-setup").style.display = "block";
+                document.getElementById("exam-progress").style.display = "none";
+                document.getElementById("exam-result").style.display = "none";
+            }
+            renderAll();
+        }
+        function toggleUser() {
+            user = user == "A" ? "B" : "A";
+            document.getElementById("show-user").innerText = "同学" + user;
+            renderAll();
+        }
+
+        // ==============================
+        // 渲染全部
+        // ==============================
+        function renderAll() {
+            renderGrade();
+            renderCate();
+            renderPoemList();
+            renderStats();
+            renderToday();
+            renderTodayList();
+            renderCalendar();
+            renderGradeSetting();
+            renderExamPool();
+            renderExamScores();
+            renderDailyChart(user);
+        }
+
+        // ==============================
+        // 分类
+        // ==============================
+        let currCate = "";
+        let currGrade = "";
+        function renderCate() {
+            let filtered = currGrade ? getPoems().filter(i => i.grade == currGrade) : getPoems();
+            let arr = [...new Set(filtered.map(i => i.cate))];
+            let html = `<span class="tag ${currCate == '' ? 'on' : ''}" onclick="filterCate('')">全部</span>`;
+            arr.forEach(c => {
+                html += `<span class="tag ${currCate == c ? 'on' : ''}" onclick="filterCate('${c}')">${c}</span>`;
+            });
+            document.getElementById("cate-list").innerHTML = html;
+        }
+        function renderGrade() {
+            let arr = [...new Set(getPoems().map(i => i.grade).filter(Boolean))];
+            let html = `<span class="tag ${currGrade == '' ? 'on' : ''}" onclick="filterGrade('')">全部</span>`;
+            arr.forEach(g => {
+                html += `<span class="tag ${currGrade == g ? 'on' : ''}" onclick="filterGrade('${g}')">${g}</span>`;
+            });
+            document.getElementById("grade-list").innerHTML = html;
+        }
+        function filterCate(c) {
+            currCate = c;
+            renderCate();
+            renderPoemList();
+        }
+        function filterGrade(g) {
+            currGrade = g;
+            currCate = "";
+            renderGrade();
+            renderCate();
+            renderPoemList();
+        }
+
+        // ==============================
+        // 诗词列表
+        // ==============================
+        function renderPoemList() {
+            let all = getPoems();
+            let u = safeUser(getUser());
+            let list = all;
+            if (currGrade) list = list.filter(i => i.grade == currGrade);
+            if (currCate) list = list.filter(i => i.cate == currCate);
+            let kw = (document.getElementById("poem-search").value || "").trim().toLowerCase();
+            if (kw) {
+                list = list.filter(p => {
+                    let dy = getDynasty(p.author);
+                    let authorStr = dy ? dy + p.author : p.author;
+                    return p.title.toLowerCase().includes(kw) || authorStr.toLowerCase().includes(kw) || p.cont.toLowerCase().includes(kw);
+                });
+            }
+            document.getElementById("poem-count").innerText = list.length;
+            let html = "";
+            list.forEach((p, i) => {
+                let realIdx = all.indexOf(p);
+                let learned = u.learn.includes(realIdx);
+                let mastered = u.done.includes(realIdx);
+                let skilled = u.skilled && u.skilled.includes(realIdx);
+                let btnText = learned ? "复习" : "学习";
+                let btnClass = learned ? "btn-blue" : "btn-green";
+                html += `
+        <div class="poem-item" style="${skilled ? 'opacity:0.5;' : ''}">
+            <div class="poem-title">${p.title} <span style="font-size:12px;color:#929292">[${p.cate}]</span></div>
+            <div class="poem-author">${authorLabel(p)}</div>
+            <div style="margin-top:8px;">
+                ${skilled ? '' : `<button class="btn ${btnClass}" onclick="start(${realIdx})">${btnText}</button>`}
+                <button class="btn ${skilled ? 'btn-green' : 'btn-gray'}" onclick="toggleSkilled(${realIdx})">${skilled ? '✅ 熟练' : '熟练'}</button>
+            </div>
+        </div>`;
+            });
+            document.getElementById("poem-list").innerHTML = html;
+        }
+
+        // ==============================
+        // 学习 & 复习
+        // ==============================
+        function start(idx) {
+            let u = safeUser(getUser());
+            if (u.learn.includes(idx)) {
+                openModal(idx);
+            } else {
+                openLearnModal(idx);
+            }
+        }
+        let showPinyin = false;
+        let showDraw = false;
+        function isCnChar(ch) {
+            return /[\u4e00-\u9fff]/.test(ch);
+        }
+        function getCharPinyin(ch) {
+            try { return ch.spell('tone', 'low'); } catch (e) { return ''; }
+        }
+        function renderPoemDisplay() {
+            if (learnIdx === null) return;
+            let p = getPoems()[learnIdx];
+            let text = p.cont.replace(/\n/g, '');
+            let sentences = text.split(/([。！？；])/);
+            let lines = [];
+            let buf = '';
+            sentences.forEach(seg => {
+                buf += seg;
+                if (/^[。！？；]$/.test(seg)) {
+                    lines.push(buf);
+                    buf = '';
+                }
+            });
+            if (buf) lines.push(buf);
+            let html = '';
+            lines.forEach((line, li) => {
+                let chars = [...line];
+                chars.forEach(ch => {
+                    if (isCnChar(ch)) {
+                        let py = showPinyin ? getCharPinyin(ch) : '';
+                        let pyHtml = `<span style="font-size:12px;color:#888;display:block;height:16px;line-height:16px;">${py}</span>`;
+                        let style = showDraw ? 'cursor:pointer;border-bottom:2px solid #4285F4;' : '';
+                        let click = showDraw ? `onclick="drawChar('${ch}')"` : '';
+                        html += `<span style="display:inline-block;vertical-align:bottom;padding-right: 5px;${style}" ${click}>${pyHtml}<span style="display:block;">${ch}</span></span>`;
+                    } else {
+                        html += `<span style="display:inline-block;vertical-align:bottom;padding-right: 5px;"><span style="display:block;height:16px;"></span><span style="display:block;">${ch}</span></span>`;
+                    }
+                });
+                if (li < lines.length - 1) html += '<br>';
+            });
+            document.getElementById('learn-poem').innerHTML = html;
+            document.getElementById('btn-pinyin').classList.toggle('btn-blue', showPinyin);
+            document.getElementById('btn-pinyin').classList.toggle('btn-gray', !showPinyin);
+            document.getElementById('btn-draw').classList.toggle('btn-blue', showDraw);
+            document.getElementById('btn-draw').classList.toggle('btn-gray', !showDraw);
+        }
+        function openLearnModal(idx) {
+            let p = getPoems()[idx];
+            learnIdx = idx;
+            showPinyin = false;
+            showDraw = false;
+            document.getElementById("learn-title").innerText = p.title;
+            document.getElementById("learn-author").innerText = authorLabel(p);
+            document.getElementById("learn-draw-canvas").innerHTML = "";
+            renderPoemDisplay();
+            document.getElementById("learn-modal").style.display = "flex";
+        }
+        function closeLearnModal() {
+            document.getElementById("learn-modal").style.display = "none";
+            learnIdx = null;
+        }
+        function togglePinyin() {
+            showPinyin = !showPinyin;
+            renderPoemDisplay();
+        }
+        function toggleDraw() {
+            showDraw = !showDraw;
+            document.getElementById("learn-draw-canvas").innerHTML = "";
+            renderPoemDisplay();
+        }
+        function drawChar(ch) {
+            let container = document.getElementById("learn-draw-canvas");
+            container.innerHTML = "";
+            try {
+                cnchar.draw(ch, {
+                    el: container,
+                    type: cnchar.draw.TYPE.ANIMATION,
+                    style: {
+                        backgroundColor: '#fff',
+                        showCharacter: false,
+                        length: 60
+                    }
+                });
+            } catch (e) {
+                container.innerText = "笔画绘制加载失败";
+            }
+        }
+        function openBaiduHanyu() {
+            let p = curr ? curr.item : (learnIdx !== null ? getPoems()[learnIdx] : null);
+            if (!p) return;
+            let wd = encodeURIComponent(`《${p.title}》${p.author}`);
+            window.open(`https://hanyu.baidu.com/s?wd=${wd}&from=poem`, '_blank');
+        }
+        function speakPoem() {
+            if (learnIdx === null) return;
+            let p = getPoems()[learnIdx];
+            let text = p.cont.replace(/[\n\r]/g, '，');
+            try {
+                if (cnchar.voice && cnchar.voice.speak) {
+                    cnchar.voice.speak(text);
+                } else {
+                    let utter = new SpeechSynthesisUtterance(text);
+                    utter.lang = 'zh-CN';
+                    utter.rate = 0.8;
+                    speechSynthesis.speak(utter);
+                }
+            } catch (e) {
+                let utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'zh-CN';
+                utter.rate = 0.8;
+                speechSynthesis.speak(utter);
+            }
+        }
+        function addToReview() {
+            let idx = learnIdx;
+            if (idx === null) return;
+            let u = safeUser(getUser());
+            let now = Date.now();
+            if (!u.learn.includes(idx)) {
+                u.learn.push(idx);
+                let nextTs = nextDate(now, 1);
+                u.log[idx] = { t: now, c: 1, next: nextTs };
+                setUser(u);
+                recordDaily('learn');
+            }
+            closeLearnModal();
+            renderAll();
+        }
+
+        // 计算下一次复习时间
+        function nextDate(st, count) {
+            if (count >= PERIOD.length) return null;
+            let d = new Date(st);
+            d.setDate(d.getDate() + PERIOD[count]);
+            return d.getTime();
+        }
+
+        // ==============================
+        // 答题弹窗
+        // ==============================
+        function openModal(idx) {
+            curr = { idx, item: getPoems()[idx] };
+            document.getElementById("modal").style.display = "flex";
+            document.getElementById("ans-show").innerText = "";
+            let reviewBtn = document.querySelector("#modal .btn-blue");
+            if (reviewBtn) reviewBtn.disabled = false;
+            renderQ();
+        }
+        function closeModal() {
+            document.getElementById("modal").style.display = "none";
+            curr = null;
+        }
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll(".mode-bar .mbtn").forEach((b, i) => {
+                b.classList.toggle("on", i === m - 1);
+            });
+            if (curr) renderQ();
+            renderTodayList();
+            renderExamPool();
+        }
+        function renderQ() {
+            let p = curr.item;
+            let lines = p.cont.split(/[。！？]/).filter(x => x.trim());
+            let t = "";
+            if (mode == 1) t = `《${p.title}》${p.author}<br>请背诵全文`;
+            else if (mode == 2) t = `上句：${lines[0]}。<br>请写下句`;
+            else if (mode == 3) t = lines.length >= 2 ? `下句：${lines[1]}。<br>请写上句` : `下句：（结尾）<br>请写上句`;
+            else if (mode == 4) t = `诗句：${lines[0]}。<br>请写出题目+作者`;
+            document.getElementById("q-text").innerHTML = t;
+            document.getElementById("input-ans").value = "";
+            document.getElementById("ans-show").innerText = "";
+        }
+        function showAns() {
+            let p = curr.item;
+            document.getElementById("ans-show").innerText = `${p.title}｜${authorLabel(p)}\n${p.cont}`;
+        }
+        function doneReview() {
+            if (!curr) return;
+            let u = safeUser(getUser());
+            let idx = curr.idx;
+            let log = u.log[idx];
+            if (!log) { closeModal(); return; }
+            log.c += 1;
+            if (log.c >= PERIOD.length) {
+                if (!u.done.includes(idx)) u.done.push(idx);
+                log.next = null;
+            } else {
+                let interval = PERIOD[log.c] - PERIOD[log.c - 1];
+                let d = new Date();
+                d.setDate(d.getDate() + interval);
+                log.next = d.getTime();
+            }
+            setUser(u);
+            recordDaily('review');
+            closeModal();
+            renderAll();
+        }
+
+        // ==============================
+        // 统计 & 日历 & 今日任务
+        // ==============================
+        function safeUser(u) {
+            if (!u) return { learn: [], done: [], log: {}, grade: "", skilled: [], dailyLog: {}, examScores: [] };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, grade: u.grade || "", skilled: u.skilled || [], dailyLog: u.dailyLog || {}, examScores: u.examScores || [] };
+        }
+        function toggleSkilled(idx) {
+            let u = safeUser(getUser());
+            if (!u.skilled) u.skilled = [];
+            let pos = u.skilled.indexOf(idx);
+            if (pos >= 0) u.skilled.splice(pos, 1);
+            else u.skilled.push(idx);
+            setUser(u);
+            renderPoemList();
+        }
+        function renderGradeSetting() {
+            let u = safeUser(getUser());
+            let grades = [...new Set(getPoems().map(i => i.grade).filter(Boolean))];
+            let html = "";
+            grades.forEach(g => {
+                html += `<span class="tag ${u.grade == g ? 'on' : ''}" onclick="setMyGrade('${g}')">${g}</span>`;
+            });
+            html += `<span class="tag ${u.grade == '' ? 'on' : ''}" onclick="setMyGrade('')">全部</span>`;
+            document.getElementById("grade-setting").innerHTML = html;
+        }
+        function setMyGrade(g) {
+            let u = safeUser(getUser());
+            u.grade = g;
+            setUser(u);
+            renderGradeSetting();
+            renderTodayList();
+        }
+        function renderStats() {
+            let a = safeUser(JSON.parse(localStorage.getItem("userA") || "null"));
+            let b = safeUser(JSON.parse(localStorage.getItem("userB") || "null"));
+            let u = safeUser(getUser());
+            let today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let ts = today.getTime();
+            let countWait = (usr) => usr.learn.filter(x => !usr.done.includes(x) && usr.log[x] && usr.log[x].next && usr.log[x].next <= ts + 86400000).length;
+            document.getElementById("a-total").innerText = a.learn.length;
+            document.getElementById("a-wait").innerText = countWait(a);
+            document.getElementById("a-done").innerText = a.done.length;
+            document.getElementById("b-total").innerText = b.learn.length;
+            document.getElementById("b-wait").innerText = countWait(b);
+            document.getElementById("b-done").innerText = b.done.length;
+            document.getElementById("my-total").innerText = u.learn.length;
+            document.getElementById("my-wait").innerText = countWait(u);
+            document.getElementById("my-done").innerText = u.done.length;
+        }
+        function renderToday() {
+            let cnt = getTodayTasks().length;
+            document.getElementById("today-count").innerText = cnt;
+        }
+        function renderTodayList() {
+            let targetDate = selectedDate || new Date();
+            targetDate.setHours(0, 0, 0, 0);
+            let isToday = !selectedDate;
+            let tasks = isToday ? getTodayTasks() : getTasksByDate(targetDate);
+            let dateStr = isToday ? "今日" : `${targetDate.getMonth() + 1}月${targetDate.getDate()}日`;
+            document.getElementById("review-date-label").innerText = dateStr;
+            let html = "";
+            let hideInfo = (mode == 4);
+            let u = safeUser(getUser());
+            if (tasks.length === 0 && isToday) {
+                let poems = getPoems();
+                let pool = poems.map((p, i) => ({ p, i })).filter(x => {
+                    if (u.grade && x.p.grade != u.grade) return false;
+                    if (u.skilled && u.skilled.includes(x.i)) return false;
+                    return true;
+                });
+                let shuffled = pool.sort(() => Math.random() - 0.5);
+                let picks = shuffled.slice(0, Math.min(5, pool.length));
+                html = `<p style='margin-bottom:12px;color:#666;'>今日暂无待复习，<b>随机推荐${u.grade ? u.grade : ''}5首</b>：</p>`;
+                picks.forEach(x => {
+                    html += `
+        <div class="poem-item">
+            ${hideInfo ? `<div class="poem-content">${x.p.cont}</div>` : `<div class="poem-title">${x.p.title} <span style="font-size:12px;color:#929292">[${x.p.cate}]</span></div><div class="poem-author">${authorLabel(x.p)}</div>`}
+            <button class="btn btn-green" onclick="start(${x.i})">学习</button>
+        </div>`;
+                });
+            } else if (tasks.length === 0 && !isToday) {
+                html = `<p style='color:#666;'>${dateStr}暂无待复习诗词</p>`;
+            } else {
+                let todayTs = new Date();
+                todayTs.setHours(0, 0, 0, 0);
+                let todayEnd = todayTs.getTime() + 86400000;
+                tasks.forEach(t => {
+                    let isDue = t.nextTime >= todayTs.getTime() && t.nextTime < todayEnd;
+                    html += `
+        <div class="poem-item">
+            ${hideInfo ? `<div class="poem-content">${t.poem.cont}</div>` : `<div class="poem-title">${t.poem.title} <span style="font-size:12px;color:#929292">[${t.poem.cate}]</span></div><div class="poem-author">${authorLabel(t.poem)}</div>`}
+            ${isDue ? `<button class="btn btn-blue" onclick="start(${t.idx})">开始复习</button>` : ''}
+        </div>`;
+                });
+            }
+            document.getElementById("today-list").innerHTML = html;
+        }
+        function getTodayTasks() {
+            let u = safeUser(getUser());
+            let poems = getPoems();
+            let today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let ts = today.getTime();
+            let tasks = [];
+            let needSave = false;
+            u.learn.forEach(i => {
+                if (u.done.includes(i)) return;
+                if (!u.log[i] || !u.log[i].next) return;
+                let nt = u.log[i].next;
+                if (nt <= ts + 86400000) {
+                    tasks.push({ idx: i, poem: poems[i], nextTime: nt });
+                }
+                if (nt < ts) {
+                    u.log[i].next = ts;
+                    needSave = true;
+                }
+            });
+            if (needSave) setUser(u);
+            return tasks;
+        }
+        let selectedDate = null;
+        function renderCalendar() {
+            let u = safeUser(getUser());
+            let poems = getPoems();
+            let now = new Date();
+            let year = now.getFullYear();
+            let month = now.getMonth();
+            let firstDay = new Date(year, month, 1).getDay();
+            let daysInMonth = new Date(year, month + 1, 0).getDate();
+            let today = now.getDate();
+            let taskDays = {};
+            u.learn.forEach(i => {
+                if (u.done.includes(i)) return;
+                if (!u.log[i] || !u.log[i].next) return;
+                let d = new Date(u.log[i].next);
+                if (d.getFullYear() == year && d.getMonth() == month) {
+                    let day = d.getDate();
+                    if (!taskDays[day]) taskDays[day] = 0;
+                    taskDays[day]++;
+                }
+            });
+            let html = "";
+            let weekNames = ["日", "一", "二", "三", "四", "五", "六"];
+            weekNames.forEach(w => { html += `<div style="font-weight:bold;padding:8px;text-align:center;">${w}</div>`; });
+            for (let i = 0; i < firstDay; i++) { html += `<div class="calendar-day"></div>`; }
+            for (let d = 1; d <= daysInMonth; d++) {
+                let cls = "calendar-day";
+                if (d == today) cls += " today";
+                if (taskDays[d]) cls += " has-task";
+                if (selectedDate && selectedDate.getFullYear() == year && selectedDate.getMonth() == month && selectedDate.getDate() == d) cls += " selected";
+                html += `<div class="${cls}" onclick="selectDate(${year},${month},${d})" style="cursor:pointer;">${d}${taskDays[d] ? `<br><span style="font-size:11px;">${taskDays[d]}首</span>` : ""}</div>`;
+            }
+            document.getElementById("calendar").innerHTML = html;
+        }
+        function selectDate(y, m, d) {
+            selectedDate = new Date(y, m, d);
+            renderCalendar();
+            renderTodayList();
+        }
+        function getTasksByDate(date) {
+            let u = safeUser(getUser());
+            let poems = getPoems();
+            let ts = date.getTime();
+            let tasks = [];
+            u.learn.forEach(i => {
+                if (u.done.includes(i)) return;
+                if (!u.log[i] || !u.log[i].next) return;
+                let nt = u.log[i].next;
+                if (nt >= ts && nt < ts + 86400000) {
+                    tasks.push({ idx: i, poem: poems[i], nextTime: nt });
+                }
+            });
+            return tasks;
+        }
+
+        // ==============================
+        // 下载诗词xlsx
+        // ==============================
+        function downloadXlsx() {
+            let poems = getPoems();
+            let data = [["题目", "作者", "分类", "年级", "内容"]];
+            poems.forEach(p => data.push([p.title, p.author, p.cate, p.grade || "", p.cont]));
+            let ws = XLSX.utils.aoa_to_sheet(data);
+            ws['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 60 }];
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "诗词");
+            XLSX.writeFile(wb, "诗词题库.xlsx");
+        }
+
+        // ==============================
+        // 重置用户
+        // ==============================
+        function resetUser() {
+            if (!confirm("确定清空当前用户所有学习记录？不可恢复！")) return;
+            setUser({ learn: [], done: [], log: {} });
+            renderAll();
+            toast("已重置", "success");
+        }
+
+        // ==============================
+        // 启动
+        // ==============================
+        window.onload = async function () {
+            await loadData();
+            initStorage();
+            show('home');
+        };
+
+        // ==============================
+        // 汉堡菜单
+        // ==============================
+        function openNav() {
+            document.getElementById("nav-drawer").classList.add("active");
+            document.getElementById("nav-overlay").classList.add("active");
+        }
+        function closeNav() {
+            document.getElementById("nav-drawer").classList.remove("active");
+            document.getElementById("nav-overlay").classList.remove("active");
+        }
+        function navTo(p) {
+            closeNav();
+            show(p);
+        }
+
+        // ==============================
+        // 每日学习记录
+        // ==============================
+        function todayKey() {
+            let d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        function recordDaily(type) {
+            let u = safeUser(getUser());
+            let key = todayKey();
+            if (!u.dailyLog) u.dailyLog = {};
+            if (!u.dailyLog[key]) u.dailyLog[key] = { learn: 0, review: 0 };
+            if (type === 'learn') u.dailyLog[key].learn++;
+            else if (type === 'review') u.dailyLog[key].review++;
+            setUser(u);
+        }
+
+        // ==============================
+        // 30天学习统计图表
+        // ==============================
+        let dailyChartInstance = null;
+        function renderDailyChart(which) {
+            document.getElementById("chart-btn-A").className = which === 'A' ? 'btn btn-blue' : 'btn btn-gray';
+            document.getElementById("chart-btn-B").className = which === 'B' ? 'btn btn-blue' : 'btn btn-gray';
+            let u = safeUser(JSON.parse(localStorage.getItem("user" + which) || "null"));
+            let labels = [];
+            let learnData = [];
+            let reviewData = [];
+            let now = new Date();
+            for (let i = 29; i >= 0; i--) {
+                let d = new Date(now);
+                d.setDate(d.getDate() - i);
+                let key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
+                let dl = (u.dailyLog || {})[key] || { learn: 0, review: 0 };
+                learnData.push(dl.learn);
+                reviewData.push(dl.review);
+            }
+            if (dailyChartInstance) dailyChartInstance.destroy();
+            let ctx = document.getElementById("daily-chart").getContext("2d");
+            dailyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '学习',
+                            data: learnData,
+                            backgroundColor: 'rgba(52, 168, 83, 0.6)',
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            order: 2
+                        },
+                        {
+                            label: '复习',
+                            data: reviewData,
+                            backgroundColor: 'rgba(66, 133, 244, 0.6)',
+                            borderColor: 'rgba(66, 133, 244, 1)',
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            order: 3
+                        },
+                        {
+                            label: '学习趋势',
+                            data: learnData,
+                            type: 'line',
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false,
+                            order: 0
+                        },
+                        {
+                            label: '复习趋势',
+                            data: reviewData,
+                            type: 'line',
+                            borderColor: 'rgba(66, 133, 244, 1)',
+                            backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false,
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 12 } } },
+                        tooltip: { callbacks: { title: function(items) { return '同学' + which + ' ' + items[0].label; } } }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 }, callback: function(val, idx) { return idx % 3 === 0 ? this.getLabelForValue(val) : ''; } } },
+                        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+                    }
+                }
+            });
+        }
+
+        // ==============================
+        // 考试功能
+        // ==============================
+        const MODE_LABELS = { 1: '题目背全文', 2: '上句填下句', 3: '下句填上句', 4: '诗句猜题目' };
+        let examWords = [];
+        let examIndex = 0;
+        let examAnswers = [];
+        let examSubmitted = false;
+        let examStartTime = 0;
+        let examTimerInterval = null;
+        let examAutoSpeakTimer = null;
+
+        function similarity(a, b) {
+            if (!a || !b) return 0;
+            a = a.toLowerCase();
+            b = b.toLowerCase();
+            if (a === b) return 1;
+            let la = a.length, lb = b.length;
+            if (la === 0 || lb === 0) return 0;
+            let dp = [];
+            for (let i = 0; i <= la; i++) dp[i] = [i];
+            for (let j = 0; j <= lb; j++) dp[0][j] = j;
+            for (let i = 1; i <= la; i++) {
+                for (let j = 1; j <= lb; j++) {
+                    let cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+                }
+            }
+            return 1 - dp[la][lb] / Math.max(la, lb);
+        }
+
+        function charSetSim(a, b) {
+            if (!a || !b) return 0;
+            let sa = new Set(a), sb = new Set(b);
+            let common = 0;
+            for (let c of sa) { if (sb.has(c)) common++; }
+            return (2 * common) / (sa.size + sb.size);
+        }
+
+        function getPoemAnswer(poem, m) {
+            let lines = poem.cont.split(/[。！？；]/).filter(x => x.trim());
+            if (m === 1) return poem.cont;
+            if (m === 2) return lines.length >= 2 ? lines[1] : lines[0] || '';
+            if (m === 3) return lines.length >= 1 ? lines[0] : '';
+            if (m === 4) return poem.title + poem.author;
+            return poem.cont;
+        }
+
+        function checkExamAnswer(input, poem) {
+            let ans = input.trim();
+            if (!ans) return { correct: false, score: 0 };
+            let correctAnswer = getPoemAnswer(poem, mode);
+            let parts = correctAnswer.split(/[，。！？；、\n]/).map(s => s.trim()).filter(s => s);
+            let ansParts = ans.split(/[，。！？；、\n]/).map(s => s.trim()).filter(s => s);
+            let bestScore = 0;
+            let containMatch = false;
+            for (let ap of ansParts) {
+                for (let p of parts) {
+                    let edSim = similarity(ap, p);
+                    let csSim = charSetSim(ap, p);
+                    let s = Math.max(edSim, csSim);
+                    if (s > bestScore) bestScore = s;
+                    if (ans.includes(p) || p.includes(ans)) containMatch = true;
+                }
+            }
+            if (mode === 4) {
+                let titleSim = similarity(ans, poem.title);
+                let titleContain = ans.includes(poem.title) || poem.title.includes(ans);
+                if (titleSim > bestScore) bestScore = titleSim;
+                if (titleContain) containMatch = true;
+            }
+            return { correct: bestScore >= 0.2 || containMatch, score: bestScore };
+        }
+
+        function formatDuration(ms) {
+            let totalSec = Math.floor(ms / 1000);
+            let min = Math.floor(totalSec / 60);
+            let sec = totalSec % 60;
+            if (min >= 60) {
+                let hr = Math.floor(min / 60);
+                min = min % 60;
+                return `${hr}时${String(min).padStart(2, '0')}分${String(sec).padStart(2, '0')}秒`;
+            }
+            return `${min}分${String(sec).padStart(2, '0')}秒`;
+        }
+
+        function updateExamTimer() {
+            let elapsed = Date.now() - examStartTime;
+            let totalSec = Math.floor(elapsed / 1000);
+            let min = Math.floor(totalSec / 60);
+            let sec = totalSec % 60;
+            document.getElementById("exam-timer").innerText = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+        }
+
+        function getExamPool() {
+            let u = safeUser(getUser());
+            let poems = getPoems();
+            let pool = [];
+            let indices = new Set([...u.learn, ...u.done]);
+            indices.forEach(i => {
+                if (poems[i]) pool.push({ idx: i, poem: poems[i] });
+            });
+            return pool;
+        }
+
+        function renderExamPool() {
+            let pool = getExamPool();
+            document.getElementById("exam-pool-count").innerText = pool.length;
+            document.getElementById("exam-mode-label").innerText = MODE_LABELS[mode];
+            let btn = document.getElementById("exam-start-btn");
+            if (pool.length < 1) {
+                btn.disabled = true;
+                btn.style.opacity = 0.5;
+            } else {
+                btn.disabled = false;
+                btn.style.opacity = 1;
+            }
+        }
+
+        function startExam() {
+            let pool = getExamPool();
+            if (pool.length < 1) {
+                toast("暂无已学习的诗词，请先学习一些诗词再考试", "warning");
+                return;
+            }
+            let countInput = parseInt(document.getElementById("exam-count-input").value) || 10;
+            countInput = Math.max(1, Math.min(countInput, pool.length));
+            let shuffled = pool.sort(() => Math.random() - 0.5);
+            examWords = shuffled.slice(0, countInput);
+            examIndex = 0;
+            examAnswers = [];
+            examSubmitted = false;
+            examStartTime = Date.now();
+            if (examTimerInterval) clearInterval(examTimerInterval);
+            examTimerInterval = setInterval(updateExamTimer, 1000);
+            document.getElementById("exam-total").innerText = examWords.length;
+            document.getElementById("exam-setup").style.display = "none";
+            document.getElementById("exam-progress").style.display = "block";
+            document.getElementById("exam-result").style.display = "none";
+            renderExamQuestion();
+        }
+
+        function renderExamQuestion() {
+            if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
+            if (examIndex >= examWords.length) {
+                finishExam();
+                return;
+            }
+            let p = examWords[examIndex].poem;
+            document.getElementById("exam-current").innerText = examIndex + 1;
+            let pct = ((examIndex) / examWords.length * 100).toFixed(1);
+            document.getElementById("exam-bar").style.width = pct + "%";
+            let qEl = document.getElementById("exam-question");
+            let speakBtn = document.getElementById("exam-speak-btn");
+            document.getElementById("exam-answer").value = "";
+            document.getElementById("exam-feedback").style.display = "none";
+            document.getElementById("exam-answer").disabled = false;
+            let lines = p.cont.split(/[。！？；]/).filter(x => x.trim());
+            if (mode === 1) {
+                qEl.innerHTML = `《<span style="color:#4285F4;">${p.title}</span>》${p.author}<br><span style="font-size:14px;color:#999;">请背诵全文</span>`;
+                speakBtn.style.display = "block";
+            } else if (mode === 2) {
+                qEl.innerHTML = `上句：<span style="color:#4285F4;">${lines[0]}。</span><br><span style="font-size:14px;color:#999;">请写下句</span>`;
+                speakBtn.style.display = "block";
+            } else if (mode === 3) {
+                qEl.innerHTML = lines.length >= 2 ? `下句：<span style="color:#4285F4;">${lines[1]}。</span><br><span style="font-size:14px;color:#999;">请写上句</span>` : `请写上句`;
+                speakBtn.style.display = "block";
+            } else if (mode === 4) {
+                qEl.innerHTML = `诗句：<span style="color:#4285F4;">${lines[0]}。</span><br><span style="font-size:14px;color:#999;">请写出题目+作者</span>`;
+                speakBtn.style.display = "block";
+            }
+            document.getElementById("exam-answer").focus();
+        }
+
+        function speakExamPoem() {
+            if (examIndex >= examWords.length) return;
+            let p = examWords[examIndex].poem;
+            let text = p.cont.replace(/[\n\r]/g, '，');
+            try {
+                if (cnchar.voice && cnchar.voice.speak) {
+                    cnchar.voice.speak(text);
+                } else {
+                    speechSynthesis.cancel();
+                    let utter = new SpeechSynthesisUtterance(text);
+                    utter.lang = 'zh-CN';
+                    utter.rate = 0.8;
+                    speechSynthesis.speak(utter);
+                }
+            } catch (e) {
+                speechSynthesis.cancel();
+                let utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'zh-CN';
+                utter.rate = 0.8;
+                speechSynthesis.speak(utter);
+            }
+        }
+
+        function submitExamAnswer() {
+            if (examSubmitted || examIndex >= examWords.length) return;
+            if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
+            let input = document.getElementById("exam-answer").value;
+            let p = examWords[examIndex].poem;
+            let result = checkExamAnswer(input, p);
+            let scorePct = Math.round(result.score * 100);
+            examAnswers.push({ idx: examWords[examIndex].idx, poem: p, input: input.trim(), correct: result.correct, simScore: scorePct, skipped: false });
+            let fb = document.getElementById("exam-feedback");
+            fb.style.display = "block";
+            let correctAnswer = getPoemAnswer(p, mode);
+            if (result.correct) {
+                fb.style.background = "#e6f4ea";
+                fb.style.color = "#1e7e34";
+                fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
+            } else {
+                fb.style.background = "#fce8e6";
+                fb.style.color = "#c5221f";
+                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${correctAnswer}</strong>`;
+            }
+            document.getElementById("exam-answer").disabled = true;
+            setTimeout(() => {
+                examIndex++;
+                renderExamQuestion();
+            }, 1200);
+        }
+
+        function skipExamAnswer() {
+            if (examSubmitted || examIndex >= examWords.length) return;
+            if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
+            let p = examWords[examIndex].poem;
+            examAnswers.push({ idx: examWords[examIndex].idx, poem: p, input: "", correct: false, simScore: 0, skipped: true });
+            examIndex++;
+            renderExamQuestion();
+        }
+
+        function finishExam() {
+            examSubmitted = true;
+            if (examTimerInterval) { clearInterval(examTimerInterval); examTimerInterval = null; }
+            let duration = Date.now() - examStartTime;
+            let correctCount = examAnswers.filter(a => a.correct).length;
+            let wrongCount = examAnswers.filter(a => !a.correct && !a.skipped).length;
+            let skipCount = examAnswers.filter(a => a.skipped).length;
+            let score = Math.round(correctCount / examWords.length * 100);
+            document.getElementById("exam-score").innerText = score;
+            document.getElementById("exam-score").style.color = score >= 80 ? '#34a853' : score >= 60 ? '#fbbc04' : '#ea4335';
+            document.getElementById("exam-correct").innerText = correctCount;
+            document.getElementById("exam-wrong").innerText = wrongCount;
+            document.getElementById("exam-skip").innerText = skipCount;
+            document.getElementById("exam-duration").innerText = formatDuration(duration);
+            let html = `<div style="margin-bottom:10px;color:#666;font-size:13px;">考试模式：${MODE_LABELS[mode]} | 题目数量：${examWords.length} | 用时：${formatDuration(duration)}</div>`;
+            html += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead><tr style="background:#f1f3f4;">
+                    <th style="padding:8px;border:1px solid #eee;text-align:left;width:30px;">#</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:left;">诗词</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:left;">正确答案</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:left;">你的答案</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;width:60px;">匹配度</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;width:60px;">结果</th>
+                </tr></thead><tbody>`;
+            examAnswers.forEach((a, i) => {
+                let bg = i % 2 === 0 ? '#fff' : '#fafafa';
+                let resultIcon = a.skipped ? '⏭️' : (a.correct ? '✅' : '❌');
+                let simColor = a.simScore >= 80 ? '#34a853' : a.simScore >= 60 ? '#fbbc04' : '#ea4335';
+                let correctAnswer = getPoemAnswer(a.poem, mode);
+                html += `<tr style="background:${bg};">
+                    <td style="padding:6px 8px;border:1px solid #eee;">${i + 1}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;font-weight:bold;">《${a.poem.title}》${a.poem.author}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;color:#666;">${correctAnswer}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;">${a.skipped ? '<span style="color:#999;">跳过</span>' : a.input}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;color:${simColor};">${a.skipped ? '-' : a.simScore + '%'}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${resultIcon}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            document.getElementById("exam-detail-list").innerHTML = html;
+            document.getElementById("exam-progress").style.display = "none";
+            document.getElementById("exam-result").style.display = "block";
+            saveExamScore(score, correctCount, examWords.length, mode, duration);
+        }
+
+        function saveExamScore(score, correct, total, m, duration) {
+            let u = safeUser(getUser());
+            if (!u.examScores) u.examScores = [];
+            u.examScores.push({
+                score: score,
+                correct: correct,
+                total: total,
+                mode: m,
+                modeLabel: MODE_LABELS[m],
+                duration: duration,
+                date: new Date().toLocaleString('zh-CN')
+            });
+            if (u.examScores.length > 10) u.examScores = u.examScores.slice(-10);
+            setUser(u);
+        }
+
+        function retakeExam() {
+            document.getElementById("exam-setup").style.display = "block";
+            document.getElementById("exam-progress").style.display = "none";
+            document.getElementById("exam-result").style.display = "none";
+            renderExamPool();
+        }
+
+        function renderExamScores() {
+            let u = safeUser(getUser());
+            let scores = u.examScores || [];
+            let el = document.getElementById("exam-scores-list");
+            if (!el) return;
+            if (scores.length === 0) {
+                el.innerHTML = '<p style="color:#999;font-size:13px;">暂无考试记录，去考试页面参加考试吧</p>';
+                return;
+            }
+            let html = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead><tr style="background:#f1f3f4;">
+                    <th style="padding:8px;border:1px solid #eee;text-align:left;">时间</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;">模式</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;">正确/总数</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;">用时</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;">得分</th>
+                </tr></thead><tbody>`;
+            scores.slice().reverse().forEach((s, i) => {
+                let bg = i % 2 === 0 ? '#fff' : '#fafafa';
+                let scoreColor = s.score >= 80 ? '#34a853' : s.score >= 60 ? '#fbbc04' : '#ea4335';
+                let dur = s.duration ? formatDuration(s.duration) : '-';
+                html += `<tr style="background:${bg};">
+                    <td style="padding:6px 8px;border:1px solid #eee;">${s.date}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${s.modeLabel}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${s.correct}/${s.total}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${dur}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;font-weight:bold;color:${scoreColor};">${s.score}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            el.innerHTML = html;
+        }
+    </script>
+</body>
+
+</html>

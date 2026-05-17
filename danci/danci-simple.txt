@@ -1,0 +1,3017 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>单词复习工具 - 艾宾浩斯双用户版</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #f8f9fa;
+            color: #222;
+        }
+
+        .top {
+            height: 60px;
+            background: #34a853;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+        }
+
+        .nav a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 16px;
+            font-size: 15px;
+        }
+
+        .mode-bar {
+            height: 40px;
+            background: #e6f4ea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .mode-bar .mbtn {
+            padding: 5px 16px;
+            border: none;
+            border-radius: 20px;
+            background: #fff;
+            color: #34a853;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .mode-bar .mbtn.on {
+            background: #34a853;
+            color: #fff;
+        }
+
+        .user button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #fff;
+            color: #34a853;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 25px 0;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 22px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.06);
+        }
+
+        h2 {
+            color: #34a853;
+            margin-bottom: 14px;
+            font-size: 20px;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 4px;
+        }
+
+        .btn-blue {
+            background: #4285f4;
+            color: #fff;
+        }
+
+        .btn-gray {
+            background: #f1f3f4;
+            color: #333;
+        }
+
+        .btn-red {
+            background: #ea4335;
+            color: #fff;
+        }
+
+        .btn-green {
+            background: #34a853;
+            color: #fff;
+        }
+
+        .btn-orange {
+            background: #fbbc04;
+            color: #333;
+        }
+
+        .hide {
+            display: none;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .flex {
+            display: flex;
+            gap: 20px;
+        }
+
+        .col {
+            flex: 1;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 5px 11px;
+            background: #e6f4ea;
+            border-radius: 20px;
+            margin: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .tag.on {
+            background: #34a853;
+            color: #fff;
+        }
+
+        .word-item {
+            padding: 14px;
+            border-bottom: 1px solid #f1f1f1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .word-item > div:first-child {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .word-item > div:last-child {
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .word-item:last-child {
+            border-bottom: none;
+        }
+
+        .word-text {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .word-meaning {
+            color: #666;
+            font-size: 13px;
+            margin-top: 4px;
+            word-break: break-all;
+        }
+
+        .word-meta {
+            font-size: 12px;
+            color: #999;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .modal-body {
+            width: 650px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 30px;
+            max-height: 85vh;
+            overflow: auto;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+
+        .calendar-day {
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            background: #fafafa;
+            color: #333;
+            text-align: center;
+            transition: all 0.15s;
+        }
+
+        .calendar-day.has-task {
+            background: #e6f4ea;
+            color: #1e7e34;
+        }
+
+        .calendar-day.has-task span {
+            color: #34a853;
+        }
+
+        .calendar-day.today {
+            background: #fff3e0;
+            color: #e65100;
+            font-weight: bold;
+        }
+
+        .calendar-day.today.has-task {
+            background: #e6f4ea;
+            color: #1e7e34;
+            font-weight: bold;
+            border: 2px solid #e65100;
+        }
+
+        .calendar-day.selected {
+            background: #34a853;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .calendar-day.selected span {
+            color: #c8e6c9;
+        }
+
+        .calendar-day.selected.today {
+            background: #34a853;
+            color: #fff;
+            border: 2px solid #e65100;
+        }
+
+        .calendar-day.overdue {
+            background: #fde8e8;
+            color: #c0392b;
+        }
+
+        .calendar-day.overdue span {
+            color: #e74c3c;
+        }
+
+        .calendar-day.overdue.today {
+            background: #e6f4ea;
+            color: #1e7e34;
+            font-weight: bold;
+            border: 2px solid #e65100;
+        }
+
+        .calendar-day.selected.overdue {
+            background: #c0392b;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .calendar-day.selected.overdue span {
+            color: #f5b7b1;
+        }
+
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .calendar-nav button {
+            padding: 4px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.15s;
+        }
+
+        .calendar-nav button:hover {
+            background: #f0f0f0;
+        }
+
+        .calendar-nav .cal-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .overdue-item {
+            border-left: 3px solid #e74c3c !important;
+        }
+
+        .collins-star {
+            color: #fbbc04;
+        }
+
+        .exam-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #e6f4ea;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #34a853;
+            margin: 1px;
+        }
+        #exam-answer:focus {
+            border-color: #34a853;
+            box-shadow: 0 0 0 2px rgba(52, 168, 83, 0.2);
+        }
+        #exam-answer:disabled {
+            background: #f5f5f5;
+            color: #999;
+        }
+        .overdue-item {
+            background: #fff8f0;
+        }
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .nav-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 998;
+        }
+        .nav-overlay.active {
+            display: block;
+        }
+        .nav-drawer {
+            position: fixed;
+            top: 0;
+            left: -260px;
+            width: 260px;
+            height: 100%;
+            background: #2d8a4e;
+            z-index: 999;
+            transition: left 0.3s ease;
+            padding: 20px 0;
+        }
+        .nav-drawer.active {
+            left: 0;
+        }
+        .nav-drawer a {
+            display: block;
+            color: #fff;
+            text-decoration: none;
+            padding: 14px 24px;
+            font-size: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+        .nav-drawer a:active {
+            background: rgba(255,255,255,0.1);
+        }
+        .nav-drawer-close {
+            text-align: right;
+            padding: 0 16px 10px;
+        }
+        .nav-drawer-close button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .top {
+                height: 50px;
+                padding: 0 12px;
+            }
+            .nav a {
+                display: none;
+            }
+            .hamburger {
+                display: block;
+            }
+            .user {
+                font-size: 13px;
+            }
+            .user button {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            .mode-bar {
+                height: 36px;
+                gap: 4px;
+                padding: 0 8px;
+            }
+            .mode-bar .mbtn {
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+            .container {
+                width: 96%;
+                padding: 12px 0;
+            }
+            .card {
+                padding: 14px;
+                margin-bottom: 12px;
+                border-radius: 8px;
+            }
+            h2 {
+                font-size: 17px;
+                margin-bottom: 10px;
+            }
+            .btn {
+                padding: 6px 10px;
+                font-size: 13px;
+                margin: 3px;
+            }
+            .flex {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .tag {
+                padding: 4px 8px;
+                font-size: 12px;
+                margin: 2px;
+            }
+            .word-item {
+                padding: 10px;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .word-text {
+                font-size: 16px;
+            }
+            .word-meaning {
+                font-size: 12px;
+            }
+            .modal-body {
+                width: 95%;
+                padding: 16px;
+                border-radius: 8px;
+                max-height: 90vh;
+            }
+            .calendar-day {
+                padding: 6px 2px;
+                font-size: 12px;
+            }
+            .calendar {
+                gap: 4px;
+            }
+            textarea {
+                height: 80px;
+                font-size: 14px;
+            }
+            .exam-tag {
+                font-size: 10px;
+                padding: 1px 4px;
+            }
+            #exam-answer {
+                font-size: 16px;
+                padding: 10px 12px;
+            }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .container {
+                width: 94%;
+                max-width: 960px;
+            }
+            .nav a {
+                margin: 0 10px;
+                font-size: 14px;
+            }
+            .modal-body {
+                width: 90%;
+                max-width: 600px;
+            }
+        }
+        .toast-item {
+            pointer-events: auto;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            max-width: 90vw;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .toast-success { background: #34a853; }
+        .toast-error { background: #ea4335; }
+        .toast-info { background: #4285f4; }
+        .toast-warning { background: #fbbc04; color: #333; }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast-container" style="position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;"></div>
+
+    <div class="top">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <button class="hamburger" onclick="openNav()">☰</button>
+            <div class="nav">
+                <a href="javascript:show('home')">首页</a>
+                <a href="javascript:show('plan')">复习计划</a>
+                <a href="javascript:show('lib')">单词库</a>
+                <a href="javascript:show('exam')">考试</a>
+                <a href="javascript:show('relation')">关系查询</a>
+                <a href="javascript:show('mine')">个人中心</a>
+            </div>
+        </div>
+        <div class="user">
+            当前：<span id="show-user">同学A</span>
+            <button onclick="toggleUser()">切换 A/B</button>
+        </div>
+    </div>
+
+    <div class="nav-overlay" id="nav-overlay" onclick="closeNav()"></div>
+    <div class="nav-drawer" id="nav-drawer">
+        <div class="nav-drawer-close"><button onclick="closeNav()">✕</button></div>
+        <a href="javascript:navTo('home')">🏠 首页</a>
+        <a href="javascript:navTo('plan')">📅 复习计划</a>
+        <a href="javascript:navTo('lib')">📚 单词库</a>
+        <a href="javascript:navTo('exam')">📝 考试</a>
+        <a href="javascript:navTo('relation')">🔗 关系查询</a>
+        <a href="javascript:navTo('mine')">👤 个人中心</a>
+    </div>
+
+    <div class="mode-bar">
+        <button class="mbtn on" onclick="setMode(1)">看词写义</button>
+        <button class="mbtn" onclick="setMode(2)">看义写词</button>
+        <button class="mbtn" onclick="setMode(3)">听写单词</button>
+    </div>
+
+    <div class="container">
+        <!-- 首页 -->
+        <div class="page" id="page-home">
+            <div class="card">
+                <h2>📌 今日待复习</h2>
+                <p>今日需复习：<span id="today-count" style="font-weight:bold;color:red">0</span> 个</p>
+                <button class="btn btn-blue" onclick="show('plan')">前往复习</button>
+            </div>
+            <div class="card">
+                <h2>📊 同学 A / B 学习对比</h2>
+                <div class="flex">
+                    <div class="col card">
+                        <h3>同学A</h3>
+                        <p>已学：<span id="a-total">0</span></p>
+                        <p>待复习：<span id="a-wait">0</span></p>
+                        <p>已掌握：<span id="a-done">0</span></p>
+                    </div>
+                    <div class="col card">
+                        <h3>同学B</h3>
+                        <p>已学：<span id="b-total">0</span></p>
+                        <p>待复习：<span id="b-wait">0</span></p>
+                        <p>已掌握：<span id="b-done">0</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 复习计划 -->
+        <div class="page" id="page-plan">
+            <div class="card">
+                <h2>📅 复习日历</h2>
+                <div class="calendar" id="calendar"></div>
+            </div>
+            <div class="card">
+                <h2>📖 <span id="review-date-label">今日</span>待复习列表</h2>
+                <div id="today-list"></div>
+            </div>
+        </div>
+
+        <!-- 单词库 -->
+        <div class="page" id="page-lib">
+            <div class="card">
+                <h2>🔍 分类筛选</h2>
+                <div style="margin-bottom:8px;color:#666;font-size:13px;">柯林斯分级：</div>
+                <div id="collins-list"></div>
+                <div style="margin-top:10px;color:#666;font-size:13px;">考试范围：</div>
+                <div id="exam-list"></div>
+            </div>
+            <div class="card">
+                <h2>📚 单词库（<span id="word-count">0</span> 个）</h2>
+                <div style="margin:10px 0;">
+                    <input type="text" id="word-search" placeholder="搜索单词或释义..." oninput="renderWordList(true)" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                </div>
+                <div id="word-list" style="margin-top:15px;"></div>
+                <div id="word-more" style="text-align:center;padding:15px;display:none;">
+                    <button class="btn btn-gray" onclick="loadMoreWords()">加载更多（已显示 <span id="word-shown">0</span>/<span id="word-total2">0</span>）</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 个人中心 -->
+        <div class="page" id="page-mine">
+            <div class="card">
+                <h2>🎯 我的考试范围</h2>
+                <div id="exam-setting"></div>
+                <p style="margin-top:8px;color:#999;font-size:13px;">设置考试范围后，今日待复习列表仅推荐对应范围的单词</p>
+            </div>
+            <div class="card">
+                <h2>🌐 释义翻译</h2>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="translate-toggle" onchange="toggleTranslate()" style="width:18px;height:18px;">
+                    <span>开启英文释义中文翻译</span>
+                </label>
+                <p style="margin-top:8px;color:#999;font-size:13px;">开启后，学习弹窗中的英文释义会自动翻译为中文</p>
+            </div>
+            <div class="card">
+                <h2>🔊 朗读声音配置</h2>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;" id="voice-setting">
+                    <button class="btn btn-green" onclick="setVoice('local')" id="voice-local">本地</button>
+                    <button class="btn btn-gray" onclick="setVoice('us')" id="voice-us">🇺🇸 美音</button>
+                    <button class="btn btn-gray" onclick="setVoice('en')" id="voice-en">🇬🇧 英音</button>
+                </div>
+                <p style="margin-top:8px;color:#999;font-size:13px;">本地使用浏览器内置语音，美音/英音使用有道词典在线发音</p>
+            </div>
+            <div class="card">
+                <h2>📈 我的学习数据</h2>
+                <p>已学习：<span id="my-total">0</span> 个 <span style="color:#999;font-size:12px;">（点击过"学习/复习"的单词总数）</span></p>
+                <p>待复习：<span id="my-wait">0</span> 个 <span style="color:#999;font-size:12px;">（已学习但未完成全部复习周期，且下次复习时间≤今日的单词）</span></p>
+                <p>已掌握：<span id="my-done">0</span> 个 <span style="color:#999;font-size:12px;">（完成全部艾宾浩斯复习周期（1/2/4/7/15/30天）的单词）</span></p>
+            </div>
+            <div class="card">
+                <h2>🏆 考试成绩记录</h2>
+                <p style="color:#999;font-size:13px;margin-bottom:12px;">保留最近10次考试成绩</p>
+                <div id="exam-scores-list"></div>
+            </div>
+            <div class="card">
+                <h2>📊 近30天学习统计</h2>
+                <div style="display:flex;gap:6px;margin-bottom:12px;">
+                    <button class="btn btn-blue" onclick="renderDailyChart('A')" id="chart-btn-A">同学A</button>
+                    <button class="btn btn-gray" onclick="renderDailyChart('B')" id="chart-btn-B">同学B</button>
+                </div>
+                <div style="position:relative;height:280px;">
+                    <canvas id="daily-chart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2>📝 英语词性速查表</h2>
+                <p style="margin-bottom:12px;color:#666;font-size:13px;">英语主要分为八大词性（Eight Parts of Speech），包括名词、代词、动词、形容词、副词、介词、连词和感叹词，部分分类会将冠词单独列出或加上数词。它们决定了单词在句子中的位置（如形容词修饰名词）和形式变化（如动词时态）。</p>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                        <thead>
+                            <tr style="background:#e6f4ea;">
+                                <th style="padding:10px;border:1px solid #ddd;text-align:left;">词性</th>
+                                <th style="padding:10px;border:1px solid #ddd;text-align:left;">缩写</th>
+                                <th style="padding:10px;border:1px solid #ddd;text-align:left;">定义</th>
+                                <th style="padding:10px;border:1px solid #ddd;text-align:left;">例子</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">名词</td>
+                                <td style="padding:10px;border:1px solid #eee;">Noun, n.</td>
+                                <td style="padding:10px;border:1px solid #eee;">表示人、事、物、地点或抽象概念的词</td>
+                                <td style="padding:10px;border:1px solid #eee;">apple, teacher, love, Taipei</td>
+                            </tr>
+                            <tr style="background:#fafafa;">
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">代词</td>
+                                <td style="padding:10px;border:1px solid #eee;">Pronoun, pron.</td>
+                                <td style="padding:10px;border:1px solid #eee;">用来代替名词，避免重复</td>
+                                <td style="padding:10px;border:1px solid #eee;">I, you, he, she, it, they, this, which</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">动词</td>
+                                <td style="padding:10px;border:1px solid #eee;">Verb, v.<br>vt. 及物动词<br>vi. 不及物动词</td>
+                                <td style="padding:10px;border:1px solid #eee;">表示动作或状态<br><strong>及物动词(vt.)：</strong>后面必须跟宾语，意义才完整<br><strong>不及物动词(vi.)：</strong>本身意义完整，后面不需要跟宾语</td>
+                                <td style="padding:10px;border:1px solid #eee;"><strong>vt.</strong> eat (吃), believe (相信), study (学习)<br><strong>vi.</strong> run (跑), is (是), sleep (睡觉)</td>
+                            </tr>
+                            <tr style="background:#fafafa;">
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">形容词</td>
+                                <td style="padding:10px;border:1px solid #eee;">Adjective, adj./a.</td>
+                                <td style="padding:10px;border:1px solid #eee;">修饰名词或代词，描述其特征</td>
+                                <td style="padding:10px;border:1px solid #eee;">beautiful, hot, high, smart</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">副词</td>
+                                <td style="padding:10px;border:1px solid #eee;">Adverb, adv./ad.</td>
+                                <td style="padding:10px;border:1px solid #eee;">修饰动词、形容词或其他副词，表示时间、地点、程度、方式</td>
+                                <td style="padding:10px;border:1px solid #eee;">quickly, very, here, yesterday</td>
+                            </tr>
+                            <tr style="background:#fafafa;">
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">介词/介系词</td>
+                                <td style="padding:10px;border:1px solid #eee;">Preposition, prep.</td>
+                                <td style="padding:10px;border:1px solid #eee;">置于名词或代词之前，表示它与句子中其他成分的关系</td>
+                                <td style="padding:10px;border:1px solid #eee;">in, on, at, for, with, about</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">连词/连接词</td>
+                                <td style="padding:10px;border:1px solid #eee;">Conjunction, conj.</td>
+                                <td style="padding:10px;border:1px solid #eee;">连接单词、短语或句子</td>
+                                <td style="padding:10px;border:1px solid #eee;">and, but, or, because, so</td>
+                            </tr>
+                            <tr style="background:#fafafa;">
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">感叹词</td>
+                                <td style="padding:10px;border:1px solid #eee;">Interjection, interj./int.</td>
+                                <td style="padding:10px;border:1px solid #eee;">表示说话人的惊奇、喜悦、痛苦等情绪</td>
+                                <td style="padding:10px;border:1px solid #eee;">Oh!, Wow!, Ouch!, Yay!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <h3 style="margin-top:15px;margin-bottom:10px;color:#34a853;font-size:16px;">补充词性（常见版本）</h3>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                        <tbody>
+                            <tr style="background:#fff8e6;">
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;width:20%;">冠词</td>
+                                <td style="padding:10px;border:1px solid #eee;width:15%;">Article, art.</td>
+                                <td style="padding:10px;border:1px solid #eee;">用于名词前表示特指或泛指</td>
+                                <td style="padding:10px;border:1px solid #eee;">a, an, the</td>
+                            </tr>
+                            <tr style="background:#fff;">
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">数词</td>
+                                <td style="padding:10px;border:1px solid #eee;">Numeral, num.</td>
+                                <td style="padding:10px;border:1px solid #eee;">表示数量或顺序</td>
+                                <td style="padding:10px;border:1px solid #eee;">one, first</td>
+                            </tr>
+                            <tr style="background:#fff;">
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">限定词</td>
+                                <td style="padding:10px;border:1px solid #eee;">Determiner , det.</td>
+                                <td style="padding:10px;border:1px solid #eee;">通常位于名词词组的开头，用于限定名词的指称范围、数量或归属</td>
+                                <td style="padding:10px;border:1px solid #eee;">冠词： a, an, the<br>
+                                指示限定词： this, that, these, those<br>
+                                物主限定词： my, your, his, her, their<br>
+                                数量词： some, any, few, many, all</td>
+                            </tr>
+                            <tr style="background:#fff;">
+                                <td style="padding:10px;border:1px solid #eee;font-weight:bold;">助动词‌</td>
+                                <td style="padding:10px;border:1px solid #eee;">Auxiliary Verb , aux.</td>
+                                <td style="padding:10px;border:1px solid #eee;">特指协助主要动词构成谓语的词</td>
+                                <td style="padding:10px;border:1px solid #eee;">包括 be、do、have 以及情态动词（如 can、may、must 等）</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <h3 style="margin-top:15px;margin-bottom:10px;color:#34a853;font-size:16px;">掌握词性的重要性</h3>
+                <div style="background:#f8f9fa;padding:12px;border-radius:6px;font-size:13px;line-height:1.8;">
+                    <p><strong>位置：</strong>例如形容词放在名词前（a <em>fast</em> car），副词修饰动词（runs <em>fast</em>）</p>
+                    <p><strong>形状：</strong>如名词变形容词（fashion → fashionable）</p>
+                    <p><strong>字典使用：</strong>查找单词时，词性缩写（如 n., v., adj.）直接决定了用法</p>
+                </div>
+            </div>
+            <div class="card">
+                <h2>⚙️ 数据管理</h2>
+                <button class="btn btn-red" onclick="resetUser()">重置我的所有学习记录</button>
+                <p style="margin-top:10px;color:#999;font-size:13px;">只清空当前用户，不影响对方</p>
+                <hr style="margin:15px 0;border:none;border-top:1px solid #eee;">
+                <h3 style="margin-bottom:10px;">📦 数据导出 / 导入</h3>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-blue" onclick="exportData()">📤 导出学习数据</button>
+                    <button class="btn btn-green" onclick="document.getElementById('import-file').click()">📥 导入学习数据</button>
+                    <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)">
+                </div>
+                <p style="margin-top:10px;color:#999;font-size:13px;">导出为JSON文件，可在另一台电脑上导入恢复学习进度</p>
+            </div>
+            <div class="card" style="text-align:center;">
+                <button class="btn btn-blue" onclick="downloadXlsx()">📥 下载所有单词（xlsx）</button>
+            </div>
+        </div>
+
+        <!-- 考试 -->
+        <div class="page" id="page-exam">
+            <div class="card" id="exam-setup">
+                <h2>📝 单词考试</h2>
+                <p style="color:#666;font-size:13px;margin-bottom:16px;">从已学习和已复习的单词中随机抽取100个组成试卷，完成后自动打分</p>
+                <div style="margin-bottom:16px;color:#666;font-size:13px;">
+                    当前考试模式：<span id="exam-mode-label" style="font-weight:bold;color:#34a853;">看词写义</span>（使用顶部全局模式）
+                </div>
+                <div style="margin-bottom:16px;color:#666;font-size:13px;">
+                    可用单词池：<span id="exam-pool-count" style="font-weight:bold;color:#34a853;">0</span> 个（已学习 + 已掌握的单词）
+                </div>
+                <button class="btn btn-green" onclick="startExam()" id="exam-start-btn">开始考试</button>
+            </div>
+            <div class="card" id="exam-progress" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <h2 style="margin-bottom:0;">📝 考试进行中</h2>
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <span style="color:#666;font-size:14px;">⏱ <span id="exam-timer">00:00</span></span>
+                        <span style="color:#666;font-size:14px;">进度：<span id="exam-current">0</span> / <span id="exam-total">100</span></span>
+                    </div>
+                </div>
+                <div style="background:#f1f3f4;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden;">
+                    <div id="exam-bar" style="background:#34a853;height:100%;border-radius:8px;transition:width 0.3s;width:0%;"></div>
+                </div>
+                <div id="exam-question-area" style="min-height:200px;">
+                    <div id="exam-question" style="font-size:20px;font-weight:bold;margin-bottom:16px;text-align:center;"></div>
+                    <div id="exam-speak-btn" style="text-align:center;margin-bottom:16px;display:none;">
+                        <button class="btn btn-gray" onclick="speakExamWord()">🔊 朗读单词</button>
+                    </div>
+                    <input type="text" id="exam-answer" placeholder="请输入答案..." style="width:100%;padding:12px 16px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;" onkeydown="if(event.key==='Enter')submitExamAnswer()">
+                    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+                        <button class="btn btn-blue" onclick="submitExamAnswer()">提交答案</button>
+                        <button class="btn btn-gray" onclick="skipExamAnswer()">跳过</button>
+                    </div>
+                    <div id="exam-feedback" style="margin-top:16px;padding:12px;border-radius:8px;display:none;"></div>
+                </div>
+            </div>
+            <div class="card" id="exam-result" style="display:none;">
+                <h2>📊 考试成绩</h2>
+                <div style="text-align:center;padding:20px 0;">
+                    <div style="font-size:48px;font-weight:bold;" id="exam-score">0</div>
+                    <div style="color:#666;font-size:14px;margin-top:4px;">得分（满分100分）</div>
+                    <div style="color:#999;font-size:13px;margin-top:6px;">用时：<span id="exam-duration">0</span></div>
+                </div>
+                <div style="display:flex;justify-content:center;gap:30px;margin-bottom:20px;">
+                    <div style="text-align:center;">
+                        <div style="font-size:24px;font-weight:bold;color:#34a853;" id="exam-correct">0</div>
+                        <div style="color:#666;font-size:13px;">正确</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:24px;font-weight:bold;color:#ea4335;" id="exam-wrong">0</div>
+                        <div style="color:#666;font-size:13px;">错误</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:24px;font-weight:bold;color:#999;" id="exam-skip">0</div>
+                        <div style="color:#666;font-size:13px;">跳过</div>
+                    </div>
+                </div>
+                <div id="exam-detail-list" style="max-height:400px;overflow-y:auto;"></div>
+                <div style="text-align:center;margin-top:20px;">
+                    <button class="btn btn-green" onclick="retakeExam()">再考一次</button>
+                    <button class="btn btn-gray" onclick="show('mine')">查看成绩记录</button>
+                </div>
+            </div>
+            <div class="card" id="wrong-pool-card">
+                <h2>🔄 错题重考</h2>
+                <p style="color:#666;font-size:13px;margin-bottom:12px;">考试中匹配度低于100%的单词自动进入错题库，连续答对3次即可移除</p>
+                <div style="margin-bottom:12px;color:#666;font-size:13px;">
+                    错题数量：<span id="wrong-pool-count" style="font-weight:bold;color:#ea4335;">0</span> 个
+                </div>
+                <div id="wrong-pool-list" style="margin-bottom:16px;"></div>
+                <button class="btn btn-blue" onclick="startWrongExam()" id="wrong-exam-btn">开始错题重考</button>
+            </div>
+            <div class="card" id="wrong-exam-progress" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <h2 style="margin-bottom:0;">🔄 错题重考</h2>
+                    <span style="color:#666;font-size:14px;">进度：<span id="wrong-current">0</span> / <span id="wrong-total">0</span></span>
+                </div>
+                <div style="background:#f1f3f4;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden;">
+                    <div id="wrong-bar" style="background:#ea4335;height:100%;border-radius:8px;transition:width 0.3s;width:0%;"></div>
+                </div>
+                <div id="wrong-question" style="font-size:20px;font-weight:bold;margin-bottom:16px;text-align:center;"></div>
+                <div id="wrong-speak-btn" style="text-align:center;margin-bottom:16px;display:none;">
+                    <button class="btn btn-gray" onclick="speakWrongWord()">🔊 朗读单词</button>
+                </div>
+                <input type="text" id="wrong-answer" placeholder="请输入答案..." style="width:100%;padding:12px 16px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;" onkeydown="if(event.key==='Enter')submitWrongAnswer()">
+                <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+                    <button class="btn btn-blue" onclick="submitWrongAnswer()">提交答案</button>
+                    <button class="btn btn-gray" onclick="skipWrongAnswer()">跳过</button>
+                </div>
+                <div id="wrong-feedback" style="margin-top:16px;padding:12px;border-radius:8px;display:none;"></div>
+            </div>
+        </div>
+
+        <!-- 关系查询 -->
+        <div class="page" id="page-relation">
+            <div class="card">
+                <h2>🔗 单词关系查询</h2>
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                    <input type="text" id="rel-search" placeholder="输入单词搜索关系..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:15px;" oninput="relSearch(this.value)">
+                    <button class="btn btn-blue" onclick="relSearch(document.getElementById('rel-search').value)">搜索</button>
+                </div>
+                <div id="rel-suggestions" style="max-height:150px;overflow-y:auto;margin-bottom:10px;display:none;"></div>
+                <div id="rel-result"></div>
+            </div>
+            <div class="card">
+                <h2>🎛️ 筛选与排序</h2>
+                <div style="margin-bottom:10px;">
+                    <div style="color:#666;font-size:13px;margin-bottom:6px;">按关系类型筛选：</div>
+                    <div id="rel-type-filters" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <button class="btn btn-gray" onclick="relSortAZ()" id="rel-sort-btn">排序 A→Z</button>
+                    <span style="color:#999;font-size:13px;" id="rel-count-info"></span>
+                </div>
+            </div>
+            <div class="card">
+                <h2>📖 字母索引浏览</h2>
+                <div id="rel-alpha-index" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;"></div>
+                <div id="rel-alpha-list" style="max-height:300px;overflow-y:auto;"></div>
+            </div>
+            <div class="card">
+                <h2>📂 数据管理</h2>
+                <p style="color:#666;font-size:13px;margin-bottom:10px;">上传自定义数据替换当前词库和关系表，无需刷新页面</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-blue" onclick="document.getElementById('upload-words').click()">上传 JSON 单词库</button>
+                    <input type="file" id="upload-words" accept=".json" style="display:none;" onchange="uploadWordsFile(event)">
+                    <button class="btn btn-green" onclick="document.getElementById('upload-relations').click()">上传 CSV 关系表</button>
+                    <input type="file" id="upload-relations" accept=".csv" style="display:none;" onchange="uploadRelationsFile(event)">
+                </div>
+                <div style="margin-top:10px;color:#999;font-size:12px;">
+                    <p>单词库格式：JSON数组，每项含 word / collins / exam / meaning</p>
+                    <p>关系表格式：CSV，表头 原词,关系类型,目标词</p>
+                    <p>关系类型：相似 / 同义词 / 同音词 / 部分同音 / 近义词 / 反义词 / 同词不同性 / 词形变化 / 比较级 / 最高级 / 序数词 / 过去式 / 过去分词</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 答题弹窗 -->
+    <div class="modal" id="modal">
+        <div class="modal-body" style="max-width:600px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div id="review-round-info" style="font-size:14px;color:#666;"></div>
+                <div id="review-progress-info" style="font-size:13px;color:#999;"></div>
+            </div>
+            <div id="review-passed-info" style="margin-bottom:10px;font-size:12px;"></div>
+            <div id="q-text" style="font-size:17px;line-height:1.7;margin-bottom:15px;"></div>
+            <input type="text" id="input-ans" placeholder="请输入答案..." style="width:100%;padding:10px 14px;border:2px solid #ddd;border-radius:8px;font-size:16px;outline:none;box-sizing:border-box;">
+            <div style="margin-top:10px;display:flex;gap:8px;">
+                <button class="btn btn-blue" onclick="submitReviewAnswer()" id="btn-submit-review">提交答案</button>
+                <button class="btn btn-gray" onclick="viewReviewAns()" id="btn-view-ans">查看答案</button>
+                <button class="btn btn-gray" onclick="skipReviewWord()" id="btn-skip-review">跳过</button>
+                <button class="btn" onclick="closeModal()">关闭</button>
+            </div>
+            <div id="ans-show" style="margin-top:18px;line-height:1.7;color:#333;"></div>
+            <div id="review-feedback" style="margin-top:12px;padding:12px;border-radius:8px;display:none;"></div>
+        </div>
+    </div>
+
+    <!-- 学习展示弹窗 -->
+    <div class="modal" id="learn-modal">
+        <div class="modal-body" style="text-align:center;max-width:600px;display:flex;flex-direction:column;max-height:80vh;">
+            <div style="flex:1;overflow-y:auto;padding-bottom:10px;">
+                <div id="learn-word" style="font-size:32px;font-weight:bold;margin-bottom:8px;"></div>
+                <div id="learn-phonetic" style="font-size:14px;color:#666;margin-bottom:8px;"></div>
+                <div id="learn-meaning" style="font-size:20px;line-height:1.8;margin-bottom:8px;"></div>
+                <div id="learn-meta" style="font-size:13px;color:#999;margin-bottom:10px;"></div>
+                <div id="learn-detail" style="text-align:left;font-size:14px;line-height:1.8;color:#444;"></div>
+            </div>
+            <div style="border-top:1px solid #eee;padding-top:12px;flex-shrink:0;">
+                <button class="btn btn-blue" onclick="addToReview()">加入复习</button>
+                <button class="btn btn-gray" onclick="speakWord()">🔊 朗读单词</button>
+                <button class="btn btn-gray" onclick="openIciba()">📖 金山词霸</button>
+                <button class="btn" onclick="closeLearnModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toast(msg, type) {
+            type = type || 'info';
+            let el = document.createElement('div');
+            el.className = 'toast-item toast-' + type;
+            el.innerText = msg;
+            document.getElementById('toast-container').appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
+        }
+
+        function playSound(name) {
+            try { new Audio(name + '.mp3').play(); } catch(e) {}
+        }
+
+        const PERIOD = [0, 1, 2, 4, 7, 15, 30];
+        let user = "A";
+        let mode = 1;
+        let curr = null;
+        let learnIdx = null;
+        let learnAudioUrl = "";
+        let currCollins = "";
+        let currExam = "";
+        let selectedDate = null;
+        let calYear = new Date().getFullYear();
+        let calMonth = new Date().getMonth();
+        let ALL_WORDS = [];
+        let filteredList = [];
+        let wordPageSize = 30;
+        let wordPage = 0;
+
+        const EXAM_LABELS = {
+            zk: "中考", gk: "高考", cet4: "四级", cet6: "六级",
+            ky: "考研", ielts: "雅思", toefl: "托福"
+        };
+
+        function loadWords() {
+            let stored = localStorage.getItem("ALL_WORDS_DATA");
+            if (stored) {
+                try {
+                    ALL_WORDS = JSON.parse(stored);
+                    if (ALL_WORDS.length > 1000) return;
+                } catch (e) {}
+            }
+            fetch("words.json")
+                .then(r => r.json())
+                .then(d => {
+                    ALL_WORDS = d;
+                    localStorage.setItem("ALL_WORDS_DATA", JSON.stringify(d));
+                    renderAll();
+                })
+                .catch(() => {
+                    toast("单词数据加载失败，请确保words.json在同一目录下", "error");
+                });
+        }
+
+        function getWords() { return ALL_WORDS; }
+
+        function getUser() { return JSON.parse(localStorage.getItem("wuser" + user)); }
+        function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
+
+        function show(p) {
+            document.querySelectorAll(".page").forEach(el => el.classList.remove("active"));
+            document.getElementById("page-" + p).classList.add("active");
+            selectedDate = null;
+            let now = new Date();
+            calYear = now.getFullYear();
+            calMonth = now.getMonth();
+            if (p === 'exam') {
+                document.getElementById("exam-setup").style.display = "block";
+                document.getElementById("exam-progress").style.display = "none";
+                document.getElementById("exam-result").style.display = "none";
+                document.getElementById("wrong-pool-card").style.display = "block";
+                document.getElementById("wrong-exam-progress").style.display = "none";
+            }
+            renderAll();
+        }
+
+        function openNav() {
+            document.getElementById("nav-drawer").classList.add("active");
+            document.getElementById("nav-overlay").classList.add("active");
+        }
+
+        function closeNav() {
+            document.getElementById("nav-drawer").classList.remove("active");
+            document.getElementById("nav-overlay").classList.remove("active");
+        }
+
+        function navTo(p) {
+            closeNav();
+            show(p);
+        }
+
+        function toggleUser() {
+            user = user === "A" ? "B" : "A";
+            document.getElementById("show-user").innerText = "同学" + user;
+            selectedDate = null;
+            renderAll();
+        }
+
+        function safeUser(u) {
+            if (!u) return { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {} };
+            return { learn: u.learn || [], done: u.done || [], log: u.log || {}, exam: u.exam || "", skilled: u.skilled || [], translate: !!u.translate, dailyLog: u.dailyLog || {}, examScores: u.examScores || [], voice: u.voice || "local", wrongPool: u.wrongPool || {} };
+        }
+
+        function todayKey() {
+            let d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function recordDaily(type) {
+            let u = safeUser(getUser());
+            let key = todayKey();
+            if (!u.dailyLog[key]) u.dailyLog[key] = { learn: 0, review: 0 };
+            if (type === 'learn') u.dailyLog[key].learn++;
+            else if (type === 'review') u.dailyLog[key].review++;
+            setUser(u);
+        }
+
+        // ==============================
+        // 分类筛选
+        // ==============================
+        function renderCollins() {
+            let filtered = currExam ? getWords().filter(w => w.exam.split(" ").includes(currExam)) : getWords();
+            let arr = [...new Set(filtered.map(w => w.collins))].sort();
+            let html = `<span class="tag ${currCollins == '' ? 'on' : ''}" onclick="filterCollins('')">全部</span>`;
+            arr.forEach(c => {
+                let stars = "★".repeat(c) + "☆".repeat(5 - c);
+                html += `<span class="tag ${currCollins == c ? 'on' : ''}" onclick="filterCollins(${c})">${c}星 ${stars}</span>`;
+            });
+            document.getElementById("collins-list").innerHTML = html;
+        }
+
+        function renderExam() {
+            let tags = ["zk", "gk", "cet4", "cet6", "ky", "ielts", "toefl"];
+            let html = `<span class="tag ${currExam == '' ? 'on' : ''}" onclick="filterExam('')">全部</span>`;
+            tags.forEach(t => {
+                html += `<span class="tag ${currExam == t ? 'on' : ''}" onclick="filterExam('${t}')">${EXAM_LABELS[t]}</span>`;
+            });
+            document.getElementById("exam-list").innerHTML = html;
+        }
+
+        function filterCollins(c) {
+            currCollins = c;
+            renderCollins();
+            renderWordList(true);
+        }
+
+        function filterExam(e) {
+            currExam = e;
+            currCollins = "";
+            renderExam();
+            renderCollins();
+            renderWordList(true);
+        }
+
+        // ==============================
+        // 单词列表
+        // ==============================
+        let lastFilterKey = "";
+        let wordLoadedCount = 0;
+
+        function renderWordList(forceReset) {
+            let all = getWords();
+            let u = safeUser(getUser());
+            let list = all;
+            if (currExam) list = list.filter(w => w.exam.split(" ").includes(currExam));
+            if (currCollins) list = list.filter(w => w.collins == currCollins);
+            let kw = (document.getElementById("word-search").value || "").trim().toLowerCase();
+            if (kw) {
+                list = list.filter(w => w.word.toLowerCase().includes(kw) || w.meaning.toLowerCase().includes(kw));
+            }
+            let filterKey = currExam + "|" + currCollins + "|" + kw;
+            if (forceReset || filterKey !== lastFilterKey) {
+                filteredList = list;
+                wordPage = 0;
+                wordLoadedCount = 0;
+                lastFilterKey = filterKey;
+            }
+            document.getElementById("word-count").innerText = filteredList.length;
+            document.getElementById("word-list").innerHTML = "";
+            let count = wordLoadedCount || wordPageSize;
+            wordLoadedCount = count;
+            renderWordsUpTo(count);
+        }
+
+        function renderWordsUpTo(count) {
+            let all = getWords();
+            let u = safeUser(getUser());
+            let end = Math.min(count, filteredList.length);
+            let html = "";
+            for (let i = 0; i < end; i++) {
+                let w = filteredList[i];
+                let realIdx = all.indexOf(w);
+                let learned = u.learn.includes(realIdx);
+                let skilled = u.skilled && u.skilled.includes(realIdx);
+                let btnText = learned ? "复习" : "学习";
+                let btnClass = learned ? "btn-blue" : "btn-green";
+                let examHtml = w.exam.split(" ").map(t => EXAM_LABELS[t] ? `<span class="exam-tag">${EXAM_LABELS[t]}</span>` : "").join("");
+                html += `
+        <div class="word-item" style="${skilled ? 'opacity:0.5;' : ''}">
+            <div>
+                <span class="word-text">${w.word}</span>
+                <span class="collins-star">${"★".repeat(w.collins)}</span>
+                <span class="word-meta">${examHtml}</span>
+                <div class="word-meaning">${w.meaning}</div>
+            </div>
+            <div>
+                ${skilled ? '' : `<button class="btn ${btnClass}" onclick="start(${realIdx})">${btnText}</button>`}
+                <button class="btn ${skilled ? 'btn-green' : 'btn-gray'}" onclick="toggleSkilled(${realIdx})">${skilled ? '✅ 熟练' : '熟练'}</button>
+            </div>
+        </div>`;
+            }
+            document.getElementById("word-list").innerHTML = html;
+            document.getElementById("word-shown").innerText = end;
+            document.getElementById("word-total2").innerText = filteredList.length;
+            let moreEl = document.getElementById("word-more");
+            moreEl.style.display = end < filteredList.length ? "block" : "none";
+        }
+
+        function loadMoreWords() {
+            wordLoadedCount += wordPageSize;
+            renderWordsUpTo(wordLoadedCount);
+        }
+
+        function toggleSkilled(idx) {
+            let u = safeUser(getUser());
+            if (!u.skilled) u.skilled = [];
+            let pos = u.skilled.indexOf(idx);
+            if (pos >= 0) u.skilled.splice(pos, 1);
+            else u.skilled.push(idx);
+            setUser(u);
+            renderWordList();
+        }
+
+        // ==============================
+        // 学习 & 复习
+        // ==============================
+        function start(idx) {
+            let u = safeUser(getUser());
+            if (u.learn.includes(idx)) {
+                openModal(idx);
+            } else {
+                openLearnModal(idx);
+            }
+        }
+
+        let dictCache = {};
+        let transCache = {};
+
+        function openLearnModal(idx) {
+            let w = getWords()[idx];
+            learnIdx = idx;
+            document.getElementById("learn-word").innerText = w.word;
+            document.getElementById("learn-meaning").innerText = w.meaning;
+            let examHtml = w.exam.split(" ").map(t => EXAM_LABELS[t] || t).join("、");
+            document.getElementById("learn-meta").innerHTML = `柯林斯 ${"★".repeat(w.collins)} | ${examHtml}`;
+            document.getElementById("learn-detail").innerHTML = '<span style="color:#999;">加载例句中...</span>';
+            document.getElementById("learn-modal").style.display = "flex";
+            fetchDict(w.word);
+        }
+
+        function fetchDict(word) {
+            if (dictCache[word]) {
+                renderDict(dictCache[word]);
+                return;
+            }
+            fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word))
+                .then(res => {
+                    if (!res.ok) throw new Error();
+                    return res.json();
+                })
+                .then(data => {
+                    dictCache[word] = data;
+                    if (learnIdx !== null && getWords()[learnIdx].word === word) {
+                        renderDict(data);
+                    }
+                })
+                .catch(() => {
+                    if (learnIdx !== null && getWords()[learnIdx].word === word) {
+                        document.getElementById("learn-detail").innerHTML = '<span style="color:#ccc;">暂无在线例句</span>';
+                    }
+                });
+        }
+
+        function renderDict(data) {
+            if (!data || !data[0] || !data[0].meanings) {
+                document.getElementById("learn-detail").innerHTML = '<span style="color:#ccc;">暂无在线例句</span>';
+                return;
+            }
+            let phonetic = "";
+            let audioUrl = "";
+            if (data[0].phonetics) {
+                for (let p of data[0].phonetics) {
+                    if (p.text && !phonetic) phonetic = p.text;
+                    if (p.audio && !audioUrl) audioUrl = p.audio;
+                }
+            }
+            if (phonetic) {
+                document.getElementById("learn-phonetic").innerText = phonetic;
+            }
+            if (audioUrl) {
+                learnAudioUrl = audioUrl;
+            }
+            let word = data[0].word.toLowerCase();
+            let html = "";
+            let transIdx = 0;
+            let transQueue = [];
+            let u = safeUser(getUser());
+            data[0].meanings.forEach(m => {
+                html += `<div style="margin-bottom:10px;">`;
+                html += `<div style="color:#34a853;font-weight:bold;margin-bottom:4px;">${m.partOfSpeech}</div>`;
+                m.definitions.slice(0, 3).forEach((d, i) => {
+                    html += `<div style="margin-bottom:6px;padding-left:8px;">`;
+                    html += `<div>${i + 1}. ${d.definition}`;
+                    if (u.translate) {
+                        html += `<span id="trans-${transIdx}" style="color:#999;font-size:12px;margin-left:4px;"></span>`;
+                        transQueue.push({ text: d.definition, idx: transIdx });
+                    }
+                    html += `</div>`;
+                    transIdx++;
+                    if (d.example) {
+                        let highlighted = highlightWord(d.example, word);
+                        html += `<div style="color:#888;font-style:italic;padding-left:12px;align-items:center;gap:6px;">"${highlighted}"<span class="speak-example" style="cursor:pointer;font-style:normal;font-size:16px;" onclick="speakExample(this)" data-text="${escAttr(d.example)}">🔊</span></div>`;
+                    }
+                    html += `</div>`;
+                });
+                html += `</div>`;
+            });
+            document.getElementById("learn-detail").innerHTML = html || '<span style="color:#ccc;">暂无在线例句</span>';
+            if (u.translate && transQueue.length > 0) {
+                transQueue.forEach(item => translateDef(item.text, item.idx));
+            }
+        }
+
+        let transQueue = [];
+        let transRunning = false;
+
+        function translateDef(text, idx) {
+            transQueue.push({ text, idx });
+            processTransQueue();
+        }
+
+        async function processTransQueue() {
+            if (transRunning || transQueue.length === 0) return;
+            transRunning = true;
+            let { text, idx } = transQueue.shift();
+            let el = document.getElementById("trans-" + idx);
+            if (transCache[text]) {
+                if (el) el.innerText = transCache[text];
+                transRunning = false;
+                processTransQueue();
+                return;
+            }
+            if (!el) {
+                transRunning = false;
+                processTransQueue();
+                return;
+            }
+            el.innerText = "（翻译中…）";
+            try {
+                let url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=" + encodeURIComponent(text);
+                let res = await fetch(url);
+                let data = await res.json();
+                let zh = "";
+                if (data && data[0]) {
+                    zh = data[0].map(item => item[0] || "").join("");
+                }
+                if (zh) {
+                    transCache[text] = "（" + zh + "）";
+                    el.innerText = "（" + zh + "）";
+                } else {
+                    el.innerText = "";
+                }
+            } catch {
+                el.innerText = "（翻译失败）";
+            }
+            transRunning = false;
+            processTransQueue();
+        }
+
+        function highlightWord(text, word) {
+            let re = new RegExp('(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+            return text.replace(re, '<span style="background: #ffff00;padding: 0px 3px;color:#000;font-weight:bold;font-style:normal;">$1</span>');
+        }
+
+        function escAttr(s) {
+            return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function speak(text) {
+            let u = safeUser(getUser());
+            let voice = u.voice || 'local';
+            if (voice === 'local') {
+                speechSynthesis.cancel();
+                let utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'en-US';
+                utter.rate = 0.8;
+                speechSynthesis.speak(utter);
+            } else {
+                let type = voice === 'us' ? 0 : 1;
+                new Audio(`http://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(text)}`).play();
+            }
+        }
+
+        function speakExample(el) {
+            let text = el.getAttribute('data-text');
+            speechSynthesis.cancel();
+            let utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'en-US';
+            utter.rate = 0.8;
+            speechSynthesis.speak(utter);
+        }
+
+        function closeLearnModal() {
+            document.getElementById("learn-modal").style.display = "none";
+            learnIdx = null;
+            learnAudioUrl = "";
+        }
+
+        function addToReview() {
+            let idx = learnIdx;
+            if (idx === null) return;
+            let u = safeUser(getUser());
+            let now = Date.now();
+            let todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            if (!u.learn.includes(idx)) {
+                u.learn.push(idx);
+                let nextTs = nextDate(now, 1);
+                u.log[idx] = { t: now, c: 1, next: nextTs };
+                setUser(u);
+                recordDaily('learn');
+            }
+            closeLearnModal();
+            renderAll();
+        }
+
+        function openIciba() {
+            if (learnIdx === null) return;
+            let word = ALL_WORDS[learnIdx].word;
+            window.open('https://www.iciba.com/word?w=' + encodeURIComponent(word), '_blank');
+        }
+        function speakWord() {
+            if (learnIdx === null) return;
+            if (learnAudioUrl) {
+                new Audio(learnAudioUrl).play();
+                return;
+            }
+            speak(getWords()[learnIdx].word);
+        }
+
+        function speakWordBy(idx) {
+            speak(getWords()[idx].word);
+        }
+
+        // ==============================
+        // 答题弹窗
+        // ==============================
+        let reviewRound = 0;
+        let reviewQueue = [];
+        let reviewIndex = 0;
+        let reviewPassed = {};
+        let reviewViewedAns = false;
+
+        function startReviewSession() {
+            let tasks = getTodayTasks();
+            if (tasks.length === 0) { toast('今日暂无待复习单词', 'warning'); return; }
+            reviewRound = 1;
+            reviewQueue = tasks.map(t => t.idx);
+            reviewIndex = 0;
+            reviewPassed = {};
+            reviewViewedAns = false;
+            setMode(1);
+            document.getElementById("modal").style.display = "flex";
+            renderReviewWord();
+        }
+
+        function renderReviewWord() {
+            if (reviewIndex >= reviewQueue.length) {
+                finishReviewRound();
+                return;
+            }
+            let idx = reviewQueue[reviewIndex];
+            let w = getWords()[idx];
+            curr = { idx, item: w };
+            reviewViewedAns = false;
+            document.getElementById("review-round-info").innerHTML = `第${reviewRound}轮 · ${MODE_LABELS[reviewRound]}`;
+            document.getElementById("review-progress-info").innerText = `${reviewIndex + 1} / ${reviewQueue.length}`;
+            let passedInfo = reviewPassed[idx] || [];
+            let roundLabels = ['看词写义', '看义写词', '听写单词'];
+            let passedHtml = roundLabels.map((label, i) => {
+                let done = passedInfo.includes(i + 1);
+                return `<span style="color:${done ? '#34a853' : '#ccc'};margin-right:8px;">${done ? '✅' : '⬜'}${label}</span>`;
+            }).join('');
+            document.getElementById("review-passed-info").innerHTML = passedHtml;
+            let t = '';
+            if (reviewRound === 1) {
+                t = `单词：<strong style="font-size:22px;">${w.word}</strong><br>请写出中文释义`;
+            } else if (reviewRound === 2) {
+                t = `释义：${w.meaning}<br>请写出英文单词`;
+            } else if (reviewRound === 3) {
+                t = `请听写单词（点击朗读按钮播放）<br><button class="btn btn-gray" onclick="speakCurrWord()">🔊 朗读</button>`;
+                speak(w.word);
+            }
+            document.getElementById("q-text").innerHTML = t;
+            document.getElementById("input-ans").value = '';
+            document.getElementById("input-ans").disabled = false;
+            document.getElementById("ans-show").innerText = '';
+            document.getElementById("review-feedback").style.display = 'none';
+            document.getElementById("btn-submit-review").disabled = false;
+            document.getElementById("btn-submit-review").className = 'btn btn-blue';
+            document.getElementById("btn-view-ans").disabled = false;
+            document.getElementById("btn-skip-review").className = 'btn btn-gray';
+            document.getElementById("input-ans").focus();
+        }
+
+        function reviewKeyEnter() {
+            let modal = document.getElementById("modal");
+            if (modal.style.display !== "flex") return;
+            let submitBtn = document.getElementById("btn-submit-review");
+            if (!submitBtn.disabled) {
+                submitReviewAnswer();
+            } else {
+                skipReviewWord();
+            }
+        }
+
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") reviewKeyEnter();
+        });
+
+        function submitReviewAnswer() {
+            if (reviewIndex >= reviewQueue.length) return;
+            let input = document.getElementById("input-ans").value;
+            let w = curr.item;
+            let result = checkExamAnswer(input, w);
+            let scorePct = Math.round(result.score * 100);
+            let fb = document.getElementById("review-feedback");
+            fb.style.display = 'block';
+            if (result.correct) {
+                playSound('correct');
+                fb.style.background = '#e6f4ea';
+                fb.style.color = '#1e7e34';
+                fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
+                if (!reviewPassed[curr.idx]) reviewPassed[curr.idx] = [];
+                if (!reviewPassed[curr.idx].includes(reviewRound)) {
+                    reviewPassed[curr.idx].push(reviewRound);
+                }
+                document.getElementById("input-ans").disabled = true;
+                document.getElementById("btn-submit-review").disabled = true;
+                setTimeout(() => {
+                    reviewIndex++;
+                    renderReviewWord();
+                }, 1000);
+            } else {
+                playSound('wrong');
+                fb.style.background = '#fce8e6';
+                fb.style.color = '#c5221f';
+                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${reviewRound === 1 ? w.meaning : w.word}</strong>`;
+                document.getElementById("input-ans").disabled = true;
+                document.getElementById("btn-submit-review").disabled = true;
+                document.getElementById("btn-submit-review").className = 'btn btn-gray';
+                document.getElementById("btn-skip-review").className = 'btn btn-blue';
+            }
+        }
+
+        function viewReviewAns() {
+            if (!curr) return;
+            let w = curr.item;
+            document.getElementById("ans-show").innerText = `${w.word}\n${w.meaning}`;
+            document.getElementById("btn-submit-review").disabled = true;
+            document.getElementById("btn-submit-review").className = 'btn btn-gray';
+            document.getElementById("input-ans").disabled = true;
+            document.getElementById("btn-skip-review").className = 'btn btn-blue';
+            reviewViewedAns = true;
+        }
+
+        function skipReviewWord() {
+            if (reviewIndex >= reviewQueue.length) return;
+            let idx = reviewQueue.splice(reviewIndex, 1)[0];
+            reviewQueue.push(idx);
+            renderReviewWord();
+        }
+
+        function finishReviewRound() {
+            if (reviewRound < 3) {
+                reviewRound++;
+                let nextQueue = reviewQueue.filter(idx => {
+                    let p = reviewPassed[idx] || [];
+                    return p.includes(reviewRound - 1);
+                });
+                if (nextQueue.length === 0) {
+                    finishReviewAll();
+                    return;
+                }
+                reviewQueue = nextQueue;
+                reviewIndex = 0;
+                setMode(reviewRound);
+                renderReviewWord();
+            } else {
+                finishReviewAll();
+            }
+        }
+
+        function finishReviewAll() {
+            let u = safeUser(getUser());
+            let reviewed = Object.keys(reviewPassed).filter(idx => {
+                let p = reviewPassed[idx];
+                return p.includes(1) && p.includes(2) && p.includes(3);
+            });
+            reviewed.forEach(idx => {
+                let i = parseInt(idx);
+                let log = u.log[i];
+                if (!log) return;
+                log.c += 1;
+                let interval = PERIOD[log.c] - PERIOD[log.c - 1];
+                if (log.c >= PERIOD.length) {
+                    if (!u.done.includes(i)) u.done.push(i);
+                    log.next = null;
+                } else {
+                    let d = new Date();
+                    d.setDate(d.getDate() + interval);
+                    log.next = d.getTime();
+                }
+            });
+            setUser(u);
+            if (reviewed.length > 0) recordDaily('review');
+            closeModal();
+            renderAll();
+            if (reviewed.length > 0) {
+                playSound('victory');
+                toast(`复习完成！${reviewed.length} 个单词已通过三轮复习`, 'success');
+            } else {
+                toast('本轮无单词通过全部三轮复习', 'warning');
+            }
+        }
+
+        function openModal(idx) {
+            curr = { idx, item: getWords()[idx] };
+            reviewRound = 1;
+            reviewQueue = [idx];
+            reviewIndex = 0;
+            reviewPassed = {};
+            reviewViewedAns = false;
+            setMode(1);
+            document.getElementById("modal").style.display = "flex";
+            renderReviewWord();
+        }
+
+        function closeModal() {
+            document.getElementById("modal").style.display = "none";
+            curr = null;
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll(".mode-bar .mbtn").forEach((b, i) => {
+                b.classList.toggle("on", i === m - 1);
+            });
+            renderTodayList();
+            renderExamPool();
+        }
+
+        function speakCurrWord() {
+            if (!curr) return;
+            speak(curr.item.word);
+        }
+
+        function nextDate(st, count) {
+            if (count >= PERIOD.length) return null;
+            let d = new Date(st);
+            d.setDate(d.getDate() + PERIOD[count]);
+            return d.getTime();
+        }
+
+        // ==============================
+        // 统计 & 日历 & 今日任务
+        // ==============================
+        function renderExamSetting() {
+            let u = safeUser(getUser());
+            let tags = ["zk", "gk", "cet4", "cet6", "ky", "ielts", "toefl"];
+            let html = `<span class="tag ${u.exam == '' ? 'on' : ''}" onclick="setMyExam('')">全部</span>`;
+            tags.forEach(t => {
+                html += `<span class="tag ${u.exam == t ? 'on' : ''}" onclick="setMyExam('${t}')">${EXAM_LABELS[t]}</span>`;
+            });
+            document.getElementById("exam-setting").innerHTML = html;
+            document.getElementById("translate-toggle").checked = u.translate;
+        }
+
+        function toggleTranslate() {
+            let u = safeUser(getUser());
+            u.translate = document.getElementById("translate-toggle").checked;
+            setUser(u);
+        }
+
+        function setVoice(v) {
+            let u = safeUser(getUser());
+            u.voice = v;
+            setUser(u);
+            renderVoiceSetting();
+        }
+
+        function renderVoiceSetting() {
+            let u = safeUser(getUser());
+            let v = u.voice || 'local';
+            ['local', 'us', 'en'].forEach(id => {
+                let btn = document.getElementById('voice-' + id);
+                if (btn) btn.className = id === v ? 'btn btn-green' : 'btn btn-gray';
+            });
+        }
+
+        function setMyExam(e) {
+            let u = safeUser(getUser());
+            u.exam = e;
+            setUser(u);
+            renderExamSetting();
+            renderTodayList();
+        }
+
+        function renderStats() {
+            let a = safeUser(JSON.parse(localStorage.getItem("wuserA") || "null"));
+            let b = safeUser(JSON.parse(localStorage.getItem("wuserB") || "null"));
+            let u = safeUser(getUser());
+            let today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let ts = today.getTime();
+            let countWait = (usr) => usr.learn.filter(x => !usr.done.includes(x) && usr.log[x] && usr.log[x].next && usr.log[x].next <= ts + 86400000).length;
+            document.getElementById("a-total").innerText = a.learn.length;
+            document.getElementById("a-wait").innerText = countWait(a);
+            document.getElementById("a-done").innerText = a.done.length;
+            document.getElementById("b-total").innerText = b.learn.length;
+            document.getElementById("b-wait").innerText = countWait(b);
+            document.getElementById("b-done").innerText = b.done.length;
+            document.getElementById("my-total").innerText = u.learn.length;
+            document.getElementById("my-wait").innerText = countWait(u);
+            document.getElementById("my-done").innerText = u.done.length;
+        }
+
+        function renderToday() {
+            let cnt = getTodayTasks().length;
+            document.getElementById("today-count").innerText = cnt;
+        }
+
+        function renderTodayList() {
+            let targetDate = selectedDate || new Date();
+            targetDate.setHours(0, 0, 0, 0);
+            let now = new Date();
+            now.setHours(0, 0, 0, 0);
+            let isToday = !selectedDate;
+            let isPast = selectedDate && targetDate < now;
+            let isFuture = selectedDate && targetDate > now;
+            let tasks = isToday ? getTodayTasks() : getTasksByDate(targetDate);
+            let dateStr = isToday ? "今日" : `${targetDate.getMonth() + 1}月${targetDate.getDate()}日`;
+            document.getElementById("review-date-label").innerText = dateStr;
+            let html = "";
+            let u = safeUser(getUser());
+            if (tasks.length === 0 && isToday) {
+                let words = getWords();
+                let pool = words.map((w, i) => ({ w, i })).filter(x => {
+                    if (u.exam && !x.w.exam.split(" ").includes(u.exam)) return false;
+                    if (u.skilled && u.skilled.includes(x.i)) return false;
+                    return true;
+                });
+                let shuffled = pool.sort(() => Math.random() - 0.5);
+                let picks = shuffled.slice(0, Math.min(10, pool.length));
+                let examLabel = u.exam ? EXAM_LABELS[u.exam] : '';
+                html = `<p style='margin-bottom:12px;color:#666;'>今日暂无待复习，随机推荐${examLabel}10个单词：</p>`;
+                picks.forEach(x => {
+                    let hideWord = (mode == 2);
+                    let hideMeaning = (mode == 1);
+                    html += `
+        <div class="word-item">
+            <div>
+                <span class="word-text">${hideWord ? '____' : x.w.word}</span>
+                <div class="word-meaning">${hideMeaning ? '' : x.w.meaning}</div>
+            </div>
+            <div>
+                <button class="btn btn-green" onclick="start(${x.i})">学习</button>
+                <button class="btn btn-gray" onclick="speakWordBy(${x.i})">🔊</button>
+            </div>
+        </div>`;
+                });
+            } else if (tasks.length === 0 && !isToday) {
+                html = `<p style='color:#666;'>${dateStr}暂无待复习单词</p>`;
+            } else {
+                if (isPast) {
+                    html += `<p style='margin-bottom:10px;color:#c0392b;font-size:13px;'>⚠ ${dateStr}有 ${tasks.length} 个过期未复习的单词，请尽快复习</p>`;
+                }
+                if (isFuture) {
+                    html += `<p style='margin-bottom:10px;color:#666;font-size:13px;'>📅 ${dateStr}待复习单词预览</p>`;
+                }
+                if (isToday || isPast) {
+                    html += `<div style="margin-bottom:12px;"><button class="btn btn-blue" onclick="startReviewSession()">开始复习（${tasks.length}个单词，三轮模式）</button></div>`;
+                }
+                tasks.forEach(t => {
+                    let hideWord = (mode == 2 || mode == 3);
+                    let hideMeaning = (mode == 1);
+                    if (isFuture) {
+                        html += `
+        <div class="word-item" style="opacity:0.7;">
+            <div>
+                <span class="word-text">${t.word.word}</span>
+                <div class="word-meaning">${t.word.meaning}</div>
+            </div>
+            <div>
+                <button class="btn btn-gray" onclick="speakWordBy(${t.idx})">🔊</button>
+            </div>
+        </div>`;
+                    } else if (isToday || isPast) {
+                        html += `
+        <div class="word-item${isPast ? ' overdue-item' : ''}">
+            <div>
+                <span class="word-text">${hideWord ? '____' : t.word.word}</span>
+                <div class="word-meaning">${hideMeaning ? '' : t.word.meaning}</div>
+            </div>
+            <div>
+                <button class="btn btn-gray" onclick="speakWordBy(${t.idx})">🔊</button>
+            </div>
+        </div>`;
+                    }
+                });
+            }
+            document.getElementById("today-list").innerHTML = html;
+        }
+
+        function getTodayTasks() {
+            let u = safeUser(getUser());
+            let words = getWords();
+            let today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let ts = today.getTime();
+            let tasks = [];
+            let needSave = false;
+            u.learn.forEach(i => {
+                if (u.done.includes(i)) return;
+                if (!u.log[i] || !u.log[i].next) return;
+                let nt = u.log[i].next;
+                if (nt <= ts + 86400000) {
+                    tasks.push({ idx: i, word: words[i], nextTime: nt });
+                }
+                if (nt < ts) {
+                    u.log[i].next = ts;
+                    needSave = true;
+                }
+            });
+            if (needSave) setUser(u);
+            return tasks;
+        }
+
+        function getTasksByDate(date) {
+            let u = safeUser(getUser());
+            let words = getWords();
+            let ts = date.getTime();
+            let tasks = [];
+            u.learn.forEach(i => {
+                if (u.done.includes(i)) return;
+                if (!u.log[i] || !u.log[i].next) return;
+                let nt = u.log[i].next;
+                if (nt >= ts && nt < ts + 86400000) {
+                    tasks.push({ idx: i, word: words[i], nextTime: nt });
+                }
+            });
+            return tasks;
+        }
+
+        function renderCalendar() {
+            let u = safeUser(getUser());
+            let now = new Date();
+            let year = calYear;
+            let month = calMonth;
+            let firstDay = new Date(year, month, 1).getDay();
+            let daysInMonth = new Date(year, month + 1, 0).getDate();
+            let todayDate = now.getDate();
+            let todayMonth = now.getMonth();
+            let todayYear = now.getFullYear();
+            let isCurrentMonth = (year === todayYear && month === todayMonth);
+            let todayTs = new Date(todayYear, todayMonth, todayDate).getTime();
+            let taskDays = {};
+            let overdueDays = {};
+            u.learn.forEach(i => {
+                if (u.done.includes(i)) return;
+                if (!u.log[i] || !u.log[i].next) return;
+                let nt = u.log[i].next;
+                let d = new Date(nt);
+                if (d.getFullYear() == year && d.getMonth() == month) {
+                    let day = d.getDate();
+                    if (!taskDays[day]) taskDays[day] = 0;
+                    taskDays[day]++;
+                    if (nt < todayTs) {
+                        if (!overdueDays[day]) overdueDays[day] = 0;
+                        overdueDays[day]++;
+                    }
+                }
+            });
+            let navHtml = `<div class="calendar-nav">
+                <button onclick="calPrev()">◀ 上月</button>
+                <span class="cal-title">${year}年${month + 1}月</span>
+                <button onclick="calNext()">下月 ▶</button>
+            </div>`;
+            let html = navHtml;
+            let weekNames = ["日", "一", "二", "三", "四", "五", "六"];
+            weekNames.forEach(w => { html += `<div style="font-weight:bold;padding:8px;text-align:center;">${w}</div>`; });
+            for (let i = 0; i < firstDay; i++) { html += `<div class="calendar-day"></div>`; }
+            for (let d = 1; d <= daysInMonth; d++) {
+                let cls = "calendar-day";
+                let isToday = isCurrentMonth && d == todayDate;
+                let isOverdue = !!overdueDays[d];
+                let isFuture = !isCurrentMonth ? (year > todayYear || (year === todayYear && month > todayMonth)) : d > todayDate;
+                if (isToday) cls += " today";
+                if (taskDays[d]) cls += " has-task";
+                if (isOverdue && !isToday) cls += " overdue";
+                if (selectedDate && selectedDate.getFullYear() == year && selectedDate.getMonth() == month && selectedDate.getDate() == d) cls += " selected";
+                let label = "";
+                if (overdueDays[d] && !isToday) {
+                    label = `<br><span style="font-size:11px;">⚠${overdueDays[d]}</span>`;
+                } else if (taskDays[d]) {
+                    label = `<br><span style="font-size:11px;">${taskDays[d]}个</span>`;
+                }
+                let clickable = true;
+                html += `<div class="${cls}" ${clickable ? `onclick="selectDate(${year},${month},${d})" style="cursor:pointer;"` : 'style="opacity:0.4;"'}>${d}${label}</div>`;
+            }
+            document.getElementById("calendar").innerHTML = html;
+        }
+
+        function calPrev() {
+            calMonth--;
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            selectedDate = null;
+            renderCalendar();
+            renderTodayList();
+        }
+
+        function calNext() {
+            calMonth++;
+            if (calMonth > 11) { calMonth = 0; calYear++; }
+            selectedDate = null;
+            renderCalendar();
+            renderTodayList();
+        }
+
+        function selectDate(y, m, d) {
+            let now = new Date();
+            now.setHours(0, 0, 0, 0);
+            let clicked = new Date(y, m, d);
+            if (clicked.getTime() === now.getTime()) {
+                selectedDate = null;
+            } else {
+                selectedDate = clicked;
+            }
+            renderCalendar();
+            renderTodayList();
+        }
+
+        // ==============================
+        // 下载单词xlsx
+        // ==============================
+        function downloadXlsx() {
+            let words = getWords();
+            let data = [["单词", "柯林斯分级", "考试范围", "词义"]];
+            words.forEach(w => data.push([w.word, w.collins, w.exam, w.meaning]));
+            let ws = XLSX.utils.aoa_to_sheet(data);
+            ws['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 20 }, { wch: 60 }];
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "单词");
+            XLSX.writeFile(wb, "单词库.xlsx");
+        }
+
+        // ==============================
+        // 重置用户
+        // ==============================
+        function resetUser() {
+            if (!confirm("确定重置当前用户的所有学习记录？")) return;
+            localStorage.removeItem("wuser" + user);
+            renderAll();
+        }
+
+        function exportData() {
+            let u = safeUser(getUser());
+            let exportObj = {
+                version: 1,
+                user: user,
+                data: u,
+                exportTime: new Date().toISOString()
+            };
+            let json = JSON.stringify(exportObj, null, 2);
+            let blob = new Blob([json], { type: "application/json" });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = `单词学习数据_同学${user}_${new Date().toLocaleDateString().replace(/\//g, "-")}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let obj = JSON.parse(e.target.result);
+                    if (!obj.data || !obj.data.learn) {
+                        toast("文件格式不正确，请选择正确的导出文件", "error");
+                        return;
+                    }
+                    let srcUser = obj.user || "A";
+                    let msg = `检测到导出数据来自「同学${srcUser}」，将导入到当前「同学${user}」\n\n导出时间：${obj.exportTime ? new Date(obj.exportTime).toLocaleString() : "未知"}\n已学习：${obj.data.learn ? obj.data.learn.length : 0} 个\n\n确定导入？此操作会覆盖当前用户的所有数据！`;
+                    if (!confirm(msg)) return;
+                    let imported = safeUser(obj.data);
+                    setUser(imported);
+                    renderAll();
+                    toast("导入成功！", "success");
+                } catch (err) {
+                    toast("文件解析失败：" + err.message, "error");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = "";
+        }
+
+        // ==============================
+        // 关系查询系统
+        // ==============================
+        const REL_TYPES = ['相似', '同义词', '同音词', '部分同音', '近义词', '反义词', '同词不同性', '词形变化', '比较级', '最高级', '序数词', '过去式', '过去分词'];
+        const REL_TYPE_COLORS = {
+            '相似': '#8e44ad', '同义词': '#2980b9', '同音词': '#e67e22', '部分同音': '#d35400',
+            '近义词': '#27ae60', '反义词': '#c0392b', '同词不同性': '#16a085', '词形变化': '#7f8c8d',
+            '比较级': '#e91e63', '最高级': '#9c27b0', '序数词': '#00bcd4', '过去式': '#ff9800', '过去分词': '#795548'
+        };
+        let relIndex = new Map();
+        let relWordMap = new Map();
+        let relAlphaMap = new Map();
+        let relCurrentWord = "";
+        let relCurrentData = null;
+        let relActiveTypes = new Set(REL_TYPES);
+        let relSortAsc = true;
+
+        const REL_EXAMPLE_DATA = [
+            { word: "affect", collins: 4, exam: "cet4 cet6", meaning: "v. 影响；感动" },
+            { word: "effect", collins: 4, exam: "cet4 cet6", meaning: "n. 效果；影响 v. 引起" },
+            { word: "big", collins: 5, exam: "zk", meaning: "adj. 大的；重要的" },
+            { word: "large", collins: 5, exam: "zk gk", meaning: "adj. 大的；大量的" },
+            { word: "to", collins: 5, exam: "zk", meaning: "prep. 到；向" },
+            { word: "two", collins: 5, exam: "zk", meaning: "num. 二" },
+            { word: "write", collins: 4, exam: "zk", meaning: "v. 写；书写" },
+            { word: "right", collins: 5, exam: "zk", meaning: "adj. 正确的；右边的 n. 权利" },
+            { word: "happy", collins: 5, exam: "zk", meaning: "adj. 快乐的；幸福的" },
+            { word: "joyful", collins: 3, exam: "", meaning: "adj. 快乐的；高兴的" },
+            { word: "hot", collins: 5, exam: "zk", meaning: "adj. 热的；辣的" },
+            { word: "cold", collins: 5, exam: "zk", meaning: "adj. 冷的 n. 感冒" },
+            { word: "record", collins: 4, exam: "cet4", meaning: "n. 记录；唱片 v. 记录；录音" },
+            { word: "run", collins: 5, exam: "zk", meaning: "v. 跑；运转 n. 跑步" },
+            { word: "runs", collins: 0, exam: "", meaning: "v. 跑（第三人称单数）" },
+            { word: "running", collins: 0, exam: "", meaning: "n. 跑步 adj. 流动的" },
+            { word: "ran", collins: 0, exam: "", meaning: "v. 跑（过去式）" },
+            { word: "no", collins: 5, exam: "zk", meaning: "adv. 不 adj. 没有的" },
+            { word: "know", collins: 5, exam: "zk", meaning: "v. 知道；了解" },
+            { word: "here", collins: 5, exam: "zk", meaning: "adv. 这里" },
+            { word: "hear", collins: 4, exam: "zk gk", meaning: "v. 听见；听到" },
+            { word: "big", collins: 5, exam: "zk", meaning: "adj. 大的；重要的" },
+            { word: "small", collins: 5, exam: "zk", meaning: "adj. 小的；少的" },
+            { word: "good", collins: 5, exam: "zk", meaning: "adj. 好的；擅长的" },
+            { word: "bad", collins: 5, exam: "zk", meaning: "adj. 坏的；不好的" }
+        ];
+
+        const REL_EXAMPLE_RELATIONS = [
+            "原词,关系类型,目标词",
+            "affect,相似,effect",
+            "big,同义词,large",
+            "to,同音词,two",
+            "write,部分同音,right",
+            "happy,近义词,joyful",
+            "hot,反义词,cold",
+            "record,同词不同性,record(n.)|record(v.)",
+            "run,词形变化,runs",
+            "run,词形变化,running",
+            "run,词形变化,ran",
+            "no,同音词,know",
+            "here,同音词,hear",
+            "big,反义词,small",
+            "good,反义词,bad",
+            "big,比较级,bigger",
+            "big,最高级,biggest",
+            "one,序数词,first",
+            "two,序数词,second",
+            "go,过去式,went",
+            "go,过去分词,gone",
+            "do,过去式,did",
+            "do,过去分词,done"
+        ].join("\n");
+
+        function buildRelIndex(csvText) {
+            relIndex.clear();
+            let lines = csvText.trim().split("\n");
+            if (lines.length < 2) return;
+            for (let i = 1; i < lines.length; i++) {
+                let parts = lines[i].split(",");
+                if (parts.length < 3) continue;
+                let w1 = parts[0].trim();
+                let rtype = parts[1].trim();
+                let w2 = parts.slice(2).join(",").trim();
+                if (!w1 || !w2 || !REL_TYPES.includes(rtype)) continue;
+                let key = w1.toLowerCase();
+                if (!relIndex.has(key)) relIndex.set(key, new Map());
+                let group = relIndex.get(key);
+                if (!group.has(rtype)) group.set(rtype, new Set());
+                group.get(rtype).add(w2);
+                let key2 = w2.toLowerCase();
+                if (!relIndex.has(key2)) relIndex.set(key2, new Map());
+                let group2 = relIndex.get(key2);
+                if (!group2.has(rtype)) group2.set(rtype, new Set());
+                group2.get(rtype).add(w1);
+            }
+            relAlphaMap.clear();
+            for (let [key, group] of relIndex) {
+                let letter = key.charAt(0).toUpperCase();
+                if (!relAlphaMap.has(letter)) relAlphaMap.set(letter, []);
+                relAlphaMap.get(letter).push({ word: key, group: group });
+            }
+        }
+
+        function buildRelWordMap() {
+            relWordMap.clear();
+            let words = getWords();
+            for (let w of words) {
+                relWordMap.set(w.word.toLowerCase(), w);
+            }
+        }
+
+        function loadRelations() {
+            fetch("relations.csv")
+                .then(r => r.text())
+                .then(text => {
+                    buildRelIndex(text);
+                    buildRelWordMap();
+                    renderRelAlphaIndex();
+                    renderRelTypeFilters();
+                })
+                .catch(() => {
+                    buildRelIndex(REL_EXAMPLE_RELATIONS);
+                    buildRelWordMap();
+                    renderRelAlphaIndex();
+                    renderRelTypeFilters();
+                });
+        }
+
+        function getWordInfo(word) {
+            let key = word.toLowerCase();
+            if (relWordMap.has(key)) return relWordMap.get(key);
+            let w = getWords().find(w => w.word.toLowerCase() === key);
+            return w || null;
+        }
+
+        function relSearch(query) {
+            query = query.trim();
+            if (!query) {
+                document.getElementById("rel-result").innerHTML = '<div style="color:#999;text-align:center;padding:30px;">请输入单词开始搜索</div>';
+                document.getElementById("rel-suggestions").style.display = "none";
+                document.getElementById("rel-count-info").textContent = "";
+                return;
+            }
+            let q = query.toLowerCase();
+            let exact = relIndex.has(q);
+            let matches = [];
+            let firstLetter = q.charAt(0).toUpperCase();
+            if (relAlphaMap.has(firstLetter)) {
+                for (let e of relAlphaMap.get(firstLetter)) {
+                    if (e.word.includes(q)) matches.push(e.word);
+                    if (matches.length >= 20) break;
+                }
+            }
+            if (matches.length < 20) {
+                for (let [key] of relIndex) {
+                    if (!key.startsWith(firstLetter.toLowerCase()) && key.includes(q) && !matches.includes(key)) {
+                        matches.push(key);
+                        if (matches.length >= 20) break;
+                    }
+                }
+            }
+            let sugEl = document.getElementById("rel-suggestions");
+            if (!exact && matches.length > 0 && matches[0] !== q) {
+                let html = matches.map(m => {
+                    let info = getWordInfo(m);
+                    let meaning = info ? info.meaning.split(";")[0] : "";
+                    let safeM = m.replace(/'/g, "\\'");
+                    return `<div style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;" onclick="relSearch('${safeM}');document.getElementById('rel-search').value='${safeM}'">${m}${meaning ? ' <span style="color:#999;font-size:12px;">' + meaning + '</span>' : ''}</div>`;
+                }).join("");
+                sugEl.innerHTML = html;
+                sugEl.style.display = "block";
+            } else {
+                sugEl.style.display = "none";
+            }
+            if (!exact) {
+                let wordMatches = [];
+                for (let w of getWords()) {
+                    if (w.word.toLowerCase().includes(q)) wordMatches.push(w.word);
+                    if (wordMatches.length >= 20) break;
+                }
+                if (wordMatches.length > 0) {
+                    let html = '<div style="color:#999;margin-bottom:8px;">未找到关系数据，相似单词：</div>';
+                    html += wordMatches.map(w => { let sw = w.replace(/'/g, "\\'"); return `<span style="display:inline-block;padding:4px 10px;margin:3px;background:#f0f0f0;border-radius:12px;cursor:pointer;font-size:13px;" onclick="relSearch('${sw}');document.getElementById('rel-search').value='${sw}'">${w}</span>`; }).join("");
+                    document.getElementById("rel-result").innerHTML = html;
+                } else {
+                    document.getElementById("rel-result").innerHTML = '<div style="color:#999;text-align:center;padding:30px;">未找到匹配的单词</div>';
+                }
+                document.getElementById("rel-count-info").textContent = "";
+                return;
+            }
+            relCurrentWord = q;
+            relCurrentData = relIndex.get(q);
+            renderRelResult();
+        }
+
+        function renderRelResult() {
+            if (!relCurrentData) return;
+            let info = getWordInfo(relCurrentWord);
+            let html = '<div style="background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:16px;">';
+            html += `<div style="font-size:28px;font-weight:bold;margin-bottom:4px;">${relCurrentWord}</div>`;
+            if (info) {
+                html += `<div style="font-size:16px;color:#333;margin-bottom:4px;">${info.meaning}</div>`;
+                html += `<div style="font-size:13px;color:#999;">柯林斯等级：${info.collins || 'N/A'}`;
+                if (info.exam) {
+                    let tags = info.exam.split(" ").map(t => EXAM_LABELS[t] || t).filter(Boolean);
+                    if (tags.length) html += ' | ' + tags.map(t => `<span style="background:#e8f5e9;padding:2px 6px;border-radius:4px;font-size:11px;">${t}</span>`).join(" ");
+                }
+                html += '</div>';
+            } else {
+                html += '<div style="font-size:13px;color:#999;">词库中无此单词详细信息</div>';
+            }
+            html += '</div>';
+
+            let totalRels = 0;
+            let filteredTypes = [...relCurrentData.keys()].filter(t => relActiveTypes.has(t));
+            for (let type of filteredTypes) {
+                let targets = [...relCurrentData.get(type)].filter(t => t.toLowerCase() !== relCurrentWord);
+                if (targets.length === 0) continue;
+                if (relSortAsc) targets.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+                else targets.sort((a, b) => b.toLowerCase().localeCompare(a.toLowerCase()));
+                totalRels += targets.length;
+                let color = REL_TYPE_COLORS[type] || '#666';
+                html += `<div style="margin-bottom:14px;">`;
+                html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">`;
+                html += `<span style="display:inline-block;width:4px;height:18px;background:${color};border-radius:2px;"></span>`;
+                html += `<span style="font-weight:bold;font-size:15px;color:${color};">${type}</span>`;
+                html += `<span style="font-size:12px;color:#999;">（${targets.length}）</span>`;
+                html += `</div>`;
+                html += `<div style="display:flex;flex-wrap:wrap;gap:6px;padding-left:10px;">`;
+                for (let t of targets) {
+                    let tInfo = getWordInfo(t);
+                    let tip = tInfo ? tInfo.meaning.split(";")[0].replace(/"/g, '&quot;') : "";
+                    let display = t;
+                    let searchKey = t.split('(')[0].trim().replace(/'/g, "\\'");
+                    if (type === '同词不同性' && t.includes('|')) {
+                        let parts = t.split('|');
+                        display = parts.join(' / ');
+                    }
+                    html += `<span style="display:inline-block;padding:5px 12px;background:#fff;border:1px solid ${color}33;border-radius:16px;cursor:pointer;font-size:13px;color:${color};transition:all 0.2s;" title="${tip}" onclick="relSearch('${searchKey}');document.getElementById('rel-search').value='${searchKey}'" onmouseover="this.style.background='${color}';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='${color}'">${display}</span>`;
+                }
+                html += `</div></div>`;
+            }
+            if (totalRels === 0) {
+                html += '<div style="color:#999;text-align:center;padding:20px;">当前筛选条件下无关系数据</div>';
+            }
+            document.getElementById("rel-result").innerHTML = html;
+            document.getElementById("rel-count-info").textContent = `共 ${totalRels} 条关系`;
+        }
+
+        function renderRelTypeFilters() {
+            let html = "";
+            for (let t of REL_TYPES) {
+                let color = REL_TYPE_COLORS[t] || '#666';
+                let active = relActiveTypes.has(t);
+                html += `<button style="padding:4px 10px;border-radius:14px;font-size:12px;cursor:pointer;border:1px solid ${active ? color : '#ddd'};background:${active ? color : '#fff'};color:${active ? '#fff' : color};transition:all 0.2s;" onclick="toggleRelType('${t}')">${t}</button>`;
+            }
+            document.getElementById("rel-type-filters").innerHTML = html;
+        }
+
+        function toggleRelType(type) {
+            if (relActiveTypes.has(type)) relActiveTypes.delete(type);
+            else relActiveTypes.add(type);
+            renderRelTypeFilters();
+            if (relCurrentData) renderRelResult();
+        }
+
+        function relSortAZ() {
+            relSortAsc = !relSortAsc;
+            document.getElementById("rel-sort-btn").textContent = relSortAsc ? "排序 A→Z" : "排序 Z→A";
+            if (relCurrentData) renderRelResult();
+        }
+
+        function renderRelAlphaIndex() {
+            let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+            let indexHtml = "";
+            for (let l of letters) {
+                let count = relAlphaMap.has(l) ? relAlphaMap.get(l).length : 0;
+                indexHtml += `<button style="width:32px;height:32px;border-radius:6px;font-size:13px;font-weight:bold;cursor:pointer;border:1px solid #e0e0e0;background:${count > 0 ? '#fff' : '#f5f5f5'};color:${count > 0 ? '#333' : '#ccc'};transition:all 0.15s;" onclick="showRelAlpha('${l}')" ${count === 0 ? 'disabled' : ''} title="${count} 个单词">${l}</button>`;
+            }
+            document.getElementById("rel-alpha-index").innerHTML = indexHtml;
+        }
+
+        function showRelAlpha(letter) {
+            let entries = relAlphaMap.get(letter) || [];
+            let words = entries.map(e => {
+                let info = getWordInfo(e.word);
+                return { word: e.word, count: e.group.size, meaning: info ? info.meaning.split(";")[0] : "" };
+            }).sort((a, b) => a.word.localeCompare(b.word));
+            let html = `<div style="color:#666;margin-bottom:8px;">${letter} 开头的单词（${words.length} 个）</div>`;
+            html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+            for (let w of words) {
+                let sw = w.word.replace(/'/g, "\\'");
+                html += `<span style="display:inline-block;padding:4px 10px;background:#f0f4ff;border-radius:10px;cursor:pointer;font-size:13px;" title="${w.meaning}" onclick="relSearch('${sw}');document.getElementById('rel-search').value='${sw}'">${w.word}<span style="color:#999;font-size:11px;margin-left:2px;">${w.count}</span></span>`;
+            }
+            html += '</div>';
+            document.getElementById("rel-alpha-list").innerHTML = html;
+        }
+
+        function uploadWordsFile(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = JSON.parse(e.target.result);
+                    if (!Array.isArray(data)) throw new Error("不是数组格式");
+                    ALL_WORDS = data;
+                    localStorage.setItem("ALL_WORDS_DATA", JSON.stringify(data));
+                    buildRelWordMap();
+                    renderAll();
+                    toast("单词库已更新，共 " + data.length + " 个单词", "success");
+                } catch (err) {
+                    toast("文件解析失败：" + err.message, "error");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = "";
+        }
+
+        function uploadRelationsFile(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let text = e.target.result;
+                    buildRelIndex(text);
+                    renderRelAlphaIndex();
+                    renderRelTypeFilters();
+                    if (relCurrentWord) relSearch(relCurrentWord);
+                    let count = 0;
+                    for (let [, g] of relIndex) for (let [, s] of g) count += s.size;
+                    toast("关系表已更新，共 " + relIndex.size + " 个词，" + count + " 条关系", "success");
+                } catch (err) {
+                    toast("文件解析失败：" + err.message, "error");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = "";
+        }
+
+        // ==============================
+        // ==============================
+        // 考试功能
+        // ==============================
+        let examWords = [];
+        let examIndex = 0;
+        let examAnswers = [];
+        let examSubmitted = false;
+        let examStartTime = 0;
+        let examTimerInterval = null;
+
+        const MODE_LABELS = { 1: "看词写义", 2: "看义写词", 3: "听写单词" };
+
+        function similarity(a, b) {
+            if (!a || !b) return 0;
+            a = a.toLowerCase();
+            b = b.toLowerCase();
+            if (a === b) return 1;
+            let la = a.length, lb = b.length;
+            if (la === 0 || lb === 0) return 0;
+            let dp = [];
+            for (let i = 0; i <= la; i++) {
+                dp[i] = [i];
+            }
+            for (let j = 0; j <= lb; j++) {
+                dp[0][j] = j;
+            }
+            for (let i = 1; i <= la; i++) {
+                for (let j = 1; j <= lb; j++) {
+                    let cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+                }
+            }
+            let dist = dp[la][lb];
+            return 1 - dist / Math.max(la, lb);
+        }
+
+        function charSetSim(a, b) {
+            if (!a || !b) return 0;
+            let sa = new Set(a), sb = new Set(b);
+            let common = 0;
+            for (let c of sa) { if (sb.has(c)) common++; }
+            return (2 * common) / (sa.size + sb.size);
+        }
+
+        function checkExamAnswer(input, word) {
+            let ans = input.trim();
+            if (!ans) return { correct: false, score: 0 };
+
+            if (mode === 1) {
+                let meanings = word.meaning.split(/[;；,，、\n]/).map(s => s.replace(/[（(][^）)]*[）)]/g, '').trim()).filter(s => s.length > 0);// 去除括号内容
+                let ansParts = ans.split(/[;；,，、\n]/).map(s => s.trim()).filter(s => s);
+                // 如果用户没有用分隔符，额外把每个字也当一个候选
+                if (ansParts.length === 1 && /^[\u4e00-\u9fa5]+$/.test(ans)) {
+                    let chars = ans.split('');
+                    ansParts = [...ansParts, ...chars];
+                }
+                
+                let bestScore = 0;
+                let containMatch = false;
+
+                for (let ap of ansParts) {
+                    for (let m of meanings) {
+                        let edSim = similarity(ap, m);
+                        let csSim = charSetSim(ap, m);
+                        let s = Math.max(edSim, csSim);
+                        if (s > bestScore) bestScore = s;
+
+                        // ✅ 修复：用 ap 而不是 ans，且要求长度足够才允许包含匹配
+                        if (ap.length >= 2 && m.length >= 2) {
+                            if (ap === m || ap.includes(m) || m.includes(ap)) {
+                                containMatch = true;
+                            }
+                        }
+                    }
+                }
+
+                // ✅ 修复：阈值提高到 0.6
+                return {
+                    correct: bestScore >= 0.6 || containMatch,
+                    score: Math.min(Math.max(bestScore, 0), 1)
+                };
+
+            } else {
+                let ansLower = ans.toLowerCase();
+                let wordLower = word.word.toLowerCase();
+
+                let s = similarity(ansLower, wordLower);
+
+                // ✅ 修复：包含匹配只允许完全相等，或答案是单词的合理前缀（长度至少覆盖80%）
+                let containMatch = ansLower === wordLower ||
+                    (ansLower.length >= Math.floor(wordLower.length * 0.8) && wordLower.startsWith(ansLower));
+                //短词（≤ 4个字母）阈值提高到 80%
+                const threshold = wordLower.length <= 4 ? 0.8 : 0.6;
+                return {
+                    correct: s >= threshold || containMatch,
+                    score: Math.min(Math.max(s, 0), 1)
+                };
+            }
+        }
+
+        function formatDuration(ms) {
+            let totalSec = Math.floor(ms / 1000);
+            let min = Math.floor(totalSec / 60);
+            let sec = totalSec % 60;
+            if (min >= 60) {
+                let hr = Math.floor(min / 60);
+                min = min % 60;
+                return `${hr}时${String(min).padStart(2, '0')}分${String(sec).padStart(2, '0')}秒`;
+            }
+            return `${min}分${String(sec).padStart(2, '0')}秒`;
+        }
+
+        function updateExamTimer() {
+            let elapsed = Date.now() - examStartTime;
+            let totalSec = Math.floor(elapsed / 1000);
+            let min = Math.floor(totalSec / 60);
+            let sec = totalSec % 60;
+            document.getElementById("exam-timer").innerText = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+        }
+
+        function getExamPool() {
+            let u = safeUser(getUser());
+            let words = getWords();
+            let pool = [];
+            let indices = new Set([...u.learn, ...u.done]);
+            indices.forEach(i => {
+                if (words[i]) pool.push({ idx: i, word: words[i] });
+            });
+            return pool;
+        }
+
+        function renderExamPool() {
+            let pool = getExamPool();
+            document.getElementById("exam-pool-count").innerText = pool.length;
+            document.getElementById("exam-mode-label").innerText = MODE_LABELS[mode];
+            let btn = document.getElementById("exam-start-btn");
+            if (pool.length < 1) {
+                btn.disabled = true;
+                btn.style.opacity = 0.5;
+            } else {
+                btn.disabled = false;
+                btn.style.opacity = 1;
+            }
+        }
+
+        function startExam() {
+            let pool = getExamPool();
+            if (pool.length < 1) {
+                toast("暂无已学习的单词，请先学习一些单词再考试", "warning");
+                return;
+            }
+            let shuffled = pool.sort(() => Math.random() - 0.5);
+            examWords = shuffled.slice(0, Math.min(100, shuffled.length));
+            examIndex = 0;
+            examAnswers = [];
+            examSubmitted = false;
+            examStartTime = Date.now();
+            if (examTimerInterval) clearInterval(examTimerInterval);
+            examTimerInterval = setInterval(updateExamTimer, 1000);
+            document.getElementById("exam-total").innerText = examWords.length;
+            document.getElementById("exam-setup").style.display = "none";
+            document.getElementById("exam-progress").style.display = "block";
+            document.getElementById("exam-result").style.display = "none";
+            document.getElementById("wrong-pool-card").style.display = "none";
+            renderExamQuestion();
+        }
+
+        let examAutoSpeakTimer = null;
+
+        function renderExamQuestion() {
+            if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
+            if (examIndex >= examWords.length) {
+                finishExam();
+                return;
+            }
+            let w = examWords[examIndex].word;
+            document.getElementById("exam-current").innerText = examIndex + 1;
+            let pct = ((examIndex) / examWords.length * 100).toFixed(1);
+            document.getElementById("exam-bar").style.width = pct + "%";
+            let qEl = document.getElementById("exam-question");
+            let speakBtn = document.getElementById("exam-speak-btn");
+            document.getElementById("exam-answer").value = "";
+            document.getElementById("exam-feedback").style.display = "none";
+            document.getElementById("exam-answer").disabled = false;
+            if (mode === 1) {
+                qEl.innerHTML = `单词：<span style="font-size:28px;color:#34a853;">${w.word}</span><br><span style="font-size:14px;color:#999;">请写出中文释义</span>`;
+                speakBtn.style.display = "block";
+            } else if (mode === 2) {
+                qEl.innerHTML = `释义：<span style="font-size:18px;color:#333;">${w.meaning}</span><br><span style="font-size:14px;color:#999;">请写出英文单词</span>`;
+                speakBtn.style.display = "none";
+            } else if (mode === 3) {
+                qEl.innerHTML = `<span style="font-size:14px;color:#999;">请听写单词（自动朗读2次，也可手动点击朗读）</span>`;
+                speakBtn.style.display = "block";
+                speak(examWords[examIndex].word.word);
+                examAutoSpeakTimer = setTimeout(() => {
+                    speak(examWords[examIndex].word.word);
+                    examAutoSpeakTimer = null;
+                }, 3000);
+            }
+            document.getElementById("exam-answer").focus();
+        }
+
+        function speakExamWord() {
+            if (examIndex >= examWords.length) return;
+            speak(examWords[examIndex].word.word);
+        }
+
+        function submitExamAnswer() {
+            if (examSubmitted || examIndex >= examWords.length) return;
+            if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
+            let input = document.getElementById("exam-answer").value;
+            let w = examWords[examIndex].word;
+            let result = checkExamAnswer(input, w);
+            let scorePct = Math.round(result.score * 100);
+            examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: input.trim(), correct: result.correct, simScore: scorePct, skipped: false });
+            if (scorePct < 100) {
+                let u = safeUser(getUser());
+                if (!u.wrongPool[examWords[examIndex].idx]) {
+                    u.wrongPool[examWords[examIndex].idx] = { c: 0, date: Date.now() };
+                    setUser(u);
+                }
+            }
+            let fb = document.getElementById("exam-feedback");
+            fb.style.display = "block";
+            if (result.correct) {
+                playSound('correct');
+                fb.style.background = "#e6f4ea";
+                fb.style.color = "#1e7e34";
+                fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%`;
+            } else {
+                playSound('wrong');
+                fb.style.background = "#fce8e6";
+                fb.style.color = "#c5221f";
+                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? w.meaning : w.word}</strong>`;
+            }
+            document.getElementById("exam-answer").disabled = true;
+            setTimeout(() => {
+                examIndex++;
+                renderExamQuestion();
+            }, 1200);
+        }
+
+        function skipExamAnswer() {
+            if (examSubmitted || examIndex >= examWords.length) return;
+            if (examAutoSpeakTimer) { clearTimeout(examAutoSpeakTimer); examAutoSpeakTimer = null; }
+            let w = examWords[examIndex].word;
+            examAnswers.push({ idx: examWords[examIndex].idx, word: w, input: "", correct: false, simScore: 0, skipped: true });
+            let u = safeUser(getUser());
+            if (!u.wrongPool[examWords[examIndex].idx]) {
+                u.wrongPool[examWords[examIndex].idx] = { c: 0, date: Date.now() };
+                setUser(u);
+            }
+            examIndex++;
+            renderExamQuestion();
+        }
+
+        function finishExam() {
+            examSubmitted = true;
+            playSound('victory');
+            if (examTimerInterval) { clearInterval(examTimerInterval); examTimerInterval = null; }
+            let duration = Date.now() - examStartTime;
+            let correctCount = examAnswers.filter(a => a.correct).length;
+            let wrongCount = examAnswers.filter(a => !a.correct && !a.skipped).length;
+            let skipCount = examAnswers.filter(a => a.skipped).length;
+            let score = Math.round(correctCount / examWords.length * 100);
+            document.getElementById("exam-score").innerText = score;
+            document.getElementById("exam-score").style.color = score >= 80 ? '#34a853' : score >= 60 ? '#fbbc04' : '#ea4335';
+            document.getElementById("exam-correct").innerText = correctCount;
+            document.getElementById("exam-wrong").innerText = wrongCount;
+            document.getElementById("exam-skip").innerText = skipCount;
+            document.getElementById("exam-duration").innerText = formatDuration(duration);
+            let html = `<div style="margin-bottom:10px;color:#666;font-size:13px;">考试模式：${MODE_LABELS[mode]} | 题目数量：${examWords.length} | 用时：${formatDuration(duration)}</div>`;
+            html += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead><tr style="background:#f1f3f4;">
+                    <th style="padding:8px;border:1px solid #eee;text-align:left;width:30px;">#</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:left;">单词</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:left;">释义</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:left;">你的答案</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;width:60px;">匹配度</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;width:60px;">结果</th>
+                </tr></thead><tbody>`;
+            examAnswers.forEach((a, i) => {
+                let bg = i % 2 === 0 ? '#fff' : '#fafafa';
+                let resultIcon = a.skipped ? '⏭️' : (a.correct ? '✅' : '❌');
+                let simColor = a.simScore >= 80 ? '#34a853' : a.simScore >= 60 ? '#fbbc04' : '#ea4335';
+                html += `<tr style="background:${bg};">
+                    <td style="padding:6px 8px;border:1px solid #eee;">${i + 1}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;font-weight:bold;">${a.word.word}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;color:#666;">${a.word.meaning}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;">${a.skipped ? '<span style="color:#999;">跳过</span>' : a.input}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;color:${simColor};">${a.skipped ? '-' : a.simScore + '%'}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${resultIcon}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            document.getElementById("exam-detail-list").innerHTML = html;
+            document.getElementById("exam-progress").style.display = "none";
+            document.getElementById("exam-result").style.display = "block";
+            document.getElementById("wrong-pool-card").style.display = "block";
+            saveExamScore(score, correctCount, examWords.length, mode, duration);
+            let u = safeUser(getUser());
+            examAnswers.forEach(a => {
+                if (a.simScore < 100 && !u.wrongPool[a.idx]) {
+                    u.wrongPool[a.idx] = { c: 0, date: Date.now() };
+                }
+            });
+            setUser(u);
+            renderWrongPool();
+        }
+
+        function saveExamScore(score, correct, total, m, duration) {
+            let u = safeUser(getUser());
+            if (!u.examScores) u.examScores = [];
+            u.examScores.push({
+                score: score,
+                correct: correct,
+                total: total,
+                mode: m,
+                modeLabel: MODE_LABELS[m],
+                duration: duration,
+                date: new Date().toLocaleString('zh-CN')
+            });
+            if (u.examScores.length > 10) u.examScores = u.examScores.slice(-10);
+            setUser(u);
+        }
+
+        function retakeExam() {
+            document.getElementById("exam-setup").style.display = "block";
+            document.getElementById("exam-progress").style.display = "none";
+            document.getElementById("exam-result").style.display = "none";
+            document.getElementById("wrong-pool-card").style.display = "block";
+            renderExamPool();
+        }
+
+        let wrongExamList = [];
+        let wrongExamIndex = 0;
+        let wrongExamAnswers = [];
+
+        const WRONG_STATUS = ['学习中', '初步掌握', '已掌握'];
+
+        function renderWrongPool() {
+            let u = safeUser(getUser());
+            let words = getWords();
+            let pool = u.wrongPool || {};
+            let keys = Object.keys(pool);
+            document.getElementById("wrong-pool-count").innerText = keys.length;
+            let btn = document.getElementById("wrong-exam-btn");
+            btn.style.display = keys.length > 0 ? '' : 'none';
+            if (keys.length === 0) {
+                document.getElementById("wrong-pool-list").innerHTML = '<p style="color:#999;font-size:13px;">暂无错题，继续加油！</p>';
+                return;
+            }
+            let html = '';
+            keys.forEach(idx => {
+                let w = words[idx];
+                if (!w) return;
+                let info = pool[idx];
+                let statusText = WRONG_STATUS[Math.min(info.c, 2)];
+                let statusColor = info.c === 0 ? '#ea4335' : info.c === 1 ? '#fbbc04' : '#34a853';
+                html += `<div class="word-item">
+                    <div>
+                        <span class="word-text">${w.word}</span>
+                        <span class="word-meaning">${w.meaning}</span>
+                    </div>
+                    <div>
+                        <span style="font-size:12px;color:${statusColor};font-weight:bold;">${statusText}(${info.c}/3)</span>
+                    </div>
+                </div>`;
+            });
+            document.getElementById("wrong-pool-list").innerHTML = html;
+        }
+
+        function startWrongExam() {
+            let u = safeUser(getUser());
+            let words = getWords();
+            let pool = u.wrongPool || {};
+            let keys = Object.keys(pool);
+            if (keys.length === 0) { toast('暂无错题', 'warning'); return; }
+            wrongExamList = keys.map(idx => ({ idx: parseInt(idx), word: words[idx] })).filter(x => x.word);
+            wrongExamList.sort(() => Math.random() - 0.5);
+            wrongExamIndex = 0;
+            wrongExamAnswers = [];
+            document.getElementById("wrong-total").innerText = wrongExamList.length;
+            document.getElementById("wrong-pool-card").style.display = 'none';
+            document.getElementById("wrong-exam-progress").style.display = 'block';
+            renderWrongQuestion();
+        }
+
+        function renderWrongQuestion() {
+            if (wrongExamIndex >= wrongExamList.length) {
+                document.getElementById("wrong-bar").style.width = '100%';
+                setTimeout(() => finishWrongExam(), 300);
+                return;
+            }
+            let w = wrongExamList[wrongExamIndex].word;
+            document.getElementById("wrong-current").innerText = wrongExamIndex + 1;
+            let pct = ((wrongExamIndex + 1) / wrongExamList.length * 100).toFixed(1);
+            document.getElementById("wrong-bar").style.width = pct + '%';
+            let q = '';
+            if (mode === 1) q = `${w.word}`;
+            else if (mode === 2) q = `${w.meaning}`;
+            else if (mode === 3) q = '🔊 听写单词（点击朗读）';
+            document.getElementById("wrong-question").innerText = q;
+            document.getElementById("wrong-answer").value = '';
+            document.getElementById("wrong-answer").disabled = false;
+            document.getElementById("wrong-feedback").style.display = 'none';
+            let speakBtn = document.getElementById("wrong-speak-btn");
+            speakBtn.style.display = mode === 3 ? '' : 'none';
+            if (mode === 3) speak(wrongExamList[wrongExamIndex].word.word);
+            document.getElementById("wrong-answer").focus();
+        }
+
+        function speakWrongWord() {
+            if (wrongExamIndex < wrongExamList.length) {
+                speak(wrongExamList[wrongExamIndex].word.word);
+            }
+        }
+
+        function submitWrongAnswer() {
+            if (wrongExamIndex >= wrongExamList.length) return;
+            let input = document.getElementById("wrong-answer").value;
+            let item = wrongExamList[wrongExamIndex];
+            let result = checkExamAnswer(input, item.word);
+            let scorePct = Math.round(result.score * 100);
+            wrongExamAnswers.push({ idx: item.idx, word: item.word, input: input.trim(), correct: result.correct, simScore: scorePct });
+            let fb = document.getElementById("wrong-feedback");
+            fb.style.display = 'block';
+            let u = safeUser(getUser());
+            if (result.correct) {
+                playSound('correct');
+                let info = u.wrongPool[item.idx];
+                if (info) {
+                    info.c += 1;
+                    if (info.c >= 3) {
+                        delete u.wrongPool[item.idx];
+                        fb.style.background = '#e6f4ea';
+                        fb.style.color = '#1e7e34';
+                        fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，连续答对3次，已从错题库移除！`;
+                    } else {
+                        fb.style.background = '#e6f4ea';
+                        fb.style.color = '#1e7e34';
+                        fb.innerHTML = `✅ 正确！匹配度 ${scorePct}%，状态：${WRONG_STATUS[Math.min(info.c, 2)]}(${info.c}/3)`;
+                    }
+                }
+            } else {
+                playSound('wrong');
+                let info = u.wrongPool[item.idx];
+                if (info) info.c = 0;
+                fb.style.background = '#fce8e6';
+                fb.style.color = '#c5221f';
+                fb.innerHTML = `❌ 错误！匹配度 ${scorePct}%，正确答案：<strong>${mode === 1 ? item.word.meaning : item.word.word}</strong>，计数已重置`;
+            }
+            setUser(u);
+            document.getElementById("wrong-answer").disabled = true;
+            setTimeout(() => {
+                wrongExamIndex++;
+                renderWrongQuestion();
+            }, 1500);
+        }
+
+        function skipWrongAnswer() {
+            if (wrongExamIndex >= wrongExamList.length) return;
+            let item = wrongExamList[wrongExamIndex];
+            let u = safeUser(getUser());
+            let info = u.wrongPool[item.idx];
+            if (info) info.c = 0;
+            setUser(u);
+            wrongExamAnswers.push({ idx: item.idx, word: item.word, input: '', correct: false, simScore: 0 });
+            wrongExamIndex++;
+            renderWrongQuestion();
+        }
+
+        function finishWrongExam() {
+            playSound('victory');
+            document.getElementById("wrong-exam-progress").style.display = 'none';
+            document.getElementById("wrong-pool-card").style.display = 'block';
+            let correctCount = wrongExamAnswers.filter(a => a.correct).length;
+            let total = wrongExamAnswers.length;
+            toast(`错题重考完成！正确 ${correctCount}/${total}`, correctCount === total ? 'success' : 'info');
+            renderWrongPool();
+        }
+
+        function renderExamScores() {
+            let u = safeUser(getUser());
+            let scores = u.examScores || [];
+            let el = document.getElementById("exam-scores-list");
+            if (!el) return;
+            if (scores.length === 0) {
+                el.innerHTML = '<p style="color:#999;font-size:13px;">暂无考试记录，去考试页面参加考试吧</p>';
+                return;
+            }
+            let html = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead><tr style="background:#f1f3f4;">
+                    <th style="padding:8px;border:1px solid #eee;text-align:left;">时间</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;">模式</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;">正确/总数</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;">用时</th>
+                    <th style="padding:8px;border:1px solid #eee;text-align:center;">得分</th>
+                </tr></thead><tbody>`;
+            scores.slice().reverse().forEach((s, i) => {
+                let bg = i % 2 === 0 ? '#fff' : '#fafafa';
+                let scoreColor = s.score >= 80 ? '#34a853' : s.score >= 60 ? '#fbbc04' : '#ea4335';
+                let dur = s.duration ? formatDuration(s.duration) : '-';
+                html += `<tr style="background:${bg};">
+                    <td style="padding:6px 8px;border:1px solid #eee;">${s.date}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${s.modeLabel}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${s.correct}/${s.total}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;">${dur}</td>
+                    <td style="padding:6px 8px;border:1px solid #eee;text-align:center;font-weight:bold;color:${scoreColor};">${s.score}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            el.innerHTML = html;
+        }
+
+        // 渲染全部
+        // ==============================
+        let dailyChartInstance = null;
+
+        function renderDailyChart(which) {
+            document.getElementById("chart-btn-A").className = which === 'A' ? 'btn btn-blue' : 'btn btn-gray';
+            document.getElementById("chart-btn-B").className = which === 'B' ? 'btn btn-blue' : 'btn btn-gray';
+            let u = safeUser(JSON.parse(localStorage.getItem("wuser" + which) || "null"));
+            let labels = [];
+            let learnData = [];
+            let reviewData = [];
+            let now = new Date();
+            for (let i = 29; i >= 0; i--) {
+                let d = new Date(now);
+                d.setDate(d.getDate() - i);
+                let key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
+                let dl = u.dailyLog[key] || { learn: 0, review: 0 };
+                learnData.push(dl.learn);
+                reviewData.push(dl.review);
+            }
+            if (dailyChartInstance) dailyChartInstance.destroy();
+            let ctx = document.getElementById("daily-chart").getContext("2d");
+            dailyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '学习',
+                            data: learnData,
+                            backgroundColor: 'rgba(52, 168, 83, 0.6)',
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            order: 2
+                        },
+                        {
+                            label: '复习',
+                            data: reviewData,
+                            backgroundColor: 'rgba(66, 133, 244, 0.6)',
+                            borderColor: 'rgba(66, 133, 244, 1)',
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            order: 3
+                        },
+                        {
+                            label: '学习趋势',
+                            data: learnData,
+                            type: 'line',
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false,
+                            order: 0
+                        },
+                        {
+                            label: '复习趋势',
+                            data: reviewData,
+                            type: 'line',
+                            borderColor: 'rgba(66, 133, 244, 1)',
+                            backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false,
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { usePointStyle: true, padding: 12, font: { size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(items) { return '同学' + which + ' ' + items[0].label; }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                maxRotation: 45,
+                                font: { size: 10 },
+                                callback: function(val, idx) { return idx % 3 === 0 ? this.getLabelForValue(val) : ''; }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, font: { size: 11 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderAll() {
+            renderExam();
+            renderCollins();
+            renderWordList();
+            renderStats();
+            renderToday();
+            renderTodayList();
+            renderCalendar();
+            renderExamSetting();
+            renderDailyChart(user);
+            renderExamPool();
+            renderExamScores();
+            renderWrongPool();
+            renderVoiceSetting();
+            let u = safeUser(getUser());
+            document.getElementById("translate-toggle").checked = !!u.translate;
+        }
+
+        window.onload = function () {
+            loadWords();
+            loadRelations();
+            show("home");
+        };
+    </script>
+</body>
+</html>

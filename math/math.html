@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>数学知识学习工具 - 艾宾浩斯双用户版</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Comic Sans MS","Chalkboard SE","Microsoft YaHei",sans-serif}
+body{background:linear-gradient(135deg,#e8eaf6 0%,#e3f2fd 50%,#f3e5f5 100%);color:#333;min-height:100vh}
+.top{height:60px;background:linear-gradient(135deg,#5c6bc0,#7e57c2,#ab47bc);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 25px;box-shadow:0 4px 15px rgba(92,107,192,0.3);position:relative;z-index:10}
+.top::after{content:'';position:absolute;bottom:-8px;left:0;right:0;height:8px;background:repeating-linear-gradient(90deg,#5c6bc0 0,#5c6bc0 10px,#7e57c2 10px,#7e57c2 20px,#ab47bc 20px,#ab47bc 30px,#26a69a 30px,#26a69a 40px)}
+.nav a{color:#fff;text-decoration:none;margin:0 12px;font-size:14px;text-shadow:1px 1px 2px rgba(0,0,0,0.2);transition:transform 0.2s;cursor:pointer}
+.nav a:hover{transform:scale(1.1)}
+.user button{padding:6px 14px;border:2px solid #fff;border-radius:20px;background:rgba(255,255,255,0.3);color:#fff;font-weight:bold;cursor:pointer;transition:all 0.3s}
+.user button:hover{background:rgba(255,255,255,0.5);transform:scale(1.05)}
+.container{width:92%;max-width:1100px;margin:0 auto;padding:25px 0}
+.card{background:rgba(255,255,255,0.92);border-radius:20px;padding:22px;margin-bottom:18px;box-shadow:4px 4px 0px #7e57c2,0 4px 15px rgba(0,0,0,0.06);border:3px solid #7e57c2;transition:transform 0.2s}
+.card:hover{transform:translateY(-2px)}
+h2{color:#5c6bc0;margin-bottom:14px;font-size:20px;text-shadow:1px 1px 0px #b39ddb}
+h3{color:#7e57c2}
+.btn{padding:8px 16px;border:2px solid transparent;border-radius:25px;cursor:pointer;margin:4px;font-weight:bold;transition:all 0.3s;box-shadow:2px 2px 0px rgba(0,0,0,0.1);font-size:14px}
+.btn:hover{transform:translateY(-2px) scale(1.05);box-shadow:3px 3px 0px rgba(0,0,0,0.15)}
+.btn:active{transform:translateY(0px);box-shadow:1px 1px 0px rgba(0,0,0,0.1)}
+.btn-blue{background:linear-gradient(135deg,#42a5f5,#1e88e5);color:#fff;border-color:#1e88e5}
+.btn-gray{background:#f5f5f5;color:#666;border-color:#ddd}
+.btn-red{background:linear-gradient(135deg,#ef5350,#e53935);color:#fff;border-color:#e53935}
+.btn-green{background:linear-gradient(135deg,#66bb6a,#43a047);color:#fff;border-color:#43a047}
+.btn-orange{background:linear-gradient(135deg,#ffa726,#fb8c00);color:#fff;border-color:#fb8c00}
+.btn-purple{background:linear-gradient(135deg,#7e57c2,#5c6bc0);color:#fff;border-color:#5c6bc0}
+.hide{display:none}
+.page{display:none}
+.page.active{display:block;animation:pageIn 0.4s ease}
+@keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.flex{display:flex;gap:20px;flex-wrap:wrap}
+.col{flex:1;min-width:280px}
+.tag{display:inline-block;padding:5px 14px;background:linear-gradient(135deg,#e8eaf6,#ede7f6);border-radius:25px;margin:4px;cursor:pointer;font-size:14px;border:2px solid #b39ddb;transition:all 0.3s;font-weight:bold;color:#5c6bc0}
+.tag:hover{transform:scale(1.05)}
+.tag.on{background:linear-gradient(135deg,#5c6bc0,#7e57c2);color:#fff;border-color:#5c6bc0}
+.math-item{padding:14px;border-bottom:2px dashed #e8eaf6;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:background 0.2s}
+.math-item:hover{background:rgba(92,107,192,0.08)}
+.math-item>div:first-child{flex:1;min-width:0;overflow:hidden}
+.math-item>div:last-child{flex-shrink:0;white-space:nowrap}
+.math-item:last-child{border-bottom:none}
+.math-name{font-weight:bold;font-size:17px;color:#5c6bc0}
+.math-formula{color:#7e57c2;font-size:15px;margin-top:3px;font-family:"Cambria Math","Latin Modern Math",serif}
+.math-meta{font-size:12px;color:#999;margin-top:2px}
+textarea{width:100%;height:100px;padding:12px;border:3px solid #b39ddb;border-radius:15px;font-size:15px;font-family:inherit;background:#f3e5f5}
+textarea:focus{outline:none;border-color:#5c6bc0;box-shadow:0 0 0 3px rgba(92,107,192,0.2)}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:999}
+.modal-body{width:680px;max-width:95vw;background:#fff;border-radius:25px;padding:30px;max-height:85vh;overflow:auto;border:4px solid #7e57c2;box-shadow:6px 6px 0px #5c6bc0,0 8px 30px rgba(0,0,0,0.15)}
+.scope-bar{height:44px;background:linear-gradient(90deg,#e8eaf6,#ede7f6,#fce4ec);display:flex;align-items:center;justify-content:center;gap:8px;border-bottom:3px dashed #b39ddb}
+.scope-bar .sbtn{padding:6px 18px;border:2px solid #b39ddb;border-radius:25px;background:#fff;color:#5c6bc0;cursor:pointer;font-size:14px;font-weight:bold;transition:all 0.3s;box-shadow:2px 2px 0px #b39ddb}
+.scope-bar .sbtn:hover{transform:translateY(-2px);box-shadow:3px 3px 0px #b39ddb}
+.scope-bar .sbtn.on{background:linear-gradient(135deg,#5c6bc0,#7e57c2);color:#fff;border-color:#5c6bc0;box-shadow:2px 2px 0px #5c6bc0}
+.mode-bar{height:44px;background:linear-gradient(90deg,#e8eaf6,#e1f5fe,#ede7f6);display:flex;align-items:center;justify-content:center;gap:8px;border-bottom:3px dashed #90caf9}
+.mode-bar .mbtn{padding:6px 18px;border:2px solid #90caf9;border-radius:25px;background:#fff;color:#42a5f5;cursor:pointer;font-size:14px;font-weight:bold;transition:all 0.3s;box-shadow:2px 2px 0px #90caf9}
+.mode-bar .mbtn:hover{transform:translateY(-2px);box-shadow:3px 3px 0px #90caf9}
+.mode-bar .mbtn.on{background:linear-gradient(135deg,#42a5f5,#5c6bc0);color:#fff;border-color:#42a5f5;box-shadow:2px 2px 0px #42a5f5}
+.star-display{font-size:18px;font-weight:bold;color:#ffc107;text-shadow:0 0 5px rgba(255,193,7,0.5)}
+.combo-display{font-size:14px;color:#ef5350;font-weight:bold}
+.scope-tag{display:inline-block;padding:2px 8px;background:linear-gradient(135deg,#e1f5fe,#b3e5fc);border-radius:10px;font-size:11px;color:#0288d1;margin:1px;border:1px solid #4fc3f7;font-weight:bold}
+.diff-star{color:#ffc107;text-shadow:0 0 3px rgba(255,193,7,0.5)}
+.lottery-item{display:inline-flex;flex-direction:column;align-items:center;padding:12px 10px;border:3px solid #e0e0e0;border-radius:16px;margin:5px;cursor:pointer;transition:all 0.3s;background:#fff;min-width:80px}
+.lottery-item:hover{transform:scale(1.05);border-color:#7e57c2}
+.lottery-item.lottery-active{border-color:#ffc107;background:#fff9c4;transform:scale(1.1)}
+.lottery-item.lottery-hit{border-color:#4caf50;background:#c8e6c9;transform:scale(1.15)}
+.lottery-item .prize-emoji{font-size:28px}
+.lottery-item .prize-name{font-size:12px;margin-top:4px;color:#555;font-weight:bold}
+.lottery-item .prize-prob{font-size:10px;color:#999}
+.lottery-item .prize-cost{font-size:10px;color:#ff6f91;font-weight:bold}
+.lottery-item.selected{border-color:#5c6bc0;background:#e8eaf6;box-shadow:0 0 0 3px rgba(92,107,192,0.3)}
+#exam-answer:focus{border-color:#5c6bc0;box-shadow:0 0 0 3px rgba(92,107,192,0.2)}
+#exam-answer:disabled{background:#f5f5f5;color:#999}
+.hamburger{display:none;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:4px 8px}
+.nav-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:50}
+.nav-drawer{position:fixed;top:0;right:-280px;width:280px;height:100%;background:#fff;z-index:60;transition:right 0.3s;padding:20px;box-shadow:-4px 0 15px rgba(0,0,0,0.2)}
+.nav-drawer.active{right:0}
+.nav-drawer a{display:block;padding:12px 16px;color:#5c6bc0;text-decoration:none;font-size:16px;border-bottom:1px solid #e8eaf6;transition:background 0.2s}
+.nav-drawer a:hover{background:#e8eaf6}
+.nav-overlay.active{display:block}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;text-align:center}
+.calendar-day{padding:10px;border:2px solid #b39ddb;border-radius:12px;background:#ede7f6;color:#333;text-align:center;transition:all 0.2s;cursor:pointer}
+.calendar-day:hover{transform:scale(1.05)}
+.calendar-day.has-task{background:#c8e6c9;color:#1e7e34;border-color:#66bb6a}
+.calendar-day.today{background:#fff9c4;color:#f57f17;font-weight:bold;border-color:#ffa726}
+.calendar-day.today.has-task{background:#c8e6c9;color:#1e7e34;font-weight:bold;border:3px solid #ffa726}
+.calendar-day.selected{background:linear-gradient(135deg,#5c6bc0,#7e57c2);color:#fff;font-weight:bold;border-color:#5c6bc0}
+.calendar-day.overdue{background:#ffcdd2;color:#c62828;border-color:#ef5350}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:25px;color:#fff;font-size:15px;z-index:2000;animation:toastIn 0.3s ease;font-weight:bold;box-shadow:0 4px 15px rgba(0,0,0,0.2)}
+.toast-success{background:linear-gradient(135deg,#66bb6a,#43a047)}
+.toast-error{background:linear-gradient(135deg,#ef5350,#e53935)}
+.toast-warning{background:linear-gradient(135deg,#ffa726,#fb8c00)}
+@keyframes toastIn{from{transform:translateX(-50%) translateY(-20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+@keyframes starPop{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+.star-pop{animation:starPop 0.4s ease}
+@keyframes lotteryPop{0%{transform:scale(0.8);opacity:0}50%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.wrong-item{border-left:4px solid #ef5350;background:#fff8f0}
+.prize-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:linear-gradient(135deg,#fff9c4,#c8e6c9);border-radius:15px;margin:3px;font-size:13px;border:1px solid #a5d6a7;cursor:pointer;transition:all 0.2s}
+.prize-tag:hover{transform:scale(1.05)}
+.progress-bar{height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden;margin:4px 0}
+.progress-bar .fill{height:100%;background:linear-gradient(90deg,#5c6bc0,#7e57c2);border-radius:4px;transition:width 0.3s}
+@media(max-width:768px){
+.hamburger{display:block}
+.nav{display:none}
+.container{width:96%;padding:15px 0}
+.modal-body{width:95vw;padding:20px}
+.flex{flex-direction:column}
+.col{min-width:auto}
+.top{padding:0 15px}
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+    <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:22px;font-weight:bold;text-shadow:1px 1px 2px rgba(0,0,0,0.3)">📐 数学学习</span>
+    </div>
+    <div class="nav" id="top-nav">
+        <a onclick="show('home')">🏠 首页</a>
+        <a onclick="show('learn')">📚 知识库</a>
+        <a onclick="show('review')">🔄 复习</a>
+        <a onclick="show('exam')">📝 考试</a>
+        <a onclick="show('stats')">📊 统计</a>
+        <a onclick="show('prizes')">🎁 奖品</a>
+    </div>
+    <div class="user" style="display:flex;align-items:center;gap:10px">
+        <span class="star-display" id="star-count">⭐ 0</span>
+        <span class="combo-display" id="combo-count"></span>
+        <button onclick="toggleUser()" id="show-user">同学A</button>
+        <button class="hamburger" onclick="openNav()">☰</button>
+    </div>
+</div>
+
+<div class="scope-bar">
+    <span style="font-size:13px;color:#666;margin-right:4px">学段：</span>
+    <button class="sbtn on" onclick="setScope('all')">全部</button>
+    <button class="sbtn" onclick="setScope('小学')">🏫 小学</button>
+    <button class="sbtn" onclick="setScope('初中')">📖 初中</button>
+    <button class="sbtn" onclick="setScope('高中')">🎓 高中</button>
+</div>
+
+<div class="mode-bar">
+    <span style="font-size:13px;color:#666;margin-right:4px">模式：</span>
+    <button class="mbtn on" onclick="setMode(1)">📝 看名写公式</button>
+    <button class="mbtn" onclick="setMode(2)">🔄 看公式写名</button>
+    <button class="mbtn" onclick="setMode(3)">💡 看应用写公式</button>
+</div>
+
+<div class="nav-overlay" id="nav-overlay" onclick="closeNav()"></div>
+<div class="nav-drawer" id="nav-drawer">
+    <h3 style="color:#5c6bc0;margin-bottom:16px">📐 导航菜单</h3>
+    <a onclick="navTo('home')">🏠 首页</a>
+    <a onclick="navTo('learn')">📚 知识库</a>
+    <a onclick="navTo('review')">🔄 复习计划</a>
+    <a onclick="navTo('exam')">📝 考试</a>
+    <a onclick="navTo('stats')">📊 数据统计</a>
+    <a onclick="navTo('prizes')">🎁 奖品中心</a>
+    <a href="math-admin.html">⚙️ 管理后台</a>
+</div>
+
+<div class="container">
+
+<!-- 首页 -->
+<div class="page active" id="page-home">
+    <div class="card">
+        <h2>🏠 学习概览</h2>
+        <div class="flex">
+            <div class="col">
+                <div style="text-align:center;padding:15px">
+                    <div style="font-size:48px;font-weight:bold;color:#5c6bc0" id="home-learned">0</div>
+                    <div style="color:#999;font-size:14px">已学知识点</div>
+                </div>
+            </div>
+            <div class="col">
+                <div style="text-align:center;padding:15px">
+                    <div style="font-size:48px;font-weight:bold;color:#66bb6a" id="home-mastered">0</div>
+                    <div style="color:#999;font-size:14px">已掌握</div>
+                </div>
+            </div>
+            <div class="col">
+                <div style="text-align:center;padding:15px">
+                    <div style="font-size:48px;font-weight:bold;color:#ef5350" id="home-today">0</div>
+                    <div style="color:#999;font-size:14px">今日待复习</div>
+                </div>
+            </div>
+            <div class="col">
+                <div style="text-align:center;padding:15px">
+                    <div style="font-size:48px;font-weight:bold;color:#ffa726" id="home-wrong">0</div>
+                    <div style="color:#999;font-size:14px">错题数</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <h2>📅 今日任务</h2>
+        <div id="home-tasks"></div>
+    </div>
+    <div class="card">
+        <h2>🎯 快捷操作</h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-blue" onclick="show('learn')">📚 学习新知识</button>
+            <button class="btn btn-green" onclick="show('review')">🔄 开始复习</button>
+            <button class="btn btn-orange" onclick="show('exam')">📝 随机考试</button>
+            <button class="btn btn-purple" onclick="show('prizes')">🎁 奖品中心</button>
+        </div>
+    </div>
+</div>
+
+<!-- 知识库 -->
+<div class="page" id="page-learn">
+    <div class="card">
+        <h2>📚 数学知识库</h2>
+        <div style="margin-bottom:12px">
+            <span style="font-size:13px;color:#666">分类筛选：</span>
+            <span id="category-tags"></span>
+        </div>
+        <div id="math-list"></div>
+    </div>
+</div>
+
+<!-- 复习 -->
+<div class="page" id="page-review">
+    <div class="card">
+        <h2>🔄 我的复习计划</h2>
+        <div class="flex">
+            <div class="col">
+                <h3>📋 今日待复习</h3>
+                <div id="today-review-list"></div>
+            </div>
+            <div class="col">
+                <h3>📅 复习日历</h3>
+                <div id="review-calendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 考试 -->
+<div class="page" id="page-exam">
+    <div class="card" id="exam-setup">
+        <h2>📝 随机考试</h2>
+        <div style="margin-bottom:12px">
+            <label style="font-size:14px;color:#666">题目数量：</label>
+            <select id="exam-count" style="padding:6px 12px;border:2px solid #b39ddb;border-radius:10px;font-size:14px">
+                <option value="5">5题</option>
+                <option value="10" selected>10题</option>
+                <option value="15">15题</option>
+                <option value="20">20题</option>
+            </select>
+            <label style="font-size:14px;color:#666;margin-left:12px">学段：</label>
+            <select id="exam-scope" style="padding:6px 12px;border:2px solid #b39ddb;border-radius:10px;font-size:14px">
+                <option value="all">全部</option>
+                <option value="小学">小学</option>
+                <option value="初中">初中</option>
+                <option value="高中">高中</option>
+            </select>
+        </div>
+        <button class="btn btn-blue" onclick="startExam()">🚀 开始考试</button>
+    </div>
+    <div class="card hide" id="exam-progress">
+        <h2>📝 考试进行中</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span id="exam-progress-text" style="font-size:14px;color:#666">第 1/10 题</span>
+            <span id="exam-timer" style="font-size:18px;font-weight:bold;color:#ef5350">⏱ 00:00</span>
+        </div>
+        <div class="progress-bar"><div class="fill" id="exam-progress-bar" style="width:0%"></div></div>
+        <div id="exam-question" style="margin:20px 0"></div>
+        <textarea id="exam-answer" placeholder="输入你的答案..." onkeydown="if(event.key==='Enter'&&event.ctrlKey)submitExamAnswer()"></textarea>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-green" onclick="submitExamAnswer()">✅ 提交答案</button>
+            <button class="btn btn-gray" onclick="skipExamAnswer()">⏭ 跳过</button>
+        </div>
+        <div id="exam-feedback" style="margin-top:12px;display:none"></div>
+    </div>
+    <div class="card hide" id="exam-result">
+        <h2>📊 考试结果</h2>
+        <div id="exam-result-content"></div>
+    </div>
+    <div class="card" id="wrong-pool-card">
+        <h2>❌ 错题池</h2>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button class="btn btn-red" onclick="startWrongExam()">🔄 错题重考</button>
+            <button class="btn btn-green" onclick="clearWrongPool()">🗑 清空错题(+20⭐)</button>
+        </div>
+        <div id="wrong-pool-list"></div>
+    </div>
+    <div class="card hide" id="wrong-exam-progress">
+        <h2>🔄 错题重考</h2>
+        <div id="wrong-exam-question" style="margin:20px 0"></div>
+        <textarea id="wrong-exam-answer" placeholder="输入你的答案..."></textarea>
+        <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn btn-green" onclick="submitWrongExamAnswer()">✅ 提交</button>
+            <button class="btn btn-gray" onclick="skipWrongExamAnswer()">⏭ 跳过</button>
+        </div>
+        <div id="wrong-exam-feedback" style="margin-top:12px;display:none"></div>
+    </div>
+</div>
+
+<!-- 统计 -->
+<div class="page" id="page-stats">
+    <div class="card">
+        <h2>📊 学习统计</h2>
+        <div class="flex">
+            <div class="col">
+                <h3>📈 30天学习趋势</h3>
+                <canvas id="daily-chart" height="200"></canvas>
+            </div>
+            <div class="col">
+                <h3>📋 个人数据</h3>
+                <div id="personal-stats"></div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <h2>🏆 考试记录</h2>
+        <div id="exam-scores-list"></div>
+    </div>
+</div>
+
+<!-- 奖品 -->
+<div class="page" id="page-prizes">
+    <div class="card">
+        <h2>🎁 奖品中心</h2>
+        <div id="lottery-eligibility" style="margin-bottom:12px"></div>
+        <div id="lottery-box" style="text-align:center;margin:15px 0"></div>
+        <div id="lottery-result" style="display:none;padding:12px;border-radius:15px;text-align:center;font-size:16px;font-weight:bold;margin:10px 0"></div>
+        <div style="text-align:center;margin:10px 0">
+            <button class="btn btn-purple" id="lottery-btn" onclick="doLottery()">🎰 抽奖</button>
+            <button class="btn btn-orange" id="redeem-btn" onclick="redeemSelected()" style="display:none">兑换选中奖品</button>
+        </div>
+    </div>
+    <div class="card">
+        <h2>🏆 我的奖品</h2>
+        <div id="my-prizes"></div>
+    </div>
+</div>
+
+</div>
+
+<!-- 学习弹窗 -->
+<div class="modal" id="learn-modal">
+    <div class="modal-body">
+        <h2 id="learn-modal-title" style="text-align:center">📚 学习新知识</h2>
+        <div id="learn-modal-content" style="margin:20px 0"></div>
+        <div style="text-align:center;margin-top:20px">
+            <button class="btn btn-green" onclick="addToReview()">✅ 加入复习计划</button>
+            <button class="btn btn-gray" onclick="closeLearnModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 复习弹窗 -->
+<div class="modal" id="review-modal">
+    <div class="modal-body">
+        <h2 id="review-modal-title" style="text-align:center">🔄 复习</h2>
+        <div id="review-modal-content" style="margin:20px 0"></div>
+        <div style="margin-top:12px">
+            <textarea id="review-answer" placeholder="输入你的答案..." onkeydown="if(event.key==='Enter'&&event.ctrlKey)submitReviewAnswer()"></textarea>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            <button class="btn btn-green" onclick="submitReviewAnswer()">✅ 提交</button>
+            <button class="btn btn-orange" onclick="viewReviewAnswer()">👁 查看答案</button>
+            <button class="btn btn-gray" onclick="skipReviewAnswer()">⏭ 跳过</button>
+        </div>
+        <div id="review-feedback" style="margin-top:12px;display:none"></div>
+    </div>
+</div>
+
+<script>
+let user = "A";
+let mode = 1;
+let currentScope = "all";
+let currentCategory = "all";
+let WORDS = [];
+let learnIdx = null;
+let isInReview = false;
+let reviewQueue = [];
+let reviewCurrentIdx = 0;
+let reviewPassed = {};
+let reviewPendingStars = 0;
+let reviewPendingCombo = 0;
+let examQuestions = [];
+let examCurrent = 0;
+let examCorrect = 0;
+let examTimer = null;
+let examSeconds = 0;
+let wrongExamQueue = [];
+let wrongExamCurrent = 0;
+let lotterySpinning = false;
+let selectedPrizeIdx = -1;
+let calYear, calMonth, selectedDate = null;
+let dailyChartInstance = null;
+
+const PERIOD = [0, 1, 2, 4, 7, 15, 30];
+const MODE_LABELS = { 1: "看名写公式", 2: "看公式写名", 3: "看应用写公式" };
+
+const DEFAULT_LOTTERY_CONFIG = {
+    cost: 50, badDeduct: 30, starThreshold: 5000, dailyLimit: 1, dailySpendLimit: 500, redeemUnlock: true,
+    prizes: [
+        { emoji:'🍔', name:'汉堡', weight:0.01, type:'good', cost:2000 },
+        { emoji:'🍦', name:'冰激凌', weight:0.01, type:'good', cost:1800 },
+        { emoji:'🍗', name:'鸡腿', weight:0.01, type:'good', cost:1800 },
+        { emoji:'🖊️', name:'圆珠笔', weight:0.02, type:'good', cost:1600 },
+        { emoji:'📓', name:'记事本', weight:0.02, type:'good', cost:1600 },
+        { emoji:'🍭', name:'棒棒糖', weight:0.05, type:'good', cost:400 },
+        { emoji:'🫧', name:'泡泡糖', weight:0.05, type:'good', cost:200 },
+        { emoji:'💔', name:'积分减30', weight:0.15, type:'bad', cost:0 },
+        { emoji:'💨', name:'什么也没有', weight:0.68, type:'neutral', cost:0 }
+    ],
+    wishPrize: { emoji:'🌟', name:'心愿大奖', cost:30000 }
+};
+
+function loadWords() {
+    let stored = localStorage.getItem('math_words');
+    if (stored) { try { WORDS = JSON.parse(stored); return; } catch(e) {} }
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', 'math.json', false);
+    try { xhr.send(); if (xhr.status === 200) { WORDS = JSON.parse(xhr.responseText); localStorage.setItem('math_words', JSON.stringify(WORDS)); } } catch(e) { WORDS = []; }
+}
+
+function getWords() {
+    let w = WORDS;
+    if (currentScope !== 'all') w = w.filter(item => item.scope && item.scope.includes(currentScope));
+    if (currentCategory !== 'all') w = w.filter(item => item.category === currentCategory);
+    return w;
+}
+
+function getCategories() {
+    let cats = new Set();
+    let w = currentScope === 'all' ? WORDS : WORDS.filter(item => item.scope && item.scope.includes(currentScope));
+    w.forEach(item => { if (item.category) cats.add(item.category); });
+    return Array.from(cats);
+}
+
+function getUser() { return JSON.parse(localStorage.getItem("muser" + user)); }
+function setUser(u) { localStorage.setItem("muser" + user, JSON.stringify(u)); }
+
+function safeUser(u) {
+    let def = { learn:[], done:[], log:{}, dailyLog:{}, examScores:[], wrongPool:{}, stars:0, combo:0, learnMilestone:0, lastTodayMilestone:{}, prizes:[], lotteryRedeemUnlock:null, lotteryLog:[], listeningTotal:0, listeningLog:{} };
+    if (!u) return def;
+    return { ...def, ...u };
+}
+
+function todayKey() { let d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+function recordDaily(type) {
+    let u = safeUser(getUser());
+    let key = todayKey();
+    if (!u.dailyLog[key]) u.dailyLog[key] = { learn:0, review:0 };
+    if (type === 'learn') u.dailyLog[key].learn++;
+    else if (type === 'review') u.dailyLog[key].review++;
+    setUser(u);
+}
+
+function nextDate(st, count) {
+    if (count >= PERIOD.length) return null;
+    let d = new Date(st);
+    d.setDate(d.getDate() + PERIOD[count]);
+    return d.getTime();
+}
+
+function getTodayTasks() {
+    let u = safeUser(getUser());
+    let words = WORDS;
+    let today = new Date(); today.setHours(0,0,0,0);
+    let ts = today.getTime();
+    let tasks = [];
+    let needSave = false;
+    u.learn.forEach(i => {
+        if (u.done.includes(i)) return;
+        if (!u.log[i] || !u.log[i].next) return;
+        let nt = u.log[i].next;
+        if (nt <= ts + 86400000) tasks.push({ idx:i, word:words[i], nextTime:nt });
+        if (nt < ts) { u.log[i].next = ts; needSave = true; }
+    });
+    if (needSave) setUser(u);
+    return tasks;
+}
+
+function addStars(n, msg) {
+    let u = safeUser(getUser());
+    u.stars = (u.stars || 0) + n;
+    setUser(u);
+    renderStarDisplay();
+    if (msg) toast(msg + ' +' + n + '⭐', 'success');
+    let el = document.getElementById('star-count');
+    if (el) { el.classList.remove('star-pop'); el.offsetHeight; el.classList.add('star-pop'); }
+}
+
+function addComboStar() {
+    let u = safeUser(getUser());
+    u.combo = (u.combo || 0) + 1;
+    let bonus = 0;
+    if (u.combo === 3) bonus = 5;
+    else if (u.combo === 10) bonus = 20;
+    else if (u.combo % 10 === 0) bonus = 20;
+    if (bonus > 0) u.stars = (u.stars || 0) + bonus;
+    u.stars = (u.stars || 0) + 1;
+    setUser(u);
+    renderStarDisplay();
+    if (bonus > 0) toast(`🔥 ${u.combo}连击！+${bonus}⭐`, 'success');
+}
+
+function resetCombo() {
+    let u = safeUser(getUser());
+    u.combo = 0;
+    setUser(u);
+    renderStarDisplay();
+}
+
+function toast(msg, type) {
+    let old = document.querySelector('.toast');
+    if (old) old.remove();
+    let el = document.createElement('div');
+    el.className = 'toast toast-' + (type || 'success');
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+}
+
+function playSound(type) {
+    try {
+        let ctx = new (window.AudioContext || window.webkitAudioContext)();
+        let osc = ctx.createOscillator();
+        let gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        gain.gain.value = 0.15;
+        if (type === 'correct') { osc.frequency.value = 800; osc.type = 'sine'; }
+        else if (type === 'wrong') { osc.frequency.value = 300; osc.type = 'sawtooth'; }
+        else if (type === 'victory') { osc.frequency.value = 1000; osc.type = 'sine'; }
+        osc.start(); osc.stop(ctx.currentTime + 0.15);
+    } catch(e) {}
+}
+
+function similarity(a, b) {
+    if (!a || !b) return 0;
+    a = a.toLowerCase(); b = b.toLowerCase();
+    if (a === b) return 1;
+    let la = a.length, lb = b.length;
+    if (la === 0 || lb === 0) return 0;
+    let dp = [];
+    for (let i = 0; i <= la; i++) dp[i] = [i];
+    for (let j = 0; j <= lb; j++) dp[0][j] = j;
+    for (let i = 1; i <= la; i++) for (let j = 1; j <= lb; j++) {
+        let cost = a[i-1] === b[j-1] ? 0 : 1;
+        dp[i][j] = Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost);
+    }
+    return 1 - dp[la][lb] / Math.max(la, lb);
+}
+
+function normalizeFormula(s) {
+    return s.replace(/\s+/g, '').replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/（/g,'(').replace(/）/g,')').replace(/²/g,'^2').replace(/³/g,'^3').toLowerCase();
+}
+
+function checkAnswer(input, item) {
+    let ans = input.trim();
+    if (!ans) return { correct:false, score:0 };
+
+    if (mode === 1) {
+        let correct = item.formula;
+        let normAns = normalizeFormula(ans);
+        let normCorrect = normalizeFormula(correct);
+        if (normAns === normCorrect) return { correct:true, score:1 };
+        let s = similarity(normAns, normCorrect);
+        let altFormulas = [correct];
+        if (item.altFormulas) altFormulas = altFormulas.concat(item.altFormulas);
+        let bestScore = s;
+        for (let alt of altFormulas) {
+            let normAlt = normalizeFormula(alt);
+            let altS = similarity(normAns, normAlt);
+            if (altS > bestScore) bestScore = altS;
+            if (normAns === normAlt) return { correct:true, score:1 };
+        }
+        return { correct: bestScore >= 0.6, score: Math.min(bestScore, 1) };
+    } else if (mode === 2) {
+        let correct = item.name;
+        let s = similarity(ans.toLowerCase(), correct.toLowerCase());
+        let containMatch = ans.includes(correct) || correct.includes(ans);
+        return { correct: s >= 0.5 || containMatch, score: Math.min(s, 1) };
+    } else {
+        let correct = item.formula;
+        let normAns = normalizeFormula(ans);
+        let normCorrect = normalizeFormula(correct);
+        if (normAns === normCorrect) return { correct:true, score:1 };
+        let s = similarity(normAns, normCorrect);
+        return { correct: s >= 0.6, score: Math.min(s, 1) };
+    }
+}
+
+function setScope(s) {
+    currentScope = s;
+    currentCategory = 'all';
+    document.querySelectorAll('.scope-bar .sbtn').forEach(b => b.classList.toggle('on', b.textContent.includes(s === 'all' ? '全部' : s)));
+    renderCategoryTags();
+    renderAll();
+}
+
+function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.mode-bar .mbtn').forEach((b, i) => b.classList.toggle('on', i === m - 1));
+    renderAll();
+}
+
+function setCategory(c) {
+    currentCategory = c;
+    document.querySelectorAll('.category-tag').forEach(b => b.classList.toggle('on', b.dataset.cat === c));
+    renderMathList();
+}
+
+function show(p) {
+    document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+    document.getElementById('page-' + p).classList.add('active');
+    selectedDate = null;
+    let now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth();
+    if (p === 'exam') {
+        document.getElementById('exam-setup').style.display = 'block';
+        document.getElementById('exam-progress').classList.add('hide');
+        document.getElementById('exam-result').classList.add('hide');
+        document.getElementById('wrong-pool-card').style.display = 'block';
+        document.getElementById('wrong-exam-progress').classList.add('hide');
+    }
+    renderAll();
+}
+
+function openNav() { document.getElementById('nav-drawer').classList.add('active'); document.getElementById('nav-overlay').classList.add('active'); }
+function closeNav() { document.getElementById('nav-drawer').classList.remove('active'); document.getElementById('nav-overlay').classList.remove('active'); }
+function navTo(p) { closeNav(); show(p); }
+
+function toggleUser() {
+    user = user === 'A' ? 'B' : 'A';
+    document.getElementById('show-user').innerText = '同学' + user;
+    selectedDate = null;
+    renderAll();
+}
+
+function renderAll() {
+    renderHome();
+    renderMathList();
+    renderCategoryTags();
+    renderTodayReview();
+    renderCalendar();
+    renderExamSetting();
+    renderStats();
+    renderDailyChart();
+    renderExamScores();
+    renderWrongPool();
+    renderStarDisplay();
+    renderLotteryBox();
+    renderPrizes();
+    renderLotteryEligibility();
+}
+
+function renderStarDisplay() {
+    let u = safeUser(getUser());
+    document.getElementById('star-count').textContent = '⭐ ' + (u.stars || 0);
+    let combo = u.combo || 0;
+    document.getElementById('combo-count').textContent = combo >= 3 ? '🔥' + combo + '连击' : '';
+}
+
+function renderHome() {
+    let u = safeUser(getUser());
+    let words = WORDS;
+    let scopeWords = currentScope === 'all' ? words : words.filter(w => w.scope && w.scope.includes(currentScope));
+    document.getElementById('home-learned').textContent = u.learn.filter(i => scopeWords.some((_, idx) => idx === i)).length;
+    document.getElementById('home-mastered').textContent = u.done.filter(i => scopeWords.some((_, idx) => idx === i)).length;
+    document.getElementById('home-today').textContent = getTodayTasks().filter(t => currentScope === 'all' || (t.word.scope && t.word.scope.includes(currentScope))).length;
+    document.getElementById('home-wrong').textContent = Object.keys(u.wrongPool || {}).length;
+
+    let tasks = getTodayTasks();
+    if (currentScope !== 'all') tasks = tasks.filter(t => t.word.scope && t.word.scope.includes(currentScope));
+    let html = '';
+    if (tasks.length === 0) {
+        html = '<div style="text-align:center;color:#999;padding:20px">🎉 今日无待复习知识点！</div>';
+    } else {
+        tasks.slice(0, 10).forEach(t => {
+            html += `<div class="math-item" onclick="openReviewModal(${t.idx})" style="cursor:pointer">
+                <div><span class="math-name">${t.word.name}</span><span class="math-formula" style="margin-left:10px">${t.word.formula}</span>
+                ${t.word.scope ? t.word.scope.map(s => `<span class="scope-tag">${s}</span>`).join('') : ''}</div>
+                <div><button class="btn btn-blue" style="font-size:12px;padding:4px 10px">复习</button></div>
+            </div>`;
+        });
+        if (tasks.length > 10) html += `<div style="text-align:center;color:#999;padding:10px">还有 ${tasks.length - 10} 个待复习...</div>`;
+    }
+    document.getElementById('home-tasks').innerHTML = html;
+}
+
+function renderCategoryTags() {
+    let cats = getCategories();
+    let html = `<span class="tag ${currentCategory==='all'?'on':''}" onclick="setCategory('all')" data-cat="all">全部</span>`;
+    cats.forEach(c => { html += `<span class="tag category-tag ${currentCategory===c?'on':''}" onclick="setCategory('${c}')" data-cat="${c}">${c}</span>`; });
+    document.getElementById('category-tags').innerHTML = html;
+}
+
+function renderMathList() {
+    let words = getWords();
+    let u = safeUser(getUser());
+    let html = '';
+    if (words.length === 0) {
+        html = '<div style="text-align:center;color:#999;padding:30px">暂无知识点</div>';
+    } else {
+        words.forEach((w, i) => {
+            let realIdx = WORDS.indexOf(w);
+            let isLearned = u.learn.includes(realIdx);
+            let isDone = u.done.includes(realIdx);
+            let diff = w.difficulty || 1;
+            let diffStars = '⭐'.repeat(diff);
+            html += `<div class="math-item" onclick="openLearnModal(${realIdx})" style="cursor:pointer">
+                <div>
+                    <span class="math-name">${w.name}</span>
+                    <span class="math-formula">${w.formula}</span>
+                    <div class="math-meta">${diffStars} ${w.category || ''} ${w.scope ? w.scope.map(s => `<span class="scope-tag">${s}</span>`).join('') : ''}</div>
+                </div>
+                <div>
+                    ${isDone ? '<span style="color:#43a047;font-weight:bold">✅ 已掌握</span>' : isLearned ? '<span style="color:#ffa726;font-weight:bold">📖 复习中</span>' : '<button class="btn btn-blue" style="font-size:12px;padding:4px 10px">学习</button>'}
+                </div>
+            </div>`;
+        });
+    }
+    document.getElementById('math-list').innerHTML = html;
+}
+
+function openLearnModal(idx) {
+    learnIdx = idx;
+    let w = WORDS[idx];
+    let u = safeUser(getUser());
+    let isLearned = u.learn.includes(idx);
+    let isDone = u.done.includes(idx);
+    let diff = w.difficulty || 1;
+    let html = `
+        <div style="text-align:center">
+            <div style="font-size:28px;font-weight:bold;color:#5c6bc0;margin-bottom:8px">${w.name}</div>
+            <div style="font-size:22px;color:#7e57c2;font-family:'Cambria Math',serif;margin:12px 0;padding:15px;background:#ede7f6;border-radius:15px">${w.formula}</div>
+            <div style="color:#666;margin:10px 0;font-size:15px">${w.desc || ''}</div>
+            ${w.example ? `<div style="color:#888;font-size:14px;margin:10px 0;padding:10px;background:#f5f5f5;border-radius:10px">💡 ${w.example}</div>` : ''}
+            <div style="margin-top:8px">${'⭐'.repeat(diff)} ${w.category || ''} ${w.scope ? w.scope.map(s => `<span class="scope-tag">${s}</span>`).join('') : ''}</div>
+            ${isDone ? '<div style="color:#43a047;font-weight:bold;margin-top:10px">✅ 已掌握</div>' : isLearned ? '<div style="color:#ffa726;font-weight:bold;margin-top:10px">📖 已在复习计划中</div>' : ''}
+        </div>`;
+    document.getElementById('learn-modal-content').innerHTML = html;
+    document.getElementById('learn-modal').style.display = 'flex';
+}
+
+function closeLearnModal() { document.getElementById('learn-modal').style.display = 'none'; learnIdx = null; }
+
+function addToReview() {
+    let idx = learnIdx;
+    if (idx === null) return;
+    let u = safeUser(getUser());
+    let now = Date.now();
+    let today = todayKey();
+    if (!u.learn.includes(idx)) {
+        u.learn.push(idx);
+        let nextTs = nextDate(now, 1);
+        u.log[idx] = { t:now, c:1, next:nextTs };
+        setUser(u);
+        recordDaily('learn');
+        u = safeUser(getUser());
+        let todayLearn = u.dailyLog[today]?.learn || 0;
+        let todayMilestone = Math.floor(todayLearn / 10);
+        let lastTodayMilestone = u.lastTodayMilestone || {};
+        if (todayMilestone > (lastTodayMilestone[today] || 0)) {
+            if (!u.lastTodayMilestone) u.lastTodayMilestone = {};
+            u.lastTodayMilestone[today] = todayMilestone;
+            setUser(u);
+            addStars(30, '今天学习' + (todayMilestone * 10) + '个知识点！');
+        }
+    }
+    closeLearnModal();
+    renderAll();
+}
+
+function renderTodayReview() {
+    let tasks = getTodayTasks();
+    if (currentScope !== 'all') tasks = tasks.filter(t => t.word.scope && t.word.scope.includes(currentScope));
+    let html = '';
+    if (tasks.length === 0) {
+        html = '<div style="text-align:center;color:#999;padding:20px">🎉 今日无待复习知识点！</div>';
+    } else {
+        tasks.forEach(t => {
+            let isOverdue = t.nextTime < new Date().setHours(0,0,0,0);
+            html += `<div class="math-item ${isOverdue ? 'wrong-item' : ''}" onclick="openReviewModal(${t.idx})" style="cursor:pointer">
+                <div><span class="math-name">${t.word.name}</span><span class="math-formula" style="margin-left:8px">${t.word.formula}</span></div>
+                <div><button class="btn btn-green" style="font-size:12px;padding:4px 10px">复习</button></div>
+            </div>`;
+        });
+    }
+    document.getElementById('today-review-list').innerHTML = html;
+}
+
+function openReviewModal(idx) {
+    isInReview = true;
+    reviewQueue = [idx];
+    reviewCurrentIdx = 0;
+    reviewPassed = {};
+    reviewPassed[idx] = [];
+    reviewPendingStars = 0;
+    reviewPendingCombo = 0;
+    showReviewQuestion();
+    document.getElementById('review-modal').style.display = 'flex';
+}
+
+function showReviewQuestion() {
+    if (reviewCurrentIdx >= reviewQueue.length) { finishReviewAll(); return; }
+    let idx = reviewQueue[reviewCurrentIdx];
+    let w = WORDS[idx];
+    let round = (reviewPassed[idx] || []).length + 1;
+    document.getElementById('review-modal-title').textContent = `🔄 复习 - ${MODE_LABELS[mode]} (第${round}轮)`;
+    let question = '', hint = '';
+    if (mode === 1) { question = w.name; hint = '请写出公式'; }
+    else if (mode === 2) { question = w.formula; hint = '请写出名称'; }
+    else { question = w.example || w.desc; hint = '请写出公式'; }
+    let html = `
+        <div style="text-align:center">
+            <div style="font-size:24px;font-weight:bold;color:#5c6bc0;margin-bottom:12px">${question}</div>
+            <div style="color:#999;font-size:14px">${hint}</div>
+            ${w.scope ? w.scope.map(s => `<span class="scope-tag">${s}</span>`).join('') : ''}
+        </div>`;
+    document.getElementById('review-modal-content').innerHTML = html;
+    document.getElementById('review-answer').value = '';
+    document.getElementById('review-answer').disabled = false;
+    document.getElementById('review-feedback').style.display = 'none';
+    document.getElementById('review-answer').focus();
+}
+
+function submitReviewAnswer() {
+    let idx = reviewQueue[reviewCurrentIdx];
+    let w = WORDS[idx];
+    let ans = document.getElementById('review-answer').value;
+    let result = checkAnswer(ans, w);
+    let fb = document.getElementById('review-feedback');
+    fb.style.display = 'block';
+    document.getElementById('review-answer').disabled = true;
+
+    if (result.correct) {
+        addComboStar();
+        reviewPendingStars++;
+        reviewPassed[idx].push(mode);
+        fb.innerHTML = `<div style="color:#43a047;font-weight:bold;font-size:16px">✅ 正确！</div>
+            <div style="color:#666;margin-top:6px">${w.name}: ${w.formula}</div>`;
+        playSound('correct');
+        recordDaily('review');
+        setTimeout(() => {
+            reviewCurrentIdx++;
+            if (reviewCurrentIdx < reviewQueue.length) showReviewQuestion();
+            else finishReviewAll();
+        }, 1200);
+    } else {
+        resetCombo();
+        fb.innerHTML = `<div style="color:#ef5350;font-weight:bold;font-size:16px">❌ 不正确</div>
+            <div style="color:#666;margin-top:6px">正确答案：${w.name}: ${w.formula}</div>
+            <div style="color:#999;font-size:13px;margin-top:4px">${w.desc || ''}</div>`;
+        playSound('wrong');
+        let u = safeUser(getUser());
+        if (!u.wrongPool) u.wrongPool = {};
+        u.wrongPool[idx] = { c:0, date:Date.now() };
+        setUser(u);
+    }
+}
+
+function viewReviewAnswer() {
+    let idx = reviewQueue[reviewCurrentIdx];
+    let w = WORDS[idx];
+    resetCombo();
+    let fb = document.getElementById('review-feedback');
+    fb.style.display = 'block';
+    fb.innerHTML = `<div style="color:#ffa726;font-weight:bold;font-size:16px">👁 查看答案</div>
+        <div style="color:#666;margin-top:6px">${w.name}: ${w.formula}</div>
+        <div style="color:#999;font-size:13px;margin-top:4px">${w.desc || ''}</div>
+        <div style="color:#999;font-size:13px">${w.example || ''}</div>`;
+    document.getElementById('review-answer').disabled = true;
+}
+
+function skipReviewAnswer() {
+    resetCombo();
+    reviewCurrentIdx++;
+    if (reviewCurrentIdx < reviewQueue.length) showReviewQuestion();
+    else finishReviewAll();
+}
+
+function finishReviewAll() {
+    let u = safeUser(getUser());
+    let reviewed = Object.keys(reviewPassed).filter(idx => reviewPassed[idx].length > 0);
+    reviewed.forEach(idx => {
+        let i = parseInt(idx);
+        let log = u.log[i];
+        if (!log) return;
+        log.c += 1;
+        if (log.c >= PERIOD.length) {
+            if (!u.done.includes(i)) u.done.push(i);
+            log.next = null;
+        } else {
+            let interval = PERIOD[log.c] - PERIOD[log.c - 1];
+            let d = new Date(); d.setDate(d.getDate() + interval);
+            log.next = d.getTime();
+        }
+    });
+    if (reviewPendingStars > 0) u.stars = (u.stars || 0) + reviewPendingStars;
+    u.combo = reviewPendingCombo;
+    isInReview = false;
+    reviewPendingStars = 0;
+    reviewPendingCombo = 0;
+    setUser(u);
+    if (reviewed.length > 0) addStars(30, '复习任务完成！');
+    closeModal();
+    renderAll();
+    if (reviewed.length > 0) {
+        playSound('victory');
+        toast(`复习完成！${reviewed.length} 个知识点已通过复习`, 'success');
+    }
+}
+
+function closeModal() { document.getElementById('review-modal').style.display = 'none'; }
+
+function renderCalendar() {
+    let u = safeUser(getUser());
+    let now = new Date();
+    let y = calYear || now.getFullYear();
+    let m = calMonth || now.getMonth();
+    let firstDay = new Date(y, m, 1).getDay();
+    let daysInMonth = new Date(y, m + 1, 0).getDate();
+    let todayStr = todayKey();
+    let html = `<div class="calendar-nav">
+        <button onclick="calPrev()">◀</button>
+        <span class="cal-title">${y}年${m+1}月</span>
+        <button onclick="calNext()">▶</button>
+    </div>`;
+    html += '<div class="calendar">';
+    ['日','一','二','三','四','五','六'].forEach(d => { html += `<div style="font-weight:bold;color:#5c6bc0;padding:6px">${d}</div>`; });
+    for (let i = 0; i < firstDay; i++) html += '<div></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+        let dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        let hasTask = false;
+        let isOverdue = false;
+        let isToday = dateStr === todayStr;
+        let today = new Date(); today.setHours(0,0,0,0);
+        u.learn.forEach(idx => {
+            if (u.done.includes(idx)) return;
+            let log = u.log[idx];
+            if (log && log.next) {
+                let nd = new Date(log.next);
+                let ndStr = `${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
+                if (ndStr === dateStr) hasTask = true;
+                if (ndStr === dateStr && log.next < today.getTime()) isOverdue = true;
+            }
+        });
+        let cls = 'calendar-day';
+        if (isToday) cls += ' today';
+        if (hasTask) cls += ' has-task';
+        if (isOverdue && !isToday) cls += ' overdue';
+        if (selectedDate === dateStr) cls += ' selected';
+        html += `<div class="${cls}" onclick="selectCalDate('${dateStr}')"><span>${d}</span></div>`;
+    }
+    html += '</div>';
+    document.getElementById('review-calendar').innerHTML = html;
+}
+
+function calPrev() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
+function calNext() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); }
+function selectCalDate(d) { selectedDate = d; renderCalendar(); }
+
+function startExam() {
+    let count = parseInt(document.getElementById('exam-count').value);
+    let scope = document.getElementById('exam-scope').value;
+    let pool = scope === 'all' ? WORDS : WORDS.filter(w => w.scope && w.scope.includes(scope));
+    if (pool.length === 0) { toast('该学段暂无知识点', 'warning'); return; }
+    let shuffled = [...pool].sort(() => Math.random() - 0.5);
+    examQuestions = shuffled.slice(0, Math.min(count, shuffled.length));
+    examCurrent = 0;
+    examCorrect = 0;
+    examSeconds = 0;
+    document.getElementById('exam-setup').style.display = 'none';
+    document.getElementById('exam-progress').classList.remove('hide');
+    document.getElementById('exam-result').classList.add('hide');
+    document.getElementById('wrong-pool-card').style.display = 'none';
+    document.getElementById('wrong-exam-progress').classList.add('hide');
+    if (examTimer) clearInterval(examTimer);
+    examTimer = setInterval(() => {
+        examSeconds++;
+        let m = Math.floor(examSeconds / 60);
+        let s = examSeconds % 60;
+        document.getElementById('exam-timer').textContent = `⏱ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }, 1000);
+    showExamQuestion();
+}
+
+function showExamQuestion() {
+    if (examCurrent >= examQuestions.length) { finishExam(); return; }
+    let w = examQuestions[examCurrent];
+    document.getElementById('exam-progress-text').textContent = `第 ${examCurrent+1}/${examQuestions.length} 题`;
+    document.getElementById('exam-progress-bar').style.width = ((examCurrent / examQuestions.length) * 100) + '%';
+    let question = '', hint = '';
+    if (mode === 1) { question = w.name; hint = '请写出公式'; }
+    else if (mode === 2) { question = w.formula; hint = '请写出名称'; }
+    else { question = w.example || w.desc; hint = '请写出公式'; }
+    document.getElementById('exam-question').innerHTML = `
+        <div style="text-align:center">
+            <div style="font-size:22px;font-weight:bold;color:#5c6bc0">${question}</div>
+            <div style="color:#999;font-size:14px;margin-top:6px">${hint}</div>
+            ${w.scope ? w.scope.map(s => `<span class="scope-tag">${s}</span>`).join('') : ''}
+        </div>`;
+    document.getElementById('exam-answer').value = '';
+    document.getElementById('exam-answer').disabled = false;
+    document.getElementById('exam-feedback').style.display = 'none';
+    document.getElementById('exam-answer').focus();
+}
+
+function submitExamAnswer() {
+    let w = examQuestions[examCurrent];
+    let ans = document.getElementById('exam-answer').value;
+    let result = checkAnswer(ans, w);
+    let fb = document.getElementById('exam-feedback');
+    fb.style.display = 'block';
+    document.getElementById('exam-answer').disabled = true;
+    let realIdx = WORDS.indexOf(w);
+
+    if (result.correct) {
+        examCorrect++;
+        addComboStar();
+        recordDaily('learn');
+        fb.innerHTML = `<div style="color:#43a047;font-weight:bold">✅ 正确！</div>
+            <div style="color:#666;margin-top:4px">${w.name}: ${w.formula}</div>`;
+        playSound('correct');
+    } else {
+        resetCombo();
+        fb.innerHTML = `<div style="color:#ef5350;font-weight:bold">❌ 不正确</div>
+            <div style="color:#666;margin-top:4px">正确答案：${w.name}: ${w.formula}</div>
+            <div style="color:#999;font-size:13px;margin-top:4px">${w.desc || ''}</div>`;
+        playSound('wrong');
+        let u = safeUser(getUser());
+        if (!u.wrongPool) u.wrongPool = {};
+        u.wrongPool[realIdx] = { c:0, date:Date.now() };
+        setUser(u);
+    }
+    setTimeout(() => { examCurrent++; showExamQuestion(); }, 1500);
+}
+
+function skipExamAnswer() {
+    resetCombo();
+    examCurrent++;
+    showExamQuestion();
+}
+
+function finishExam() {
+    if (examTimer) { clearInterval(examTimer); examTimer = null; }
+    let total = examQuestions.length;
+    let score = Math.round((examCorrect / total) * 100);
+    document.getElementById('exam-progress').classList.add('hide');
+    document.getElementById('exam-result').classList.remove('hide');
+    document.getElementById('exam-result-content').innerHTML = `
+        <div style="text-align:center">
+            <div style="font-size:48px;font-weight:bold;color:${score >= 60 ? '#43a047' : '#ef5350'}">${score}分</div>
+            <div style="color:#666;margin:8px 0">答对 ${examCorrect}/${total} 题 | 用时 ${Math.floor(examSeconds/60)}分${examSeconds%60}秒</div>
+            <div style="font-size:40px;margin:10px 0">${score >= 90 ? '🏆' : score >= 60 ? '👍' : '💪'}</div>
+        </div>`;
+    let u = safeUser(getUser());
+    if (!u.examScores) u.examScores = [];
+    u.examScores.push({ date:todayKey(), score, correct:examCorrect, total, time:examSeconds, scope:document.getElementById('exam-scope').value });
+    setUser(u);
+    addStars(50, '完成考试！');
+    playSound(score >= 60 ? 'victory' : 'wrong');
+    renderAll();
+}
+
+function renderExamSetting() {}
+function renderExamScores() {
+    let u = safeUser(getUser());
+    let scores = u.examScores || [];
+    let html = '';
+    if (scores.length === 0) {
+        html = '<div style="text-align:center;color:#999;padding:20px">暂无考试记录</div>';
+    } else {
+        scores.slice(-10).reverse().forEach(s => {
+            html += `<div class="math-item">
+                <div><span class="math-name">${s.date}</span> <span style="color:#666">${s.scope === 'all' ? '全部' : s.scope}</span></div>
+                <div><span style="font-weight:bold;color:${s.score >= 60 ? '#43a047' : '#ef5350'}">${s.score}分</span> <span style="color:#999;font-size:13px">${s.correct}/${s.total} | ${Math.floor(s.time/60)}分${s.time%60}秒</span></div>
+            </div>`;
+        });
+    }
+    document.getElementById('exam-scores-list').innerHTML = html;
+}
+
+function renderWrongPool() {
+    let u = safeUser(getUser());
+    let pool = u.wrongPool || {};
+    let html = '';
+    let keys = Object.keys(pool);
+    if (keys.length === 0) {
+        html = '<div style="text-align:center;color:#999;padding:20px">🎉 错题池为空！</div>';
+    } else {
+        keys.forEach(idx => {
+            let w = WORDS[parseInt(idx)];
+            if (!w) return;
+            html += `<div class="math-item wrong-item">
+                <div><span class="math-name">${w.name}</span><span class="math-formula" style="margin-left:8px">${w.formula}</span></div>
+                <div><span style="color:#ef5350;font-size:13px">错${pool[idx].c || 0}次</span></div>
+            </div>`;
+        });
+    }
+    document.getElementById('wrong-pool-list').innerHTML = html;
+}
+
+function startWrongExam() {
+    let u = safeUser(getUser());
+    let pool = u.wrongPool || {};
+    let keys = Object.keys(pool);
+    if (keys.length === 0) { toast('错题池为空', 'warning'); return; }
+    document.getElementById('exam-result').classList.add('hide');
+    document.getElementById('wrong-pool-card').style.display = 'none';
+    document.getElementById('wrong-exam-progress').classList.remove('hide');
+    wrongExamQueue = keys.map(k => parseInt(k)).sort(() => Math.random() - 0.5);
+    wrongExamCurrent = 0;
+    showWrongExamQuestion();
+}
+
+function showWrongExamQuestion() {
+    if (wrongExamCurrent >= wrongExamQueue.length) { finishWrongExam(); return; }
+    let idx = wrongExamQueue[wrongExamCurrent];
+    let w = WORDS[idx];
+    let question = '', hint = '';
+    if (mode === 1) { question = w.name; hint = '请写出公式'; }
+    else if (mode === 2) { question = w.formula; hint = '请写出名称'; }
+    else { question = w.example || w.desc; hint = '请写出公式'; }
+    document.getElementById('wrong-exam-question').innerHTML = `
+        <div style="text-align:center">
+            <div style="font-size:22px;font-weight:bold;color:#5c6bc0">${question}</div>
+            <div style="color:#999;font-size:14px;margin-top:6px">${hint}</div>
+        </div>`;
+    document.getElementById('wrong-exam-answer').value = '';
+    document.getElementById('wrong-exam-answer').disabled = false;
+    document.getElementById('wrong-exam-feedback').style.display = 'none';
+}
+
+function submitWrongExamAnswer() {
+    let idx = wrongExamQueue[wrongExamCurrent];
+    let w = WORDS[idx];
+    let ans = document.getElementById('wrong-exam-answer').value;
+    let result = checkAnswer(ans, w);
+    let fb = document.getElementById('wrong-exam-feedback');
+    fb.style.display = 'block';
+    document.getElementById('wrong-exam-answer').disabled = true;
+    if (result.correct) {
+        let u = safeUser(getUser());
+        if (!u.wrongPool) u.wrongPool = {};
+        if (!u.wrongPool[idx]) u.wrongPool[idx] = { c:0, date:Date.now() };
+        u.wrongPool[idx].c = (u.wrongPool[idx].c || 0) + 1;
+        if (u.wrongPool[idx].c >= 3) delete u.wrongPool[idx];
+        setUser(u);
+        addComboStar();
+        fb.innerHTML = `<div style="color:#43a047;font-weight:bold">✅ 正确！${(u.wrongPool[idx]) ? `还需答对${3 - u.wrongPool[idx].c}次移出错题池` : '已移出错题池！'}</div>`;
+        playSound('correct');
+    } else {
+        let u = safeUser(getUser());
+        if (!u.wrongPool) u.wrongPool = {};
+        u.wrongPool[idx] = { c:0, date:Date.now() };
+        setUser(u);
+        resetCombo();
+        fb.innerHTML = `<div style="color:#ef5350;font-weight:bold">❌ 不正确</div>
+            <div style="color:#666;margin-top:4px">正确答案：${w.name}: ${w.formula}</div>`;
+        playSound('wrong');
+    }
+    setTimeout(() => { wrongExamCurrent++; showWrongExamQuestion(); }, 1500);
+}
+
+function skipWrongExamAnswer() {
+    resetCombo();
+    wrongExamCurrent++;
+    showWrongExamQuestion();
+}
+
+function finishWrongExam() {
+    document.getElementById('wrong-exam-progress').classList.add('hide');
+    document.getElementById('wrong-pool-card').style.display = 'block';
+    toast('错题重考完成！', 'success');
+    renderAll();
+}
+
+function clearWrongPool() {
+    let u = safeUser(getUser());
+    let count = Object.keys(u.wrongPool || {}).length;
+    if (count === 0) { toast('错题池已为空', 'warning'); return; }
+    if (!confirm('确定清空所有错题？')) return;
+    u.wrongPool = {};
+    setUser(u);
+    addStars(20, '清空错题池！');
+    renderAll();
+}
+
+function renderStats() {
+    let u = safeUser(getUser());
+    let totalLearn = u.learn.length;
+    let totalDone = u.done.length;
+    let totalStars = u.stars || 0;
+    let today = todayKey();
+    let todayData = u.dailyLog[today] || { learn:0, review:0 };
+    let html = `
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+            <div style="background:#e8eaf6;padding:15px;border-radius:12px;text-align:center">
+                <div style="font-size:28px;font-weight:bold;color:#5c6bc0">${totalLearn}</div>
+                <div style="color:#999;font-size:13px">已学知识点</div>
+            </div>
+            <div style="background:#e8f5e9;padding:15px;border-radius:12px;text-align:center">
+                <div style="font-size:28px;font-weight:bold;color:#43a047">${totalDone}</div>
+                <div style="color:#999;font-size:13px">已掌握</div>
+            </div>
+            <div style="background:#fff9c4;padding:15px;border-radius:12px;text-align:center">
+                <div style="font-size:28px;font-weight:bold;color:#f57f17">${totalStars}</div>
+                <div style="color:#999;font-size:13px">累计星星</div>
+            </div>
+            <div style="background:#fce4ec;padding:15px;border-radius:12px;text-align:center">
+                <div style="font-size:28px;font-weight:bold;color:#e53935">${Object.keys(u.wrongPool || {}).length}</div>
+                <div style="color:#999;font-size:13px">错题数</div>
+            </div>
+        </div>
+        <div style="margin-top:12px;background:#f3e5f5;padding:15px;border-radius:12px;text-align:center">
+            <div style="font-size:16px;color:#7e57c2">今日学习 <b>${todayData.learn}</b> | 今日复习 <b>${todayData.review}</b></div>
+        </div>`;
+    document.getElementById('personal-stats').innerHTML = html;
+}
+
+function renderDailyChart() {
+    let u = safeUser(getUser());
+    let canvas = document.getElementById('daily-chart');
+    if (!canvas) return;
+    let last30 = [];
+    let learnData = [], reviewData = [];
+    for (let i = 29; i >= 0; i--) {
+        let d = new Date(); d.setDate(d.getDate() - i);
+        let key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        last30.push(key.slice(5));
+        let dl = u.dailyLog[key] || { learn:0, review:0 };
+        learnData.push(dl.learn);
+        reviewData.push(dl.review);
+    }
+    if (dailyChartInstance) dailyChartInstance.destroy();
+    dailyChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: last30,
+            datasets: [
+                { label:'学习', data:learnData, backgroundColor:'rgba(92,107,192,0.7)' },
+                { label:'复习', data:reviewData, backgroundColor:'rgba(126,87,194,0.7)' }
+            ]
+        },
+        options: { responsive:true, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ position:'top' } } }
+    });
+}
+
+function getLotteryConfig() {
+    try { let c = JSON.parse(localStorage.getItem('math_lottery_config')); return c || DEFAULT_LOTTERY_CONFIG; } catch { return DEFAULT_LOTTERY_CONFIG; }
+}
+function getLotteryPrizes() { return getLotteryConfig().prizes; }
+function getRedeemItems() {
+    let config = getLotteryConfig();
+    let items = config.prizes.filter(p => p.type === 'good' && p.cost > 0).map(p => ({ emoji:p.emoji, name:p.name, cost:p.cost }));
+    if (config.wishPrize) items.unshift(config.wishPrize);
+    return items;
+}
+
+function getLotteryEligibility() {
+    let config = getLotteryConfig();
+    let u = safeUser(getUser());
+    let stars = u.stars || 0;
+    let todayStr = todayKey();
+    let todayLogs = [];
+    try { todayLogs = JSON.parse(localStorage.getItem('math_lottery_logs') || '[]').filter(l => l.dateKey === todayStr && l.user === user); } catch {}
+    let todayLotteryCount = todayLogs.filter(l => l.type === 'lottery').length;
+    let todaySpend = todayLogs.filter(l => l.type === 'lottery').reduce((s, l) => s + Math.abs(l.starChange), 0);
+    let redeemUnlockData = u.lotteryRedeemUnlock || null;
+    let hasRedeemUnlock = false;
+    if (redeemUnlockData) {
+        let elapsed = Date.now() - redeemUnlockData.time;
+        if (elapsed < 24 * 3600 * 1000 && !redeemUnlockData.used) hasRedeemUnlock = true;
+    }
+    let starsEnough = stars >= config.starThreshold;
+    let dailyCountOk = todayLotteryCount < (config.dailyLimit || 1);
+    let dailySpendOk = todaySpend < (config.dailySpendLimit || 500);
+    let redeemOk = config.redeemUnlock ? hasRedeemUnlock : true;
+    let costEnough = stars >= config.cost;
+    return {
+        canLottery: starsEnough && dailyCountOk && dailySpendOk && redeemOk && costEnough,
+        starsEnough, dailyCountOk, dailySpendOk, redeemOk, costEnough,
+        stars, starThreshold: config.starThreshold,
+        starsNeeded: Math.max(0, config.starThreshold - stars),
+        todayLotteryCount, dailyLimit: config.dailyLimit || 1,
+        todaySpend, dailySpendLimit: config.dailySpendLimit || 500,
+        hasRedeemUnlock, cost: config.cost
+    };
+}
+
+function renderLotteryEligibility() {
+    let elig = getLotteryEligibility();
+    let html = `<div style="font-size:14px;color:#666">`;
+    html += `抽奖资格：${elig.canLottery ? '<span style="color:#43a047;font-weight:bold">✅ 已解锁</span>' : '<span style="color:#ef5350;font-weight:bold">❌ 未解锁</span>'}`;
+    if (!elig.starsEnough) html += ` | 还差 <b style="color:#ef5350">${elig.starsNeeded}⭐</b> 达到门槛(${elig.starThreshold})`;
+    if (!elig.redeemOk) html += ` | <span style="color:#ffa726">需先兑奖解锁</span>`;
+    html += ` | 今日已抽 ${elig.todayLotteryCount}/${elig.dailyLimit}`;
+    html += `</div>`;
+    if (!elig.starsEnough) {
+        html += `<div class="progress-bar" style="margin-top:8px"><div class="fill" style="width:${Math.min(100, (elig.stars / elig.starThreshold) * 100)}%"></div></div>`;
+        html += `<div style="font-size:12px;color:#999;margin-top:4px">积分进度：${elig.stars}/${elig.starThreshold}⭐</div>`;
+    }
+    document.getElementById('lottery-eligibility').innerHTML = html;
+}
+
+function renderLotteryBox() {
+    let prizes = getLotteryPrizes();
+    let config = getLotteryConfig();
+    let totalWeight = prizes.reduce((s, p) => s + p.weight, 0);
+    let html = '';
+    prizes.forEach((p, i) => {
+        let prob = ((p.weight / totalWeight) * 100).toFixed(1);
+        let isSelected = selectedPrizeIdx === i;
+        html += `<div class="lottery-item ${isSelected ? 'selected' : ''}" id="lottery-item-${i}" onclick="selectPrize(${i})">
+            <div class="prize-emoji">${p.emoji}</div>
+            <div class="prize-name">${p.name}</div>
+            <div class="prize-prob">${prob}%</div>
+            ${p.type === 'good' ? `<div class="prize-cost">${p.cost}⭐</div>` : ''}
+        </div>`;
+    });
+    if (config.wishPrize) {
+        html += `<div class="lottery-item" style="border-color:#ffc107;background:#fff9c4">
+            <div class="prize-emoji">${config.wishPrize.emoji}</div>
+            <div class="prize-name">${config.wishPrize.name}</div>
+            <div class="prize-prob" style="color:#ffc107">仅兑换</div>
+            <div class="prize-cost">${config.wishPrize.cost}⭐</div>
+        </div>`;
+    }
+    document.getElementById('lottery-box').innerHTML = html;
+    updateRedeemBtn();
+}
+
+function selectPrize(i) {
+    let prizes = getLotteryPrizes();
+    let p = prizes[i];
+    if (p.type !== 'good') { toast('该奖品仅可抽奖获得', 'warning'); return; }
+    selectedPrizeIdx = selectedPrizeIdx === i ? -1 : i;
+    renderLotteryBox();
+}
+
+function updateRedeemBtn() {
+    let btn = document.getElementById('redeem-btn');
+    if (selectedPrizeIdx >= 0) {
+        let prizes = getLotteryPrizes();
+        let p = prizes[selectedPrizeIdx];
+        if (p && p.type === 'good') {
+            btn.style.display = 'inline-block';
+            btn.textContent = `兑换 ${p.emoji}${p.name}(${p.cost}⭐)`;
+            return;
+        }
+    }
+    btn.style.display = 'none';
+}
+
+function doLottery() {
+    if (lotterySpinning) return;
+    const prizes = getLotteryPrizes();
+    let elig = getLotteryEligibility();
+    if (!elig.canLottery) {
+        let msgs = [];
+        if (!elig.starsEnough) msgs.push(`积分需达${elig.starThreshold}（还差${elig.starsNeeded}⭐）`);
+        if (!elig.redeemOk) msgs.push('需先完成一次兑奖解锁抽奖资格');
+        if (!elig.dailyCountOk) msgs.push(`今日已抽${elig.todayLotteryCount}次，上限${elig.dailyLimit}次`);
+        if (!elig.dailySpendOk) msgs.push(`今日抽奖消耗已达上限${elig.dailySpendLimit}⭐`);
+        if (!elig.costEnough) msgs.push(`积分不足${elig.cost}⭐`);
+        toast(msgs.join('；'), 'warning');
+        return;
+    }
+    lotterySpinning = true;
+    let config = getLotteryConfig();
+    let u = safeUser(getUser());
+    u.stars -= config.cost;
+    if (u.lotteryRedeemUnlock && !u.lotteryRedeemUnlock.used) u.lotteryRedeemUnlock.used = true;
+    setUser(u);
+    renderStarDisplay();
+
+    document.querySelectorAll('.lottery-item').forEach(el => { el.classList.remove('lottery-hit'); el.classList.remove('lottery-active'); });
+    document.getElementById('lottery-result').style.display = 'none';
+
+    let totalWeight = prizes.reduce((s, p) => s + p.weight, 0);
+    let rand = Math.random() * totalWeight;
+    let hitIndex = 0, cumWeight = 0;
+    for (let i = 0; i < prizes.length; i++) { cumWeight += prizes[i].weight; if (rand < cumWeight) { hitIndex = i; break; } }
+
+    let allPrizeIds = prizes.map((_, i) => i);
+    let steps = 20 + Math.floor(Math.random() * 10);
+    let currentStep = 0;
+    let interval = setInterval(() => {
+        document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
+        let animIdx = allPrizeIds[currentStep % allPrizeIds.length];
+        let animEl = document.getElementById('lottery-item-' + animIdx);
+        if (animEl) animEl.classList.add('lottery-active');
+        currentStep++;
+        if (currentStep >= steps) {
+            clearInterval(interval);
+            try {
+                document.querySelectorAll('.lottery-item').forEach(el => el.classList.remove('lottery-active'));
+                let prize = prizes[hitIndex];
+                let hitEl = document.getElementById('lottery-item-' + hitIndex);
+                if (hitEl) hitEl.classList.add('lottery-hit');
+                u = safeUser(getUser());
+                let resultEl = document.getElementById('lottery-result');
+                if (prize.type === 'bad') {
+                    u.stars = Math.max(0, (u.stars || 0) - config.badDeduct);
+                    setUser(u);
+                    resultEl.style.background = '#ffcdd2'; resultEl.style.color = '#c5221f';
+                    resultEl.innerHTML = `${prize.emoji} ${prize.name}！`;
+                    playSound('wrong');
+                } else if (prize.type === 'neutral') {
+                    resultEl.style.background = '#f5f5f5'; resultEl.style.color = '#666';
+                    resultEl.innerHTML = `${prize.emoji} ${prize.name}`;
+                } else {
+                    if (!u.prizes) u.prizes = [];
+                    u.prizes.push({ emoji:prize.emoji, name:prize.name, date:todayKey() });
+                    setUser(u);
+                    resultEl.style.background = 'linear-gradient(135deg,#fff9c4,#c8e6c9)'; resultEl.style.color = '#1e7e34';
+                    resultEl.innerHTML = `🎉 恭喜获得 ${prize.emoji} ${prize.name}！`;
+                    playSound('victory');
+                }
+                resultEl.style.display = 'block';
+                resultEl.style.animation = 'none'; resultEl.offsetHeight; resultEl.style.animation = 'lotteryPop 0.5s ease';
+                addLotteryLog('lottery', prize.emoji, prize.name, -config.cost);
+                renderStarDisplay();
+                renderLotteryBox();
+            } catch(e) { console.error('lottery callback error:', e); }
+            finally { renderLotteryEligibility(); updateRedeemBtn(); lotterySpinning = false; }
+        }
+    }, 80);
+}
+
+function redeemSelected() {
+    if (selectedPrizeIdx < 0) { toast('请先选择要兑换的奖品', 'warning'); return; }
+    let prizes = getLotteryPrizes();
+    let p = prizes[selectedPrizeIdx];
+    if (!p || p.type !== 'good') return;
+    let u = safeUser(getUser());
+    if ((u.stars || 0) < p.cost) { toast('星星不足，无法兑奖', 'warning'); return; }
+    u.stars -= p.cost;
+    if (!u.prizes) u.prizes = [];
+    u.prizes.push({ emoji:p.emoji, name:p.name, date:todayKey() });
+    u.lotteryRedeemUnlock = { time:Date.now(), used:false };
+    setUser(u);
+    addLotteryLog('redeem', p.emoji, p.name, -p.cost);
+    try {
+        let resultEl = document.getElementById('lottery-result');
+        resultEl.style.display = 'block';
+        resultEl.style.background = 'linear-gradient(135deg,#fff9c4,#c8e6c9)'; resultEl.style.color = '#1e7e34';
+        resultEl.innerHTML = `🎉 兑奖成功！${p.emoji} ${p.name}，消耗 ${p.cost}⭐`;
+        resultEl.style.animation = 'none'; resultEl.offsetHeight; resultEl.style.animation = 'lotteryPop 0.5s ease';
+        playSound('victory');
+    } catch(e) { console.error('redeem render error:', e); }
+    finally { selectedPrizeIdx = -1; renderLotteryEligibility(); updateRedeemBtn(); renderStarDisplay(); renderPrizes(); renderLotteryBox(); }
+}
+
+function addLotteryLog(type, emoji, name, starChange) {
+    let logs = [];
+    try { logs = JSON.parse(localStorage.getItem('math_lottery_logs') || '[]'); } catch {}
+    logs.unshift({ type, emoji, name, starChange, date:new Date().toLocaleString('zh-CN'), dateKey:todayKey(), user });
+    if (logs.length > 100) logs = logs.slice(0, 100);
+    localStorage.setItem('math_lottery_logs', JSON.stringify(logs));
+}
+
+function renderPrizes() {
+    let u = safeUser(getUser());
+    let prizes = u.prizes || [];
+    let html = '';
+    if (prizes.length === 0) {
+        html = '<div style="text-align:center;color:#999;padding:20px">暂无奖品，快去抽奖或兑奖吧！</div>';
+    } else {
+        prizes.forEach((p, i) => {
+            html += `<span class="prize-tag" onclick="redeemPrizeTag('${p.emoji}','${p.name}',${i})" title="点击核销">${p.emoji} ${p.name} <span style="color:#999;font-size:11px">${p.date}</span></span>`;
+        });
+    }
+    document.getElementById('my-prizes').innerHTML = html;
+}
+
+function redeemPrizeTag(emoji, name, idx) {
+    let u = safeUser(getUser());
+    if (!u.prizes || u.prizes.length === 0) return;
+    if (!confirm(`确认核销 ${emoji} ${name}？`)) return;
+    u.prizes.splice(idx, 1);
+    setUser(u);
+    toast(`已核销 ${emoji} ${name}`, 'success');
+    renderPrizes();
+}
+
+window.onload = function() {
+    loadWords();
+    let now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth();
+    show('home');
+};
+</script>
+</body>
+</html>

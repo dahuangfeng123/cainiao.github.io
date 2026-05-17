@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数学学习工具 - 管理后台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;color:#333;min-height:100vh}
+.header{background:#5c6bc0;color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:20px;font-weight:600}
+.header .back{color:#fff;text-decoration:none;font-size:14px;opacity:0.8}
+.header .back:hover{opacity:1}
+.container{max-width:1200px;margin:20px auto;padding:0 16px}
+.tabs{display:flex;gap:0;margin-bottom:20px;background:#fff;border-radius:8px;overflow-x:auto;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.tab{flex:1;padding:12px 16px;text-align:center;cursor:pointer;font-size:14px;font-weight:500;border:none;background:#fff;color:#666;transition:all 0.2s;white-space:nowrap}
+.tab:hover{background:#f5f5f5}
+.tab.active{background:#5c6bc0;color:#fff}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.card h2{font-size:16px;margin-bottom:16px;color:#5c6bc0;border-bottom:1px solid #eee;padding-bottom:8px}
+.card h3{font-size:14px;margin:12px 0 8px;color:#555}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;color:#666;margin-bottom:4px;font-weight:500}
+.field input,.field textarea,.field select{width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px}
+.field textarea{resize:vertical;min-height:80px}
+.field input:focus,.field textarea:focus{outline:none;border-color:#5c6bc0;box-shadow:0 0 0 2px rgba(92,107,192,0.2)}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s}
+.btn-primary{background:#5c6bc0;color:#fff}
+.btn-primary:hover{background:#3f51b5}
+.btn-danger{background:#ef5350;color:#fff}
+.btn-danger:hover{background:#c62828}
+.btn-success{background:#43a047;color:#fff}
+.btn-success:hover{background:#2e7d32}
+.btn-gray{background:#f5f5f5;color:#666;border:1px solid #ddd}
+.btn-gray:hover{background:#eee}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.stat-item{background:#f8f9fa;border-radius:6px;padding:12px;text-align:center}
+.stat-item .value{font-size:24px;font-weight:700;color:#5c6bc0}
+.stat-item .label{font-size:12px;color:#999;margin-top:4px}
+.json-view{background:#1e1e1e;color:#d4d4d4;padding:16px;border-radius:6px;font-family:"Consolas","Monaco",monospace;font-size:12px;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 12px;border:1px solid #eee;text-align:left}
+th{background:#f5f5f5;font-weight:600;color:#555;position:sticky;top:0}
+tr:hover{background:#f8f9fa}
+.search-box{margin-bottom:12px}
+.search-box input{width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px}
+.search-box input:focus{outline:none;border-color:#5c6bc0}
+.empty{text-align:center;color:#999;padding:40px;font-size:14px}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-box h3{margin-bottom:16px}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;color:#fff;font-size:14px;z-index:2000;animation:slideIn 0.3s ease}
+.toast-success{background:#43a047}
+.toast-error{background:#ef5350}
+.toast-warning{background:#f9ab00}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.login-screen{display:flex;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg,#5c6bc0,#7e57c2)}
+.login-box{background:#fff;border-radius:16px;padding:40px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}
+.login-box h1{font-size:24px;margin-bottom:8px;color:#333}
+.login-box p{color:#999;font-size:14px;margin-bottom:24px}
+.login-box input{width:100%;padding:12px 16px;border:2px solid #ddd;border-radius:8px;font-size:16px;margin-bottom:16px;text-align:center;letter-spacing:4px}
+.login-box input:focus{outline:none;border-color:#5c6bc0}
+.login-box .btn{width:100%;padding:12px;font-size:16px}
+.login-error{color:#ef5350;font-size:13px;margin-top:8px;display:none}
+#admin-content{display:none}
+.prize-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0}
+.prize-row .emoji{font-size:20px;width:30px;text-align:center}
+.prize-row .name{flex:1;font-size:14px}
+.prize-row input{width:80px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px;text-align:center}
+.prize-row.dragging{opacity:0.4;background:#ede7f6}
+.prize-row.drag-over{border-top:3px solid #5c6bc0}
+.drag-handle{cursor:grab;color:#bbb;font-size:16px;padding:0 4px;user-select:none}
+.drag-handle:active{cursor:grabbing}
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="login-screen">
+    <div class="login-box">
+        <h1>📐 数学学习管理后台</h1>
+        <p>请输入管理密码</p>
+        <input type="password" id="login-password" placeholder="请输入密码" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="btn btn-primary" onclick="doLogin()">验证登录</button>
+        <div class="login-error" id="login-error">密码错误，请重试</div>
+        <div style="margin-top:16px"><a href="math.html" style="color:#5c6bc0;font-size:13px">← 返回主页面</a></div>
+    </div>
+</div>
+
+<div id="admin-content">
+<div class="header">
+    <h1>📐 数学学习工具 - 管理后台</h1>
+    <a href="math.html" class="back">← 返回主页面</a>
+</div>
+<div class="container">
+<div class="tabs">
+    <button class="tab active" onclick="switchTab('overview')">📊 总览</button>
+    <button class="tab" onclick="switchTab('users')">👥 用户数据</button>
+    <button class="tab" onclick="switchTab('knowledge')">📚 知识库</button>
+    <button class="tab" onclick="switchTab('lottery')">🎁 抽奖配置</button>
+    <button class="tab" onclick="switchTab('raw')">🔧 原始数据</button>
+</div>
+
+<div class="panel active" id="panel-overview">
+    <div class="stats" id="overview-stats"></div>
+    <div class="card">
+        <h2>📋 快捷操作</h2>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="resetDailyLottery('A')">🔄 重置同学A今日抽奖</button>
+            <button class="btn btn-primary" onclick="resetDailyLottery('B')">🔄 重置同学B今日抽奖</button>
+            <button class="btn btn-danger" onclick="resetAllData()">⚠️ 重置所有数据</button>
+        </div>
+    </div>
+</div>
+
+<div class="panel" id="panel-users">
+    <div class="card">
+        <h2>👥 同学A 数据</h2>
+        <div id="user-a-data"></div>
+    </div>
+    <div class="card">
+        <h2>👥 同学B 数据</h2>
+        <div id="user-b-data"></div>
+    </div>
+</div>
+
+<div class="panel" id="panel-knowledge">
+    <div class="card">
+        <h2>📚 知识库管理</h2>
+        <div class="search-box"><input type="text" id="knowledge-search" placeholder="搜索知识点..." oninput="renderKnowledgeTable()"></div>
+        <div class="btn-group" style="margin-bottom:12px">
+            <button class="btn btn-primary" onclick="showAddKnowledge()">➕ 添加知识点</button>
+            <button class="btn btn-success" onclick="exportKnowledge()">📥 导出JSON</button>
+            <button class="btn btn-gray" onclick="document.getElementById('import-file').click()">📤 导入JSON</button>
+            <input type="file" id="import-file" accept=".json" style="display:none" onchange="importKnowledge(event)">
+            <button class="btn btn-gray" onclick="reloadFromServer()">🔄 从服务器重新加载</button>
+        </div>
+        <div class="table-wrap" style="max-height:500px;overflow:auto">
+            <table id="knowledge-table">
+                <thead><tr><th>ID</th><th>名称</th><th>公式</th><th>分类</th><th>学段</th><th>难度</th><th>操作</th></tr></thead>
+                <tbody id="knowledge-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="panel" id="panel-lottery">
+    <div class="card">
+        <h2>🎁 抽奖基础配置</h2>
+        <div class="field"><label>每次抽奖消耗星星</label><input type="number" id="lottery-cost" value="50"></div>
+        <div class="field"><label>坏奖扣减星星</label><input type="number" id="lottery-bad-deduct" value="30"></div>
+        <div class="field"><label>抽奖积分门槛</label><input type="number" id="lottery-threshold" value="5000"></div>
+        <div class="field"><label>每日抽奖次数上限</label><input type="number" id="lottery-daily-limit" value="1"></div>
+        <div class="field"><label>每日抽奖消耗上限</label><input type="number" id="lottery-daily-spend" value="500"></div>
+        <div class="field"><label>需要兑奖解锁抽奖</label><select id="lottery-redeem-unlock"><option value="true">是</option><option value="false">否</option></select></div>
+        <button class="btn btn-primary" onclick="saveLotteryConfig()">💾 保存配置</button>
+    </div>
+    <div class="card">
+        <h2>🏆 奖品列表（拖拽排序）</h2>
+        <div id="prize-list"></div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="addPrize()">➕ 添加奖品</button>
+            <button class="btn btn-success" onclick="savePrizes()">💾 保存奖品</button>
+        </div>
+    </div>
+    <div class="card">
+        <h2>🌟 心愿大奖</h2>
+        <div class="field"><label>Emoji</label><input type="text" id="wish-emoji" value="🌟"></div>
+        <div class="field"><label>名称</label><input type="text" id="wish-name" value="心愿大奖"></div>
+        <div class="field"><label>兑换消耗</label><input type="number" id="wish-cost" value="30000"></div>
+        <button class="btn btn-primary" onclick="saveWishPrize()">💾 保存心愿大奖</button>
+    </div>
+    <div class="card">
+        <h2>🧮 抽奖计算器</h2>
+        <div class="field"><label>每日获取星星数</label><input type="number" id="calc-daily-stars" value="50" oninput="calcLottery()"></div>
+        <div id="calc-result"></div>
+    </div>
+</div>
+
+<div class="panel" id="panel-raw">
+    <div class="card">
+        <h2>🔧 原始数据编辑</h2>
+        <div class="field">
+            <label>选择数据</label>
+            <select id="raw-key" onchange="loadRawData()">
+                <option value="">请选择...</option>
+                <option value="muserA">同学A数据</option>
+                <option value="muserB">同学B数据</option>
+                <option value="math_lottery_config">抽奖配置</option>
+                <option value="math_lottery_logs">抽奖日志</option>
+                <option value="math_words">知识库</option>
+            </select>
+        </div>
+        <div class="field"><textarea id="raw-data" rows="15" style="font-family:monospace;font-size:12px"></textarea></div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="saveRawData()">💾 保存</button>
+            <button class="btn btn-gray" onclick="loadRawData()">🔄 重新加载</button>
+            <button class="btn btn-danger" onclick="deleteRawData()">🗑 删除</button>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+
+<div class="modal-overlay" id="knowledge-modal">
+    <div class="modal-box">
+        <h3 id="knowledge-modal-title">添加知识点</h3>
+        <div class="field"><label>ID</label><input type="text" id="k-id"></div>
+        <div class="field"><label>名称</label><input type="text" id="k-name"></div>
+        <div class="field"><label>公式</label><input type="text" id="k-formula"></div>
+        <div class="field"><label>描述</label><textarea id="k-desc"></textarea></div>
+        <div class="field"><label>示例</label><textarea id="k-example"></textarea></div>
+        <div class="field"><label>分类</label><input type="text" id="k-category" placeholder="如：几何公式、代数"></div>
+        <div class="field"><label>学段（逗号分隔）</label><input type="text" id="k-scope" placeholder="如：小学,初中"></div>
+        <div class="field"><label>难度(1-5)</label><input type="number" id="k-difficulty" min="1" max="5" value="2"></div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="saveKnowledge()">💾 保存</button>
+            <button class="btn btn-gray" onclick="closeKnowledgeModal()">取消</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const ADMIN_HASH = '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8';
+let WORDS = [];
+let editingKnowledgeIdx = -1;
+let tempPrizes = [];
+
+async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function doLogin() {
+    let pwd = document.getElementById('login-password').value;
+    let hash = await sha256(pwd);
+    if (hash === ADMIN_HASH) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('admin-content').style.display = 'block';
+        loadWords();
+        renderAll();
+    } else {
+        document.getElementById('login-error').style.display = 'block';
+    }
+}
+
+function loadWords() {
+    try { WORDS = JSON.parse(localStorage.getItem('math_words') || '[]'); } catch { WORDS = []; }
+}
+
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+    renderAll();
+}
+
+function toast(msg, type) {
+    let old = document.querySelector('.toast');
+    if (old) old.remove();
+    let el = document.createElement('div');
+    el.className = 'toast toast-' + (type || 'success');
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+}
+
+function renderAll() {
+    renderOverview();
+    renderUsers();
+    renderKnowledgeTable();
+    renderLotteryConfig();
+    renderPrizeList();
+    calcLottery();
+}
+
+function renderOverview() {
+    let uA = JSON.parse(localStorage.getItem('muserA') || 'null') || {};
+    let uB = JSON.parse(localStorage.getItem('muserB') || 'null') || {};
+    let stats = [
+        { label:'知识点总数', value:WORDS.length },
+        { label:'同学A已学', value:(uA.learn || []).length },
+        { label:'同学A已掌握', value:(uA.done || []).length },
+        { label:'同学A星星', value:uA.stars || 0 },
+        { label:'同学B已学', value:(uB.learn || []).length },
+        { label:'同学B已掌握', value:(uB.done || []).length },
+        { label:'同学B星星', value:uB.stars || 0 },
+    ];
+    let html = '';
+    stats.forEach(s => { html += `<div class="stat-item"><div class="value">${s.value}</div><div class="label">${s.label}</div></div>`; });
+    document.getElementById('overview-stats').innerHTML = html;
+}
+
+function renderUsers() {
+    ['A', 'B'].forEach(u => {
+        let data = JSON.parse(localStorage.getItem('muser' + u) || 'null') || {};
+        let html = `
+            <div class="stats">
+                <div class="stat-item"><div class="value">${(data.learn || []).length}</div><div class="label">已学</div></div>
+                <div class="stat-item"><div class="value">${(data.done || []).length}</div><div class="label">已掌握</div></div>
+                <div class="stat-item"><div class="value">${data.stars || 0}</div><div class="label">星星</div></div>
+                <div class="stat-item"><div class="value">${(data.combo || 0)}</div><div class="label">连击</div></div>
+                <div class="stat-item"><div class="value">${Object.keys(data.wrongPool || {}).length}</div><div class="label">错题数</div></div>
+                <div class="stat-item"><div class="value">${(data.prizes || []).length}</div><div class="label">奖品数</div></div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-danger" onclick="resetUser('${u}')">🗑 重置同学${u}数据</button>
+                <button class="btn btn-primary" onclick="resetDailyLottery('${u}')">🔄 重置今日抽奖</button>
+            </div>`;
+        document.getElementById('user-' + u.toLowerCase() + '-data').innerHTML = html;
+    });
+}
+
+function resetUser(u) {
+    if (!confirm(`确定重置同学${u}的所有数据？此操作不可恢复！`)) return;
+    localStorage.removeItem('muser' + u);
+    toast('同学' + u + '数据已重置', 'success');
+    renderAll();
+}
+
+function resetDailyLottery(u) {
+    let data = JSON.parse(localStorage.getItem('muser' + u) || 'null') || {};
+    data.lotteryRedeemUnlock = null;
+    localStorage.setItem('muser' + u, JSON.stringify(data));
+    let logs = [];
+    try { logs = JSON.parse(localStorage.getItem('math_lottery_logs') || '[]'); } catch {}
+    let today = new Date().toISOString().slice(0, 10);
+    logs = logs.filter(l => !(l.dateKey === today && l.user === u && l.type === 'lottery'));
+    localStorage.setItem('math_lottery_logs', JSON.stringify(logs));
+    toast('同学' + u + '今日抽奖资格已重置', 'success');
+    renderAll();
+}
+
+function resetAllData() {
+    if (!confirm('确定重置所有数据？此操作不可恢复！')) return;
+    if (!confirm('再次确认：所有用户数据、配置将被清除！')) return;
+    ['muserA', 'muserB', 'math_lottery_config', 'math_lottery_logs'].forEach(k => localStorage.removeItem(k));
+    toast('所有数据已重置', 'success');
+    renderAll();
+}
+
+function renderKnowledgeTable() {
+    let search = (document.getElementById('knowledge-search')?.value || '').toLowerCase();
+    let filtered = WORDS.filter(w => !search || w.name.toLowerCase().includes(search) || w.formula.toLowerCase().includes(search) || (w.category || '').toLowerCase().includes(search));
+    let html = '';
+    filtered.forEach((w, i) => {
+        let realIdx = WORDS.indexOf(w);
+        html += `<tr>
+            <td>${w.id || ''}</td>
+            <td><b>${w.name}</b></td>
+            <td style="font-family:'Cambria Math',serif">${w.formula}</td>
+            <td>${w.category || ''}</td>
+            <td>${(w.scope || []).join(',')}</td>
+            <td>${'⭐'.repeat(w.difficulty || 1)}</td>
+            <td>
+                <button class="btn btn-primary" style="padding:4px 8px;font-size:12px" onclick="editKnowledge(${realIdx})">编辑</button>
+                <button class="btn btn-danger" style="padding:4px 8px;font-size:12px" onclick="deleteKnowledge(${realIdx})">删除</button>
+            </td>
+        </tr>`;
+    });
+    document.getElementById('knowledge-tbody').innerHTML = html || '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
+}
+
+function showAddKnowledge() {
+    editingKnowledgeIdx = -1;
+    document.getElementById('knowledge-modal-title').textContent = '添加知识点';
+    document.getElementById('k-id').value = 'm' + String(WORDS.length + 1).padStart(3, '0');
+    document.getElementById('k-name').value = '';
+    document.getElementById('k-formula').value = '';
+    document.getElementById('k-desc').value = '';
+    document.getElementById('k-example').value = '';
+    document.getElementById('k-category').value = '';
+    document.getElementById('k-scope').value = '';
+    document.getElementById('k-difficulty').value = '2';
+    document.getElementById('knowledge-modal').classList.add('show');
+}
+
+function editKnowledge(idx) {
+    editingKnowledgeIdx = idx;
+    let w = WORDS[idx];
+    document.getElementById('knowledge-modal-title').textContent = '编辑知识点';
+    document.getElementById('k-id').value = w.id || '';
+    document.getElementById('k-name').value = w.name || '';
+    document.getElementById('k-formula').value = w.formula || '';
+    document.getElementById('k-desc').value = w.desc || '';
+    document.getElementById('k-example').value = w.example || '';
+    document.getElementById('k-category').value = w.category || '';
+    document.getElementById('k-scope').value = (w.scope || []).join(',');
+    document.getElementById('k-difficulty').value = w.difficulty || 2;
+    document.getElementById('knowledge-modal').classList.add('show');
+}
+
+function closeKnowledgeModal() { document.getElementById('knowledge-modal').classList.remove('show'); }
+
+function saveKnowledge() {
+    let item = {
+        id: document.getElementById('k-id').value.trim(),
+        name: document.getElementById('k-name').value.trim(),
+        formula: document.getElementById('k-formula').value.trim(),
+        desc: document.getElementById('k-desc').value.trim(),
+        example: document.getElementById('k-example').value.trim(),
+        category: document.getElementById('k-category').value.trim(),
+        scope: document.getElementById('k-scope').value.split(',').map(s => s.trim()).filter(s => s),
+        difficulty: parseInt(document.getElementById('k-difficulty').value) || 2
+    };
+    if (!item.name || !item.formula) { toast('名称和公式不能为空', 'error'); return; }
+    if (editingKnowledgeIdx >= 0) {
+        WORDS[editingKnowledgeIdx] = item;
+    } else {
+        WORDS.push(item);
+    }
+    localStorage.setItem('math_words', JSON.stringify(WORDS));
+    closeKnowledgeModal();
+    toast('知识点已保存', 'success');
+    renderAll();
+}
+
+function deleteKnowledge(idx) {
+    if (!confirm('确定删除此知识点？')) return;
+    WORDS.splice(idx, 1);
+    localStorage.setItem('math_words', JSON.stringify(WORDS));
+    toast('知识点已删除', 'success');
+    renderAll();
+}
+
+function exportKnowledge() {
+    let blob = new Blob([JSON.stringify(WORDS, null, 2)], { type: 'application/json' });
+    let a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'math.json';
+    a.click();
+    toast('知识库已导出', 'success');
+}
+
+function importKnowledge(event) {
+    let file = event.target.files[0];
+    if (!file) return;
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let data = JSON.parse(e.target.result);
+            if (!Array.isArray(data)) { toast('格式错误：需要数组', 'error'); return; }
+            WORDS = data;
+            localStorage.setItem('math_words', JSON.stringify(WORDS));
+            toast('知识库已导入（' + data.length + '条）', 'success');
+            renderAll();
+        } catch(err) { toast('导入失败：' + err.message, 'error'); }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function reloadFromServer() {
+    localStorage.removeItem('math_words');
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', 'math.json', true);
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            try {
+                WORDS = JSON.parse(xhr.responseText);
+                localStorage.setItem('math_words', JSON.stringify(WORDS));
+                toast('已从服务器重新加载（' + WORDS.length + '条）', 'success');
+                renderAll();
+            } catch(e) { toast('加载失败', 'error'); }
+        }
+    };
+    xhr.send();
+}
+
+function renderLotteryConfig() {
+    let config = JSON.parse(localStorage.getItem('math_lottery_config') || 'null') || {
+        cost:50, badDeduct:30, starThreshold:5000, dailyLimit:1, dailySpendLimit:500, redeemUnlock:true
+    };
+    document.getElementById('lottery-cost').value = config.cost || 50;
+    document.getElementById('lottery-bad-deduct').value = config.badDeduct || 30;
+    document.getElementById('lottery-threshold').value = config.starThreshold || 5000;
+    document.getElementById('lottery-daily-limit').value = config.dailyLimit || 1;
+    document.getElementById('lottery-daily-spend').value = config.dailySpendLimit || 500;
+    document.getElementById('lottery-redeem-unlock').value = String(config.redeemUnlock !== false);
+}
+
+function saveLotteryConfig() {
+    let config = JSON.parse(localStorage.getItem('math_lottery_config') || 'null') || {};
+    config.cost = parseInt(document.getElementById('lottery-cost').value) || 50;
+    config.badDeduct = parseInt(document.getElementById('lottery-bad-deduct').value) || 30;
+    config.starThreshold = parseInt(document.getElementById('lottery-threshold').value) || 5000;
+    config.dailyLimit = parseInt(document.getElementById('lottery-daily-limit').value) || 1;
+    config.dailySpendLimit = parseInt(document.getElementById('lottery-daily-spend').value) || 500;
+    config.redeemUnlock = document.getElementById('lottery-redeem-unlock').value === 'true';
+    localStorage.setItem('math_lottery_config', JSON.stringify(config));
+    toast('抽奖配置已保存', 'success');
+}
+
+function renderPrizeList() {
+    let config = JSON.parse(localStorage.getItem('math_lottery_config') || 'null') || {};
+    tempPrizes = JSON.parse(JSON.stringify(config.prizes || [
+        { emoji:'🍔', name:'汉堡', weight:0.01, type:'good', cost:2000 },
+        { emoji:'🍦', name:'冰激凌', weight:0.01, type:'good', cost:1800 },
+        { emoji:'🍗', name:'鸡腿', weight:0.01, type:'good', cost:1800 },
+        { emoji:'🖊️', name:'圆珠笔', weight:0.02, type:'good', cost:1600 },
+        { emoji:'📓', name:'记事本', weight:0.02, type:'good', cost:1600 },
+        { emoji:'🍭', name:'棒棒糖', weight:0.05, type:'good', cost:400 },
+        { emoji:'🫧', name:'泡泡糖', weight:0.05, type:'good', cost:200 },
+        { emoji:'💔', name:'积分减30', weight:0.15, type:'bad', cost:0 },
+        { emoji:'💨', name:'什么也没有', weight:0.68, type:'neutral', cost:0 }
+    ]));
+    if (config.wishPrize) {
+        document.getElementById('wish-emoji').value = config.wishPrize.emoji || '🌟';
+        document.getElementById('wish-name').value = config.wishPrize.name || '心愿大奖';
+        document.getElementById('wish-cost').value = config.wishPrize.cost || 30000;
+    }
+    renderPrizeRows();
+}
+
+function renderPrizeRows() {
+    let html = '';
+    tempPrizes.forEach((p, i) => {
+        html += `<div class="prize-row" draggable="true" ondragstart="dragStart(event,${i})" ondragover="dragOver(event)" ondrop="dropPrize(event,${i})" ondragend="dragEnd(event)">
+            <span class="drag-handle">☰</span>
+            <span class="emoji">${p.emoji}</span>
+            <span class="name">${p.name}</span>
+            <input type="text" value="${p.emoji}" style="width:50px" onchange="updatePrize(${i},'emoji',this.value)" title="Emoji">
+            <input type="text" value="${p.name}" style="width:80px" onchange="updatePrize(${i},'name',this.value)" title="名称">
+            <input type="number" value="${p.weight}" step="0.01" style="width:70px" onchange="updatePrize(${i},'weight',parseFloat(this.value))" title="权重">
+            <select style="width:70px" onchange="updatePrize(${i},'type',this.value)" title="类型">
+                <option value="good" ${p.type==='good'?'selected':''}>好奖</option>
+                <option value="bad" ${p.type==='bad'?'selected':''}>坏奖</option>
+                <option value="neutral" ${p.type==='neutral'?'selected':''}>空奖</option>
+            </select>
+            <input type="number" value="${p.cost}" style="width:70px" onchange="updatePrize(${i},'cost',parseInt(this.value))" title="兑换消耗">
+            <button class="btn btn-danger" style="padding:4px 8px;font-size:12px" onclick="removePrize(${i})">✕</button>
+        </div>`;
+    });
+    document.getElementById('prize-list').innerHTML = html || '<div class="empty">暂无奖品</div>';
+}
+
+function updatePrize(i, key, val) { tempPrizes[i][key] = val; }
+function removePrize(i) { tempPrizes.splice(i, 1); renderPrizeRows(); }
+function addPrize() { tempPrizes.push({ emoji:'🎁', name:'新奖品', weight:0.01, type:'good', cost:100 }); renderPrizeRows(); }
+
+function savePrizes() {
+    let config = JSON.parse(localStorage.getItem('math_lottery_config') || 'null') || {};
+    config.prizes = tempPrizes;
+    localStorage.setItem('math_lottery_config', JSON.stringify(config));
+    toast('奖品列表已保存', 'success');
+}
+
+function saveWishPrize() {
+    let config = JSON.parse(localStorage.getItem('math_lottery_config') || 'null') || {};
+    config.wishPrize = {
+        emoji: document.getElementById('wish-emoji').value,
+        name: document.getElementById('wish-name').value,
+        cost: parseInt(document.getElementById('wish-cost').value) || 30000
+    };
+    localStorage.setItem('math_lottery_config', JSON.stringify(config));
+    toast('心愿大奖已保存', 'success');
+}
+
+let dragIdx = -1;
+function dragStart(e, i) { dragIdx = i; e.target.closest('.prize-row').classList.add('dragging'); }
+function dragOver(e) { e.preventDefault(); e.target.closest('.prize-row')?.classList.add('drag-over'); }
+function dragEnd(e) { document.querySelectorAll('.prize-row').forEach(r => { r.classList.remove('dragging', 'drag-over'); }); }
+function dropPrize(e, targetIdx) {
+    e.preventDefault();
+    document.querySelectorAll('.prize-row').forEach(r => r.classList.remove('dragging', 'drag-over'));
+    if (dragIdx === targetIdx || dragIdx < 0) return;
+    let item = tempPrizes.splice(dragIdx, 1)[0];
+    tempPrizes.splice(targetIdx, 0, item);
+    renderPrizeRows();
+    dragIdx = -1;
+}
+
+function calcLottery() {
+    let dailyStars = parseInt(document.getElementById('calc-daily-stars').value) || 50;
+    let config = JSON.parse(localStorage.getItem('math_lottery_config') || 'null') || {};
+    let prizes = config.prizes || tempPrizes;
+    let totalWeight = prizes.reduce((s, p) => s + (p.weight || 0), 0);
+    if (totalWeight === 0) { document.getElementById('calc-result').innerHTML = '<div class="empty">请先配置奖品</div>'; return; }
+
+    let badRate = prizes.filter(p => p.type === 'bad').reduce((s, p) => s + p.weight, 0) / totalWeight;
+    let goodRate = prizes.filter(p => p.type === 'good').reduce((s, p) => s + p.weight, 0) / totalWeight;
+    let cost = config.cost || 50;
+    let badDeduct = config.badDeduct || 30;
+    let evCost = -cost;
+    let evBad = -badDeduct * badRate;
+    let evTotal = evCost + evBad;
+
+    let html = `<h3>概率分布</h3><table><tr><th>奖品</th><th>类型</th><th>概率</th><th>兑换天数</th></tr>`;
+    prizes.forEach(p => {
+        let prob = ((p.weight / totalWeight) * 100).toFixed(2);
+        let days = p.cost > 0 ? Math.ceil(p.cost / dailyStars) : '-';
+        html += `<tr><td>${p.emoji} ${p.name}</td><td>${p.type}</td><td>${prob}%</td><td>${days}</td></tr>`;
+    });
+    html += `</table>`;
+    html += `<div style="margin-top:12px">
+        <div>好奖概率：<b style="color:#43a047">${(goodRate*100).toFixed(1)}%</b></div>
+        <div>坏奖概率：<b style="color:#ef5350">${(badRate*100).toFixed(1)}%</b></div>
+        <div>每次期望亏损：<b style="color:#ef5350">${evTotal.toFixed(1)}⭐</b></div>
+        <div>每日获取${dailyStars}⭐时，达到门槛${config.starThreshold || 5000}需 <b>${Math.ceil((config.starThreshold || 5000) / dailyStars)}</b> 天</div>
+    </div>`;
+    document.getElementById('calc-result').innerHTML = html;
+}
+
+function loadRawData() {
+    let key = document.getElementById('raw-key').value;
+    if (!key) { document.getElementById('raw-data').value = ''; return; }
+    let val = localStorage.getItem(key) || '';
+    try { document.getElementById('raw-data').value = JSON.stringify(JSON.parse(val), null, 2); } catch { document.getElementById('raw-data').value = val; }
+}
+
+function saveRawData() {
+    let key = document.getElementById('raw-key').value;
+    if (!key) { toast('请选择数据', 'warning'); return; }
+    try {
+        let data = JSON.parse(document.getElementById('raw-data').value);
+        localStorage.setItem(key, JSON.stringify(data));
+        toast('数据已保存', 'success');
+        loadWords();
+        renderAll();
+    } catch(e) { toast('JSON格式错误：' + e.message, 'error'); }
+}
+
+function deleteRawData() {
+    let key = document.getElementById('raw-key').value;
+    if (!key) { toast('请选择数据', 'warning'); return; }
+    if (!confirm('确定删除此数据？')) return;
+    localStorage.removeItem(key);
+    document.getElementById('raw-data').value = '';
+    toast('数据已删除', 'success');
+    loadWords();
+    renderAll();
+}
+</script>
+</body>
+</html>

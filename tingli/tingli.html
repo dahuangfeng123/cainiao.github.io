@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>听力练习 - Demo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;background:#f5f1eb;color:#333;min-height:100vh;overflow-x:hidden;}
+.header{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#1D9E75,#185FA5);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,0.15);}
+.header h1{font-size:18px;font-weight:600;}
+.header-actions{display:flex;align-items:center;gap:12px;}
+.user-btn{background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:500;}
+.user-btn:hover{background:rgba(255,255,255,0.3);}
+.container{max-width:800px;margin:0 auto;padding:12px;}
+.card{background:#fff;border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.card h2{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 18px;border:none;border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;}
+.btn:active{transform:scale(0.96);}
+.btn-green{background:linear-gradient(135deg,#43a047,#66bb6a);color:#fff;}
+.btn-blue{background:linear-gradient(135deg,#1e88e5,#42a5f5);color:#fff;}
+.btn-orange{background:linear-gradient(135deg,#fb8c00,#ffa726);color:#fff;}
+.btn-gray{background:#e0e0e0;color:#666;}
+.btn-red{background:linear-gradient(135deg,#e53935,#ef5350);color:#fff;}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.tag{display:inline-block;padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;border:1px solid #ddd;background:#f5f5f5;color:#666;transition:all 0.2s;}
+.tag.on{background:#1D9E75;color:#fff;border-color:#1D9E75;}
+.article-item{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:10px;margin-bottom:8px;background:#fafafa;transition:background 0.2s;}
+.article-item:hover{background:#f0f0f0;}
+.article-info{flex:1;min-width:0;}
+.article-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.article-meta{font-size:12px;color:#999;margin-top:2px;}
+.article-actions{display:flex;gap:8px;flex-shrink:0;}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+.stat-box{background:#f5f1eb;border-radius:10px;padding:12px;text-align:center;}
+.stat-box .val{font-size:22px;font-weight:700;color:#1D9E75;}
+.stat-box .label{font-size:11px;color:#999;margin-top:2px;}
+
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;display:none;justify-content:center;align-items:center;}
+.modal-overlay.active{display:flex;}
+.modal{background:#fff;border-radius:20px;width:92%;max-width:600px;max-height:90vh;overflow-y:auto;padding:24px;position:relative;animation:modalIn 0.3s ease;}
+@keyframes modalIn{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+.modal-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:22px;cursor:pointer;color:#999;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{background:#f0f0f0;}
+.modal h2{font-size:18px;margin-bottom:16px;}
+
+.audio-controls{background:#f5f1eb;border-radius:14px;padding:16px;margin-bottom:16px;}
+.audio-btns{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.audio-btn{width:44px;height:44px;border-radius:50%;border:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.audio-btn:active{transform:scale(0.92);}
+.audio-btn.play{background:linear-gradient(135deg,#1D9E75,#43a047);color:#fff;box-shadow:0 3px 12px rgba(29,158,117,0.3);}
+.audio-btn.play:hover{box-shadow:0 5px 16px rgba(29,158,117,0.4);}
+.audio-btn.replay{background:#fff;color:#666;border:1px solid #ddd;}
+.audio-btn.replay:hover{background:#f0f0f0;}
+.audio-status{font-size:13px;color:#999;flex:1;}
+.audio-status.playing{color:#1D9E75;font-weight:500;}
+.volume-row{display:flex;align-items:center;gap:8px;}
+.volume-row label{font-size:12px;color:#999;white-space:nowrap;}
+.volume-row input[type=range]{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:#ddd;border-radius:2px;outline:none;}
+.volume-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#1D9E75;cursor:pointer;}
+
+.answer-area{margin-bottom:16px;}
+.answer-area textarea{width:100%;min-height:120px;padding:12px;border:2px solid #e0e0e0;border-radius:12px;font-size:14px;line-height:1.8;resize:vertical;font-family:inherit;transition:border-color 0.2s;}
+.answer-area textarea:focus{outline:none;border-color:#1D9E75;}
+.answer-hint{font-size:12px;color:#999;margin-top:4px;}
+
+.answer-reveal{background:#f5f1eb;border-radius:12px;padding:16px;margin-bottom:16px;display:none;}
+.answer-reveal h3{font-size:14px;margin-bottom:8px;color:#1D9E75;}
+.answer-reveal .full-text{font-size:14px;line-height:2;white-space:pre-wrap;color:#333;}
+
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
+
+.score-bar{display:flex;align-items:center;gap:12px;padding:12px;background:#f5f1eb;border-radius:10px;margin-bottom:12px;}
+.score-bar .pct{font-size:28px;font-weight:700;}
+.score-bar .pct.high{color:#43a047;}
+.score-bar .pct.mid{color:#ffa726;}
+.score-bar .pct.low{color:#ef5350;}
+.score-bar .detail{font-size:13px;color:#666;}
+
+.review-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #f0f0f0;}
+.review-item:last-child{border-bottom:none;}
+.review-item .title{font-size:14px;font-weight:500;}
+.review-item .meta{font-size:12px;color:#999;}
+.review-item .btns{display:flex;gap:6px;}
+
+.empty{text-align:center;padding:30px;color:#999;font-size:14px;}
+
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:24px;font-size:14px;font-weight:500;z-index:9999;animation:toastIn 0.3s ease;pointer-events:none;}
+.toast.success{background:#43a047;color:#fff;}
+.toast.warning{background:#fb8c00;color:#fff;}
+.toast.error{background:#e53935;color:#fff;}
+.toast.info{background:#1e88e5;color:#fff;}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+@media(max-width:480px){
+  .container{padding:8px;}
+  .card{padding:14px;border-radius:12px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .modal{width:96%;padding:16px;border-radius:14px;}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎧 听力练习</h1>
+  <div class="header-actions">
+    <span style="font-size:13px;opacity:0.8;">⭐ <span id="header-stars">0</span></span>
+    <button class="user-btn" onclick="toggleUser()" id="user-btn">同学A</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <h2>📊 听力统计</h2>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="val" id="stat-total">0</div><div class="label">听力练习次数</div></div>
+      <div class="stat-box"><div class="val" id="stat-articles">0</div><div class="label">练习短文数</div></div>
+      <div class="stat-box"><div class="val" id="stat-avg">-</div><div class="label">平均匹配度</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📖 今日待复习</h2>
+    <div id="review-list"></div>
+  </div>
+
+  <div class="card">
+    <h2>📚 英语短文库</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;" id="category-tags"></div>
+    <div id="article-list"></div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="listen-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeListenModal()">✕</button>
+    <h2 id="modal-title">🎧 听力练习</h2>
+    <div style="font-size:13px;color:#999;margin-bottom:12px;" id="modal-meta"></div>
+
+    <div class="audio-controls">
+      <div class="audio-btns">
+        <button class="audio-btn play" id="play-btn" onclick="togglePlay()">▶</button>
+        <button class="audio-btn replay" onclick="replayAudio()">🔄</button>
+        <span class="audio-status" id="audio-status">点击播放按钮开始</span>
+      </div>
+      <div class="volume-row">
+        <label>🔊</label>
+        <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="changeVolume(this.value)">
+        <span style="font-size:12px;color:#999;width:32px;text-align:right;" id="volume-val">80%</span>
+      </div>
+    </div>
+
+    <div class="answer-area">
+      <textarea id="answer-input" placeholder="播放音频后，输入听到的英语短文全文..."></textarea>
+      <div class="answer-hint">💡 可多次播放，输入完成后点击"查看答案"核对</div>
+    </div>
+
+    <div class="answer-reveal" id="answer-reveal">
+      <h3>📝 原文</h3>
+      <div class="full-text" id="reveal-text"></div>
+    </div>
+
+    <div class="score-bar" id="score-bar" style="display:none;">
+      <div class="pct" id="score-pct">0%</div>
+      <div class="detail" id="score-detail"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-orange" onclick="showAnswer()">👁️ 查看答案</button>
+      <button class="btn btn-green" onclick="completeListening()">✅ 完成听力复习</button>
+      <button class="btn btn-gray" onclick="closeListenModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TTS_URL = 'http://localhost:5003/tts';
+
+const ARTICLES = [
+  {
+    id: 0, title: "The Seasons", author: "Traditional", category: "自然",
+    text: "Spring is green,\nSummer is bright,\nAutumn is gold,\nWinter is white.\nFour seasons make a year,\nEach one dear and near."
+  },
+  {
+    id: 1, title: "Twinkle Twinkle Little Star", author: "Jane Taylor", category: "经典",
+    text: "Twinkle, twinkle, little star,\nHow I wonder what you are!\nUp above the world so high,\nLike a diamond in the sky.\nTwinkle, twinkle, little star,\nHow I wonder what you are!"
+  },
+  {
+    id: 2, title: "The Rain", author: "Robert Louis Stevenson", category: "自然",
+    text: "The rain is raining all around,\nIt falls on field and tree,\nIt rains on the umbrellas here,\nAnd on the ships at sea."
+  },
+  {
+    id: 3, title: "My Shadow", author: "Robert Louis Stevenson", category: "生活",
+    text: "I have a little shadow that goes in and out with me,\nAnd what can be the use of him is more than I can see.\nHe is very, very like me from the heels up to the head;\nAnd I see him jump before me, when I jump into my bed."
+  },
+  {
+    id: 4, title: "At the Seaside", author: "Robert Louis Stevenson", category: "自然",
+    text: "When I was down beside the sea,\nA wooden spade they gave to me\nTo dig the sandy shore.\nMy holes were empty like a cup,\nIn every hole the sea came up,\nTill it could come no more."
+  },
+  {
+    id: 5, title: "The Owl and the Pussycat", author: "Edward Lear", category: "经典",
+    text: "The Owl and the Pussycat went to sea\nIn a beautiful pea-green boat,\nThey took some honey, and plenty of money,\nWrapped up in a five-pound note."
+  },
+  {
+    id: 6, title: "A Morning Song", author: "Eleanor Farjeon", category: "生活",
+    text: "Morning has broken,\nLike the first morning,\nBlackbird has spoken,\nLike the first bird.\nPraise for the singing,\nPraise for the morning,\nPraise for them springing\nFresh from the world."
+  },
+  {
+    id: 7, title: "The Wind", author: "Christina Rossetti", category: "自然",
+    text: "Who has seen the wind?\nNeither I nor you:\nBut when the leaves hang trembling,\nThe wind is passing through.\nWho has seen the wind?\nNeither you nor I:\nBut when the trees bow down their heads,\nThe wind is passing by."
+  },
+  {
+    id: 8, title: "Time", author: "Percy B. Shelley", category: "经典",
+    text: "Unfathomable Sea! whose waves are years,\nOcean of Time, whose waters of deep woe\nAre brackish with the salt of human tears!\nThou shoreless flood, which in thy ebb and flow\nClaspest the limits of mortality!"
+  },
+  {
+    id: 9, title: "The Little Turtle", author: "Vachel Lindsay", category: "生活",
+    text: "There was a little turtle,\nHe lived in a box.\nHe swam in a puddle,\nHe climbed on the rocks.\nHe snapped at a mosquito,\nHe snapped at a flea,\nHe snapped at a minnow,\nAnd he snapped at me."
+  }
+];
+
+const PERIOD = [0, 1, 2, 4, 7, 15, 30];
+
+let user = "A";
+let currentArticle = null;
+let currentAudio = null;
+let isPlaying = false;
+let answerRevealed = false;
+let listeningCompleted = false;
+let selectedCategory = '';
+
+function getUser() {
+    try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; }
+}
+function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
+function safeUser(u) {
+    let def = { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0, lastTodayMilestone: {}, prizes: [], lotteryRedeemUnlock: null, listeningTotal: 0, listeningLog: {} };
+    if (!u) return def;
+    return { ...def, ...u };
+}
+function todayKey() {
+    let d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function nextDate(st, count) {
+    if (count >= PERIOD.length) return null;
+    let d = new Date(st);
+    d.setDate(d.getDate() + PERIOD[count]);
+    return d.getTime();
+}
+
+function toggleUser() {
+    user = user === "A" ? "B" : "A";
+    document.getElementById("user-btn").textContent = "同学" + user;
+    renderAll();
+}
+
+async function speak(text, voice = 'en-US-JennyNeural') {
+    try {
+        const res = await fetch(TTS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            //body: JSON.stringify({ text, voice, rate: '+0%', pitch: '+0Hz' })
+            body: JSON.stringify({ text, voice: 'af_sarah', speed: 1.0 })
+        });
+        const blob = await res.blob();
+        return URL.createObjectURL(blob);
+    } catch (e) {
+        console.error('TTS error:', e);
+        return null;
+    }
+}
+
+function playLocalTTS(text) {
+    speechSynthesis.cancel();
+    let utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'en-US';
+    utter.rate = 0.85;
+    let vol = parseInt(document.getElementById('volume-slider').value) / 100;
+    utter.volume = vol;
+    speechSynthesis.speak(utter);
+    isPlaying = true;
+    updatePlayUI();
+    utter.onend = () => { isPlaying = false; updatePlayUI(); };
+    utter.onerror = () => { isPlaying = false; updatePlayUI(); };
+}
+
+async function togglePlay() {
+    if (!currentArticle) return;
+    if (isPlaying) {
+        if (currentAudio) { currentAudio.pause(); }
+        speechSynthesis.cancel();
+        isPlaying = false;
+        updatePlayUI();
+        return;
+    }
+    let vol = parseInt(document.getElementById('volume-slider').value) / 100;
+    try {
+        let audioUrl = await speak(currentArticle.text);
+        if (audioUrl) {
+            currentAudio = new Audio(audioUrl);
+            currentAudio.volume = vol;
+            currentAudio.play();
+            isPlaying = true;
+            updatePlayUI();
+            currentAudio.onended = () => { isPlaying = false; updatePlayUI(); };
+            currentAudio.onerror = () => { isPlaying = false; updatePlayUI(); toast('音频播放失败', 'error'); };
+        } else {
+            playLocalTTS(currentArticle.text);
+        }
+    } catch {
+        playLocalTTS(currentArticle.text);
+    }
+}
+
+function replayAudio() {
+    if (!currentArticle) return;
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    speechSynthesis.cancel();
+    isPlaying = false;
+    updatePlayUI();
+    setTimeout(() => togglePlay(), 100);
+}
+
+function changeVolume(val) {
+    document.getElementById('volume-val').textContent = val + '%';
+    if (currentAudio) currentAudio.volume = val / 100;
+}
+
+function updatePlayUI() {
+    let btn = document.getElementById('play-btn');
+    let status = document.getElementById('audio-status');
+    if (isPlaying) {
+        btn.textContent = '⏸';
+        btn.style.background = 'linear-gradient(135deg,#e53935,#ef5350)';
+        status.textContent = '🔊 正在播放...';
+        status.className = 'audio-status playing';
+    } else {
+        btn.textContent = '▶';
+        btn.style.background = 'linear-gradient(135deg,#1D9E75,#43a047)';
+        status.textContent = '点击播放按钮开始';
+        status.className = 'audio-status';
+    }
+}
+
+function openListenModal(articleId) {
+    currentArticle = ARTICLES.find(a => a.id === articleId);
+    if (!currentArticle) return;
+    answerRevealed = false;
+    listeningCompleted = false;
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    speechSynthesis.cancel();
+    isPlaying = false;
+    updatePlayUI();
+    document.getElementById('modal-title').textContent = '🎧 ' + currentArticle.title;
+    document.getElementById('modal-meta').textContent = `作者：${currentArticle.author} | 分类：${currentArticle.category}`;
+    document.getElementById('answer-input').value = '';
+    document.getElementById('answer-input').disabled = false;
+    document.getElementById('answer-reveal').style.display = 'none';
+    document.getElementById('score-bar').style.display = 'none';
+    document.getElementById('listen-modal').classList.add('active');
+}
+
+function closeListenModal() {
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    speechSynthesis.cancel();
+    isPlaying = false;
+    currentArticle = null;
+    document.getElementById('listen-modal').classList.remove('active');
+}
+
+function showAnswer() {
+    if (!currentArticle) return;
+    if (currentAudio) { currentAudio.pause(); }
+    speechSynthesis.cancel();
+    isPlaying = false;
+    updatePlayUI();
+    answerRevealed = true;
+    document.getElementById('answer-reveal').style.display = 'block';
+    document.getElementById('reveal-text').textContent = currentArticle.text;
+    let input = document.getElementById('answer-input').value.trim();
+    if (input) {
+        let score = calcSimilarity(input, currentArticle.text);
+        let pct = Math.round(score * 100);
+        document.getElementById('score-bar').style.display = 'flex';
+        let pctEl = document.getElementById('score-pct');
+        pctEl.textContent = pct + '%';
+        pctEl.className = 'pct ' + (pct >= 80 ? 'high' : pct >= 60 ? 'mid' : 'low');
+        let inputWords = input.split(/\s+/).length;
+        let totalWords = currentArticle.text.split(/\s+/).length;
+        document.getElementById('score-detail').textContent = `输入 ${inputWords} 词 / 原文 ${totalWords} 词`;
+    }
+}
+
+function completeListening() {
+    if (!currentArticle) return;
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    speechSynthesis.cancel();
+    isPlaying = false;
+    let u = safeUser(getUser());
+    let idx = currentArticle.id;
+    u.listeningTotal = (u.listeningTotal || 0) + 1;
+    if (!u.listeningLog) u.listeningLog = {};
+    if (u.listeningLog[idx]) {
+        u.listeningLog[idx].count += 1;
+        u.listeningLog[idx].lastTime = Date.now();
+    } else {
+        u.listeningLog[idx] = { count: 1, lastTime: Date.now() };
+    }
+    let now = Date.now();
+    if (u.log[idx]) {
+        u.log[idx].c += 1;
+        u.log[idx].next = nextDate(now, u.log[idx].c);
+    } else {
+        if (!u.learn.includes(idx)) u.learn.push(idx);
+        u.log[idx] = { t: now, c: 1, next: nextDate(now, 1) };
+    }
+    if (u.log[idx].c >= PERIOD.length) {
+        if (!u.done.includes(idx)) u.done.push(idx);
+    }
+    if (!u.dailyLog) u.dailyLog = {};
+    let today = todayKey();
+    if (!u.dailyLog[today]) u.dailyLog[today] = { learn: 0, review: 0 };
+    u.dailyLog[today].review++;
+    u.stars = (u.stars || 0) + 5;
+    setUser(u);
+    toast('✅ 听力复习完成！+5⭐', 'success');
+    closeListenModal();
+    renderAll();
+}
+
+function calcSimilarity(input, original) {
+    if (!input || !original) return 0;
+    let a = input.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+    let b = original.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+    if (b.length === 0) return 0;
+    if (a.length === 0) return 0;
+    let matched = 0;
+    let bUsed = new Array(b.length).fill(false);
+    for (let w of a) {
+        for (let j = 0; j < b.length; j++) {
+            if (!bUsed[j] && (w === b[j] || levenshtein(w, b[j]) <= 1)) {
+                matched++;
+                bUsed[j] = true;
+                break;
+            }
+        }
+    }
+    let precision = matched / a.length;
+    let recall = matched / b.length;
+    if (precision + recall === 0) return 0;
+    return 2 * precision * recall / (precision + recall);
+}
+
+function levenshtein(a, b) {
+    let la = a.length, lb = b.length;
+    if (la === 0) return lb;
+    if (lb === 0) return la;
+    let dp = [];
+    for (let i = 0; i <= la; i++) dp[i] = [i];
+    for (let j = 0; j <= lb; j++) dp[0][j] = j;
+    for (let i = 1; i <= la; i++) {
+        for (let j = 1; j <= lb; j++) {
+            let cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+        }
+    }
+    return dp[la][lb];
+}
+
+function getReviewList() {
+    let u = safeUser(getUser());
+    let now = new Date();
+    now.setHours(23, 59, 59, 999);
+    let todayEnd = now.getTime();
+    let reviewItems = [];
+    for (let idx in u.log) {
+        let info = u.log[idx];
+        if (info.next && info.next <= todayEnd && info.c < PERIOD.length) {
+            let article = ARTICLES.find(a => a.id === parseInt(idx));
+            if (article) reviewItems.push({ idx: parseInt(idx), article, info });
+        }
+    }
+    return reviewItems;
+}
+
+function renderStats() {
+    let u = safeUser(getUser());
+    document.getElementById('stat-total').textContent = u.listeningTotal || 0;
+    document.getElementById('stat-articles').textContent = Object.keys(u.listeningLog || {}).length;
+    let logs = u.listeningLog || {};
+    let totalArticles = Object.keys(logs).length;
+    document.getElementById('stat-avg').textContent = totalArticles > 0 ? '—' : '-';
+    document.getElementById('header-stars').textContent = u.stars || 0;
+}
+
+function renderReviewList() {
+    let items = getReviewList();
+    let el = document.getElementById('review-list');
+    if (items.length === 0) {
+        el.innerHTML = '<div class="empty">暂无待复习短文 🎉</div>';
+        return;
+    }
+    el.innerHTML = items.map(item => `
+        <div class="review-item">
+            <div>
+                <div class="title">${item.article.title}</div>
+                <div class="meta">${item.article.author} | 复习第${item.info.c + 1}次</div>
+            </div>
+            <div class="btns">
+                <button class="btn btn-blue" style="padding:6px 14px;font-size:12px;" onclick="openListenModal(${item.article.id})">🎧 听力练习</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderCategoryTags() {
+    let categories = [...new Set(ARTICLES.map(a => a.category))];
+    let el = document.getElementById('category-tags');
+    let html = `<span class="tag ${selectedCategory === '' ? 'on' : ''}" onclick="filterCategory('')">全部</span>`;
+    categories.forEach(c => {
+        html += `<span class="tag ${selectedCategory === c ? 'on' : ''}" onclick="filterCategory('${c}')">${c}</span>`;
+    });
+    el.innerHTML = html;
+}
+
+function filterCategory(cat) {
+    selectedCategory = cat;
+    renderCategoryTags();
+    renderArticleList();
+}
+
+function renderArticleList() {
+    let u = safeUser(getUser());
+    let filtered = selectedCategory ? ARTICLES.filter(a => a.category === selectedCategory) : ARTICLES;
+    let el = document.getElementById('article-list');
+    if (filtered.length === 0) {
+        el.innerHTML = '<div class="empty">该分类暂无短文</div>';
+        return;
+    }
+    el.innerHTML = filtered.map(a => {
+        let log = (u.listeningLog || {})[a.id];
+        let reviewInfo = u.log[a.id];
+        let statusHtml = '';
+        if (reviewInfo) {
+            let nextDate = reviewInfo.next ? new Date(reviewInfo.next) : null;
+            let isMastered = reviewInfo.c >= PERIOD.length;
+            if (isMastered) {
+                statusHtml = '<span style="color:#43a047;font-size:11px;font-weight:500;">✅ 已掌握</span>';
+            } else if (nextDate && nextDate <= new Date().getTime()) {
+                statusHtml = '<span style="color:#ef5350;font-size:11px;font-weight:500;">📌 待复习</span>';
+            } else {
+                statusHtml = '<span style="color:#999;font-size:11px;">复习' + reviewInfo.c + '/' + (PERIOD.length - 1) + '</span>';
+            }
+        }
+        let listenCount = log ? log.count : 0;
+        return `
+        <div class="article-item">
+            <div class="article-info">
+                <div class="article-title">${a.title} ${statusHtml}</div>
+                <div class="article-meta">${a.author} | ${a.category} | 听力${listenCount}次</div>
+            </div>
+            <div class="article-actions">
+                <button class="btn btn-blue" style="padding:6px 14px;font-size:12px;" onclick="openListenModal(${a.id})">🎧 开始</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderAll() {
+    renderStats();
+    renderReviewList();
+    renderCategoryTags();
+    renderArticleList();
+}
+
+function toast(msg, type = 'info') {
+    let el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2500);
+}
+
+document.addEventListener('DOMContentLoaded', renderAll);
+</script>
+</body>
+</html>
