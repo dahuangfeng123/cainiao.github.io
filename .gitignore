@@ -1,2 +1,9 @@
 server/kokoro-v1.0.onnx
 server/voices-v1.0.bin
+kokoro-v1.0.onnx
+voices-v1.0.bin
+*.onnx
+*.bin
+__pycache__/
+*.pyc
+.venv/
