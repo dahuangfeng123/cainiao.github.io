@@ -1710,12 +1710,20 @@ function submitBatchAnswer() {
             fillAnswers: Array.from(inputs).map(i => ({ user: i.value.trim(), answer: i.dataset.answer }))
         });
     } else {
-        // 听写模式
+        // 听写模式 - 匹配整句话
         let article = batchArticles[batchIndex];
         let input = document.getElementById('batch-answer').value.trim();
-        let score = input ? calcSimilarity(input, article.text, article.words) : 0;
-        let pct = Math.round(score * 100);
-        let correct = pct >= 60;
+        let originalText = article.text.trim();
+        let pct = 0;
+        if (input) {
+            let inputWords = input.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+            let originalWords = originalText.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+            if (originalWords.length > 0) {
+                let matched = inputWords.filter(w => originalWords.includes(w)).length;
+                pct = Math.round((matched / originalWords.length) * 100);
+            }
+        }
+        let correct = pct >= 80;
         batchAnswers.push({ 
             idx: article.id, 
             article, 
