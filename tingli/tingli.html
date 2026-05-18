@@ -414,10 +414,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 
     <div id="batch-mode-fillblank" style="display:none;">
       <div class="fill-text" id="batch-fill-text"></div>
-      <div style="display:flex;gap:8px;margin-bottom:16px;">
-        <button class="btn btn-green" onclick="checkBatchFillAnswers()">✅ 检查答案</button>
-        <button class="btn btn-gray" onclick="resetBatchFillInputs()">🔄 重置</button>
-      </div>
       <div class="fill-results" id="batch-fill-results" style="display:none;"></div>
     </div>
 
@@ -1422,7 +1418,8 @@ function renderBatchQuestion() {
         batchPron.style.display = 'block';
         initBatchPronunciationMode();
         batchRevealBtn.style.display = 'none';
-        batchSubmitBtn.style.display = 'none'; // 拼读模式评分后自动提交
+        // 隐藏提交按钮，初始时跳过按钮单独显示
+        batchSubmitBtn.style.display = 'none'; 
         batchSkipBtn.style.display = 'inline-flex';
         batchSkipBtn.textContent = '⏭️ 跳过';
     } else {
@@ -1683,6 +1680,16 @@ function renderBatchAnswerCanvas(text, words) {
 
 function submitBatchAnswer() {
     if (batchIndex >= batchArticles.length) return;
+    if (currentMode === 'pronunciation') {
+        // 拼读模式 - 已经在评分时保存了答案，直接进入下一题
+        if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+        speechSynthesis.cancel();
+        batchPlaying = false;
+        stopBatchProgressTimer();
+        batchIndex++;
+        renderBatchQuestion();
+        return;
+    }
     if (currentMode === 'fillblank') {
         // 填空模式
         checkBatchFillAnswers();
@@ -2716,9 +2723,6 @@ async function submitBatchPronunciation() {
                 <strong>识别结果：</strong>${heard || '(未识别到内容)'}
             </div>
             ${resultsHtml}
-            <div id="batch-next-btn" style="display:none;margin-top:16px;text-align:center;">
-                <button class="btn btn-primary" style="font-size:14px;padding:8px 24px;" onclick="batchGoNext()">➡️ 下一题</button>
-            </div>
         `;
         // 保存答案并进入下一题
         batchAnswers.push({ 
@@ -2734,20 +2738,18 @@ async function submitBatchPronunciation() {
             duration: duration,
             heard: heard
         });
-        // 延迟1秒后显示下一题按钮
+        // 延迟1秒后显示下一题按钮（和跳过按钮并排）
         setTimeout(() => {
-            let nextBtn = document.getElementById('batch-next-btn');
-            if (nextBtn) nextBtn.style.display = 'block';
+            let submitBtn = document.getElementById('batch-submit-btn');
+            if (submitBtn) {
+                submitBtn.style.display = 'inline-flex';
+                submitBtn.textContent = '➡️ 下一题';
+            }
         }, 1000);
     } catch (err) {
         toast('评分请求出错：' + err.message, 'error');
         resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分出错，请检查服务是否启动</div>';
     }
-}
-
-function batchGoNext() {
-    batchIndex++;
-    renderBatchQuestion();
 }
 
 window.onload = async function() { await initArticles(); renderAll(); loadSettings(); };
