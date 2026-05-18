@@ -784,7 +784,7 @@ function loadSettings() {
         voiceSelect.innerHTML = buildVoiceOptions(model);
         voiceSelect.value = u.tingli.voice || (model === 'edge' ? 'en-US-JennyNeural' : 'af_sarah');
         document.getElementById('tts-speed').value = u.tingli.ttsSpeed || 85;
-        document.getElementById('tts-speed-val').textContent = (u.tingli.ttsSpeed / 100) + 'x';
+        document.getElementById('tts-speed-val').textContent = (u.tingli.ttsSpeed / 100).toFixed(2) + 'x';
         // 更新描述
         let descEl = document.getElementById('tts-model-desc');
         descEl.textContent = model === 'edge' ? '微软云端 TTS · 音质优秀 · 需联网' : 'Kokoro 82M · 离线运行 · 低延迟';
@@ -1940,11 +1940,6 @@ function renderAll() {
     renderArticleList();
     renderManageList();
     renderMineStats();
-    let speedEl = document.getElementById('tts-speed');
-    if (speedEl) speedEl.oninput = () => { 
-        document.getElementById('tts-speed-val').textContent = (parseInt(speedEl.value)/100).toFixed(2) + 'x'; 
-        saveSettings(); 
-    };
 }
 
 let editingArticleId = null;
