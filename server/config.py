@@ -12,8 +12,8 @@ KOKORO_SPEED  = 0.9
 # faster-whisper - 升级到更大的模型以提高准确度
 # 可选模型: tiny, base, small, medium, large, large-v2, large-v3
 WHISPER_MODEL  = "medium"  # 从 base 升级到 medium
-WHISPER_DEVICE = "auto"    # 自动检测 GPU/CPU
-COMPUTE_TYPE   = "int8"    # 使用 INT8 量化加速
+WHISPER_DEVICE = "cpu"    # 使用 CPU 进行推理
+COMPUTE_TYPE   = "float32"    # 使用 FLOAT32 精度
 
 
 # SpeechBrain 音素识别模型
