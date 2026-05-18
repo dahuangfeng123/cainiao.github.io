@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -604,7 +604,7 @@ let _batchProgressTimer = null;
 function getUser() { try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; } }
 function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
 function safeUser(u) {
-    let def = { learn:[], done:[], log:{}, dailyLog:{}, stars:0, listeningTotal:0, listeningLog:{}, voice:'af_sarah', ttsSpeed:85, ttsModel:'kokoro', wordMode:'fillblank' };
+    let def = { learn:[], done:[], log:{}, dailyLog:{}, stars:0, listeningTotal:0, listeningLog:{}, tingli:{voice:'af_sarah', ttsSpeed:85, ttsModel:'kokoro', wordMode:'fillblank'} };
     if (!u) return def;
     return { ...def, ...u };
 }
@@ -695,31 +695,31 @@ function onModelChange() {
 
 function saveSettings() {
     let u = safeUser(getUser());
-    u.ttsModel = document.getElementById('tts-model').value;
-    u.voice = document.getElementById('tts-voice').value;
-    u.ttsSpeed = parseInt(document.getElementById('tts-speed').value);
+    u.tingli.ttsModel = document.getElementById('tts-model').value;
+    u.tingli.voice = document.getElementById('tts-voice').value;
+    u.tingli.ttsSpeed = parseInt(document.getElementById('tts-speed').value);
     setUser(u);
 }
 
 function loadSettings() {
     let u = safeUser(getUser());
-    let model = u.ttsModel || 'kokoro';
+    let model = u.tingli.ttsModel || 'kokoro';
     let modelSelect = document.getElementById('tts-model');
     // 先加载可用模型列表
     loadModels().then(() => {
         modelSelect.value = model;
         let voiceSelect = document.getElementById('tts-voice');
         voiceSelect.innerHTML = buildVoiceOptions(model);
-        voiceSelect.value = u.voice || (model === 'edge' ? 'en-US-JennyNeural' : 'af_sarah');
-        document.getElementById('tts-speed').value = u.ttsSpeed || 85;
-        document.getElementById('tts-speed-val').textContent = (u.ttsSpeed / 100) + 'x';
+        voiceSelect.value = u.tingli.voice || (model === 'edge' ? 'en-US-JennyNeural' : 'af_sarah');
+        document.getElementById('tts-speed').value = u.tingli.ttsSpeed || 85;
+        document.getElementById('tts-speed-val').textContent = (u.tingli.ttsSpeed / 100) + 'x';
         // 更新描述
         let descEl = document.getElementById('tts-model-desc');
         descEl.textContent = model === 'edge' ? '微软云端 TTS · 音质优秀 · 需联网' : 'Kokoro 82M · 离线运行 · 低延迟';
         let voiceDescEl = document.getElementById('tts-voice-desc');
         voiceDescEl.textContent = model === 'edge' ? '微软 Neural 语音，自然流畅' : '训练数据：约100小时音频 · 目标质量：自然流畅';
         // 加载保存的单词模式（默认填空）
-        let savedMode = u.wordMode || 'fillblank';
+        let savedMode = u.tingli.wordMode || 'fillblank';
         switchMode(savedMode, true);
     });
 }
@@ -1011,7 +1011,7 @@ function openListenModal(articleId) {
     isPlaying = false;
     // 使用保存的单词模式（不重复保存）
     let u = safeUser(getUser());
-    switchMode(u.wordMode || 'fillblank', true);
+    switchMode(u.tingli.wordMode || 'fillblank', true);
     updatePlayUI();
     document.getElementById('modal-title').textContent = '🎧 ' + currentArticle.title;
     document.getElementById('modal-meta').textContent = `分类：${currentArticle.category}`;
@@ -1961,7 +1961,7 @@ function switchMode(mode, fromStorage = false) {
     // 用户手动切换模式时保存到 localStorage
     if (!fromStorage) {
         let u = safeUser(getUser());
-        u.wordMode = mode;
+        u.tingli.wordMode = mode;
         setUser(u);
     }
 }
