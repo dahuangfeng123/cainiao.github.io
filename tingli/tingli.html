@@ -294,7 +294,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
     <div style="font-size:13px;color:var(--text3);margin-bottom:12px;" id="modal-meta"></div>
 
     <div class="mode-tabs" id="mode-tabs">
-      <button class="mode-tab on" data-mode="dictation" onclick="switchMode('dictation')">🎧 听写</button>
+      <button class="mode-tab" data-mode="dictation" onclick="switchMode('dictation')">🎧 听写</button>
       <button class="mode-tab" data-mode="pronunciation" onclick="switchMode('pronunciation')">🗣️ 拼读</button>
       <button class="mode-tab" data-mode="fillblank" onclick="switchMode('fillblank')">✏️ 填空</button>
     </div>
@@ -604,7 +604,7 @@ let _batchProgressTimer = null;
 function getUser() { try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; } }
 function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
 function safeUser(u) {
-    let def = { learn:[], done:[], log:{}, dailyLog:{}, stars:0, listeningTotal:0, listeningLog:{}, voice:'af_sarah', ttsSpeed:85, ttsModel:'kokoro' };
+    let def = { learn:[], done:[], log:{}, dailyLog:{}, stars:0, listeningTotal:0, listeningLog:{}, voice:'af_sarah', ttsSpeed:85, ttsModel:'kokoro', wordMode:'fillblank' };
     if (!u) return def;
     return { ...def, ...u };
 }
@@ -718,6 +718,9 @@ function loadSettings() {
         descEl.textContent = model === 'edge' ? '微软云端 TTS · 音质优秀 · 需联网' : 'Kokoro 82M · 离线运行 · 低延迟';
         let voiceDescEl = document.getElementById('tts-voice-desc');
         voiceDescEl.textContent = model === 'edge' ? '微软 Neural 语音，自然流畅' : '训练数据：约100小时音频 · 目标质量：自然流畅';
+        // 加载保存的单词模式（默认填空）
+        let savedMode = u.wordMode || 'fillblank';
+        switchMode(savedMode, true);
     });
 }
 
@@ -1006,12 +1009,9 @@ function openListenModal(articleId) {
     if (isRecording) stopRecordingCleanup();
     speechSynthesis.cancel();
     isPlaying = false;
-    currentMode = 'dictation';
-    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('on', t.dataset.mode === 'dictation'));
-    document.getElementById('listen-audio-controls').style.display = 'block';
-    document.getElementById('mode-dictation').style.display = 'block';
-    document.getElementById('mode-pronunciation').style.display = 'none';
-    document.getElementById('mode-fillblank').style.display = 'none';
+    // 使用保存的单词模式（不重复保存）
+    let u = safeUser(getUser());
+    switchMode(u.wordMode || 'fillblank', true);
     updatePlayUI();
     document.getElementById('modal-title').textContent = '🎧 ' + currentArticle.title;
     document.getElementById('modal-meta').textContent = `分类：${currentArticle.category}`;
@@ -1928,7 +1928,7 @@ function toast(msg, type='info') {
 let currentMode = 'dictation';
 let pronAudio = null;
 
-function switchMode(mode) {
+function switchMode(mode, fromStorage = false) {
     currentMode = mode;
     document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('on', t.dataset.mode === mode));
     let audioCtrl = document.getElementById('listen-audio-controls');
@@ -1957,6 +1957,12 @@ function switchMode(mode) {
         pron.style.display = 'none';
         fill.style.display = 'block';
         initFillblankMode();
+    }
+    // 用户手动切换模式时保存到 localStorage
+    if (!fromStorage) {
+        let u = safeUser(getUser());
+        u.wordMode = mode;
+        setUser(u);
     }
 }
 
