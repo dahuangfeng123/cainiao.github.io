@@ -118,6 +118,42 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
   .stats-grid{grid-template-columns:repeat(2,1fr);}
   .modal{width:96%;padding:16px;border-radius:14px;}
 }
+.mode-tabs{display:flex;gap:4px;margin-bottom:16px;background:var(--bg);border-radius:12px;padding:4px;}
+.mode-tab{flex:1;padding:8px 0;border:none;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text2);transition:all 0.2s;}
+.mode-tab.on{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(29,158,117,0.3);}
+.pron-target{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;}
+.pron-target h3{font-size:14px;margin-bottom:8px;color:var(--primary);}
+.pron-text{font-size:16px;line-height:1.8;color:var(--text);white-space:pre-wrap;}
+.pron-record{display:flex;flex-direction:column;align-items:center;gap:12px;margin:20px 0;}
+.record-btn{width:80px;height:80px;border-radius:50%;border:3px solid var(--primary);background:#fff;font-size:28px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all 0.2s;box-shadow:0 4px 16px rgba(29,158,117,0.2);}
+.record-btn:active{transform:scale(0.95);}
+.record-btn.recording{border-color:#e53935;background:#ffebee;animation:recordPulse 1s infinite;}
+@keyframes recordPulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,0.4);}50%{box-shadow:0 0 0 12px rgba(229,57,53,0);}}
+.record-icon{font-size:28px;}
+.record-text{font-size:11px;color:var(--text3);margin-top:2px;}
+.record-timer{font-size:24px;font-weight:700;color:#e53935;}
+.pron-ref-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2);background:#fff;cursor:pointer;margin-bottom:12px;transition:all 0.2s;}
+.pron-ref-btn:hover{border-color:var(--primary);color:var(--primary);}
+.pron-results{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;}
+.pron-results h3{font-size:14px;margin-bottom:12px;color:var(--primary);}
+.pron-result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
+.pron-result-item{background:#fff;border-radius:10px;padding:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.pron-result-val{font-size:22px;font-weight:700;color:var(--primary);}
+.pron-result-val.high{color:#43a047;}
+.pron-result-val.mid{color:#ffa726;}
+.pron-result-val.low{color:#ef5350;}
+.pron-result-label{font-size:11px;color:var(--text3);margin-top:2px;}
+.pron-heard{font-size:13px;color:var(--text2);padding:8px 12px;background:#fff;border-radius:8px;border-left:3px solid var(--primary);}
+.pron-heard strong{color:var(--primary);}
+.fill-text{font-size:16px;line-height:2.4;margin-bottom:16px;white-space:pre-wrap;background:var(--bg);border-radius:12px;padding:16px;}
+.fill-input{display:inline-block;width:90px;border:none;border-bottom:2px solid var(--border);padding:2px 4px;font-size:14px;text-align:center;font-family:inherit;outline:none;transition:border-color 0.2s,background 0.2s;background:transparent;vertical-align:baseline;}
+.fill-input:focus{border-bottom-color:var(--primary);}
+.fill-input.correct{border-bottom-color:#43a047;color:#43a047;background:#e8f5e9;}
+.fill-input.wrong{border-bottom-color:#ef5350;color:#ef5350;background:#ffebee;}
+.fill-results{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;}
+.fill-results h3{font-size:14px;margin-bottom:8px;color:var(--primary);}
+.fill-score{font-size:28px;font-weight:700;margin-bottom:8px;}
+.fill-detail{font-size:13px;color:var(--text2);}
 </style>
 </head>
 <body>
@@ -257,7 +293,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
     <h2 id="modal-title">🎧 听力练习</h2>
     <div style="font-size:13px;color:var(--text3);margin-bottom:12px;" id="modal-meta"></div>
 
-    <div class="audio-controls">
+    <div class="mode-tabs" id="mode-tabs">
+      <button class="mode-tab on" data-mode="dictation" onclick="switchMode('dictation')">🎧 听写</button>
+      <button class="mode-tab" data-mode="pronunciation" onclick="switchMode('pronunciation')">🗣️ 拼读</button>
+      <button class="mode-tab" data-mode="fillblank" onclick="switchMode('fillblank')">✏️ 填空</button>
+    </div>
+
+    <div class="audio-controls" id="listen-audio-controls">
       <div class="audio-btns">
         <button class="audio-btn play" id="play-btn" onclick="togglePlay()">▶</button>
         <button class="audio-btn replay" onclick="replayAudio()">🔄</button>
@@ -277,6 +319,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
       </div>
     </div>
 
+    <div id="mode-dictation">
     <div class="answer-area">
       <textarea id="answer-input" placeholder="播放音频后，输入听到的英语短文全文..." onclick="hideAnswerOnFocus()"></textarea>
       <div class="answer-hint">💡 可多次播放，输入完成后点击"查看答案"核对</div>
@@ -291,6 +334,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
     <div class="score-bar" id="score-bar" style="display:none;">
       <div class="pct" id="score-pct">0%</div>
       <div class="detail" id="score-detail"></div>
+    </div>
+    </div>
+
+    <div id="mode-pronunciation" style="display:none;">
+      <div class="pron-target">
+        <h3>📖 朗读文本</h3>
+        <div class="pron-text" id="pron-target-text"></div>
+      </div>
+      <button class="pron-ref-btn" onclick="playPronReference()">🔊 听标准发音</button>
+      <div class="pron-record">
+        <button class="record-btn" id="record-btn" onclick="toggleRecording()">
+          <span class="record-icon">🎙️</span>
+          <span class="record-text">点击录音</span>
+        </button>
+        <div class="record-timer" id="record-timer" style="display:none;">0.0s</div>
+      </div>
+      <div class="pron-results" id="pron-results" style="display:none;"></div>
+    </div>
+
+    <div id="mode-fillblank" style="display:none;">
+      <div class="fill-text" id="fill-text"></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn btn-green" onclick="checkFillAnswers()">✅ 检查答案</button>
+        <button class="btn btn-gray" onclick="resetFillInputs()">🔄 重置</button>
+      </div>
+      <div class="fill-results" id="fill-results" style="display:none;"></div>
     </div>
 
     <div class="modal-actions" id="listen-actions">
@@ -399,6 +468,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 
 <script>
 const TTS_URL = 'http://localhost:5003/tts';
+const SCORE_URL = 'http://localhost:8000/score';
 
 const DEFAULT_ARTICLES = [
   { id:1, title:"The Seasons", words:"spring,summer,autumn,winter,season,year", category:"自然",
@@ -932,8 +1002,16 @@ function openListenModal(articleId) {
     answerRevealed = false;
     audioFinished = false;
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if (pronAudio) { pronAudio.pause(); pronAudio = null; }
+    if (isRecording) stopRecordingCleanup();
     speechSynthesis.cancel();
     isPlaying = false;
+    currentMode = 'dictation';
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('on', t.dataset.mode === 'dictation'));
+    document.getElementById('listen-audio-controls').style.display = 'block';
+    document.getElementById('mode-dictation').style.display = 'block';
+    document.getElementById('mode-pronunciation').style.display = 'none';
+    document.getElementById('mode-fillblank').style.display = 'none';
     updatePlayUI();
     document.getElementById('modal-title').textContent = '🎧 ' + currentArticle.title;
     document.getElementById('modal-meta').textContent = `分类：${currentArticle.category}`;
@@ -952,6 +1030,8 @@ function openListenModal(articleId) {
 
 function closeListenModal() {
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if (pronAudio) { pronAudio.pause(); pronAudio = null; }
+    if (isRecording) stopRecordingCleanup();
     speechSynthesis.cancel();
     isPlaying = false;
     isLoading = false;
@@ -1843,6 +1923,345 @@ function toast(msg, type='info') {
     el.textContent = msg;
     document.body.appendChild(el);
     setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2500);
+}
+
+let currentMode = 'dictation';
+let pronAudio = null;
+
+function switchMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('on', t.dataset.mode === mode));
+    let audioCtrl = document.getElementById('listen-audio-controls');
+    let dictation = document.getElementById('mode-dictation');
+    let pron = document.getElementById('mode-pronunciation');
+    let fill = document.getElementById('mode-fillblank');
+    if (mode === 'dictation') {
+        audioCtrl.style.display = 'block';
+        dictation.style.display = 'block';
+        pron.style.display = 'none';
+        fill.style.display = 'none';
+    } else if (mode === 'pronunciation') {
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        speechSynthesis.cancel();
+        isPlaying = false;
+        stopProgressTimer();
+        updatePlayUI();
+        audioCtrl.style.display = 'none';
+        dictation.style.display = 'none';
+        pron.style.display = 'block';
+        fill.style.display = 'none';
+        initPronunciationMode();
+    } else if (mode === 'fillblank') {
+        audioCtrl.style.display = 'block';
+        dictation.style.display = 'none';
+        pron.style.display = 'none';
+        fill.style.display = 'block';
+        initFillblankMode();
+    }
+}
+
+function initPronunciationMode() {
+    if (!currentArticle) return;
+    document.getElementById('pron-target-text').textContent = currentArticle.text;
+    document.getElementById('pron-results').style.display = 'none';
+    if (isRecording) stopRecordingCleanup();
+    let btn = document.getElementById('record-btn');
+    btn.classList.remove('recording');
+    btn.querySelector('.record-text').textContent = '点击录音';
+    document.getElementById('record-timer').style.display = 'none';
+}
+
+function playPronReference() {
+    if (!currentArticle) return;
+    if (pronAudio) { pronAudio.pause(); pronAudio = null; }
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+    ttsFetch(currentArticle.text).then(url => {
+        if (url) {
+            pronAudio = new Audio(url);
+            pronAudio.volume = parseInt(document.getElementById('volume-slider').value) / 100;
+            pronAudio.play();
+        }
+    });
+}
+
+let mediaStream = null;
+let audioCtx = null;
+let scriptNode = null;
+let recordedSamples = [];
+let isRecording = false;
+let recordingTimer = null;
+let recordingDuration = 0;
+
+async function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        await startRecording();
+    }
+}
+
+async function startRecording() {
+    try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let source = audioCtx.createMediaStreamSource(mediaStream);
+        scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
+        recordedSamples = [];
+        scriptNode.onaudioprocess = function(e) {
+            if (isRecording) {
+                let data = e.inputBuffer.getChannelData(0);
+                recordedSamples.push(new Float32Array(data));
+            }
+        };
+        source.connect(scriptNode);
+        scriptNode.connect(audioCtx.destination);
+        isRecording = true;
+        recordingDuration = 0;
+        let btn = document.getElementById('record-btn');
+        btn.classList.add('recording');
+        btn.querySelector('.record-text').textContent = '点击停止';
+        document.getElementById('record-timer').style.display = 'block';
+        document.getElementById('record-timer').textContent = '0.0s';
+        recordingTimer = setInterval(() => {
+            recordingDuration += 0.1;
+            document.getElementById('record-timer').textContent = recordingDuration.toFixed(1) + 's';
+        }, 100);
+    } catch (err) {
+        toast('无法访问麦克风：' + err.message, 'error');
+    }
+}
+
+function stopRecording() {
+    isRecording = false;
+    if (recordingTimer) { clearInterval(recordingTimer); recordingTimer = null; }
+    let btn = document.getElementById('record-btn');
+    btn.classList.remove('recording');
+    btn.querySelector('.record-text').textContent = '点击录音';
+    document.getElementById('record-timer').style.display = 'none';
+    if (scriptNode) { scriptNode.disconnect(); scriptNode = null; }
+    if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+    let sampleRate = audioCtx ? audioCtx.sampleRate : 16000;
+    if (audioCtx) { audioCtx.close(); audioCtx = null; }
+    if (recordedSamples.length > 0) {
+        let totalLen = recordedSamples.reduce((acc, buf) => acc + buf.length, 0);
+        let merged = new Float32Array(totalLen);
+        let offset = 0;
+        for (let buf of recordedSamples) { merged.set(buf, offset); offset += buf.length; }
+        let wavBlob = encodeWAV(merged, sampleRate);
+        sendScoreRequest(wavBlob);
+    }
+}
+
+function stopRecordingCleanup() {
+    isRecording = false;
+    if (recordingTimer) { clearInterval(recordingTimer); recordingTimer = null; }
+    if (scriptNode) { scriptNode.disconnect(); scriptNode = null; }
+    if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+    if (audioCtx) { audioCtx.close(); audioCtx = null; }
+    recordedSamples = [];
+}
+
+function encodeWAV(samples, sampleRate) {
+    let buffer = new ArrayBuffer(44 + samples.length * 2);
+    let view = new DataView(buffer);
+    function writeStr(v, o, s) { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    writeStr(view, 0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeStr(view, 8, 'WAVE');
+    writeStr(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(view, 36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+    let off = 44;
+    for (let i = 0; i < samples.length; i++) {
+        let s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        off += 2;
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+}
+
+async function sendScoreRequest(wavBlob) {
+    if (!currentArticle) return;
+    let resultsEl = document.getElementById('pron-results');
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:var(--text3);">⏳ 评分中...</div>';
+    let formData = new FormData();
+    formData.append('audio', wavBlob, 'recording.wav');
+    formData.append('target', currentArticle.text);
+    try {
+        let res = await fetch(SCORE_URL, { method: 'POST', body: formData });
+        if (!res.ok) {
+            toast('评分请求失败：' + res.status, 'error');
+            resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分失败，请重试</div>';
+            return;
+        }
+        let result = await res.json();
+        displayPronResults(result);
+    } catch (err) {
+        toast('评分请求出错：' + err.message, 'error');
+        resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分出错，请检查服务是否启动</div>';
+    }
+}
+
+function displayPronResults(result) {
+    let resultsEl = document.getElementById('pron-results');
+    resultsEl.style.display = 'block';
+    let fluency = result.fluency || 0;
+    let phoneAccuracy = result.phone_accuracy || 0;
+    let pauseRatio = result.pause_ratio || 0;
+    let duration = result.duration || 0;
+    let heard = result.heard || '';
+    let fluencyClass = fluency >= 80 ? 'high' : fluency >= 60 ? 'mid' : 'low';
+    let accClass = phoneAccuracy >= 80 ? 'high' : phoneAccuracy >= 60 ? 'mid' : 'low';
+    let resultsHtml = '';
+    if (result.results && result.results.length > 0) {
+        resultsHtml = '<div style="margin-top:8px;font-size:13px;color:var(--text2);">' + result.results.map(r => {
+            let icon = r.correct ? '✅' : '❌';
+            return icon + ' /' + r.phone + '/';
+        }).join(' ') + '</div>';
+    }
+    resultsEl.innerHTML = `
+        <h3>📊 打分结果</h3>
+        <div class="pron-result-grid">
+            <div class="pron-result-item">
+                <div class="pron-result-val ${fluencyClass}">${fluency.toFixed(1)}</div>
+                <div class="pron-result-label">流利度</div>
+            </div>
+            <div class="pron-result-item">
+                <div class="pron-result-val ${accClass}">${phoneAccuracy.toFixed(1)}%</div>
+                <div class="pron-result-label">音素准确率</div>
+            </div>
+            <div class="pron-result-item">
+                <div class="pron-result-val">${(pauseRatio * 100).toFixed(1)}%</div>
+                <div class="pron-result-label">停顿比</div>
+            </div>
+            <div class="pron-result-item">
+                <div class="pron-result-val">${duration.toFixed(1)}s</div>
+                <div class="pron-result-label">时长</div>
+            </div>
+        </div>
+        <div class="pron-heard">
+            <strong>识别结果：</strong>${heard || '(未识别到内容)'}
+        </div>
+        ${resultsHtml}
+    `;
+}
+
+function initFillblankMode() {
+    if (!currentArticle) return;
+    let text = currentArticle.text;
+    let words = currentArticle.words || '';
+    let wordList = words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    let wordSet = new Set(wordList);
+    let lines = text.split('\n');
+    let html = '';
+    let blankIndex = 0;
+    for (let line of lines) {
+        let tokens = line.split(/(\s+)/);
+        for (let token of tokens) {
+            if (!token.trim()) { html += token; continue; }
+            let match = token.match(/^([^\w]*)(\w+)([^\w]*)$/);
+            if (match) {
+                let [, prefix, word, suffix] = match;
+                if (wordSet.has(word.toLowerCase())) {
+                    let w = word.length;
+                    let inputW = Math.max(w * 12, 60);
+                    html += prefix + `<input type="text" class="fill-input" data-answer="${word}" data-index="${blankIndex}" autocomplete="off" style="width:${inputW}px;" placeholder="${'_'.repeat(w)}">` + suffix;
+                    blankIndex++;
+                } else {
+                    html += token;
+                }
+            } else {
+                html += token;
+            }
+        }
+        html += '\n';
+    }
+    document.getElementById('fill-text').innerHTML = html.trim();
+    document.getElementById('fill-results').style.display = 'none';
+    document.querySelectorAll('#fill-text .fill-input').forEach(input => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                let inputs = document.querySelectorAll('#fill-text .fill-input');
+                let idx = parseInt(this.dataset.index);
+                if (idx < inputs.length - 1) inputs[idx + 1].focus();
+            }
+        });
+    });
+}
+
+function checkFillAnswers() {
+    let inputs = document.querySelectorAll('#fill-text .fill-input');
+    let correct = 0;
+    let total = inputs.length;
+    inputs.forEach(input => {
+        let answer = input.dataset.answer.toLowerCase();
+        let userAnswer = input.value.trim().toLowerCase();
+        input.disabled = false;
+        if (userAnswer === answer) {
+            input.classList.add('correct');
+            input.classList.remove('wrong');
+            correct++;
+        } else {
+            input.classList.add('wrong');
+            input.classList.remove('correct');
+        }
+    });
+    let pct = total > 0 ? Math.round(correct / total * 100) : 0;
+    let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
+    let resultsEl = document.getElementById('fill-results');
+    resultsEl.style.display = 'block';
+    let wrongWords = [];
+    inputs.forEach(input => {
+        if (input.classList.contains('wrong')) {
+            wrongWords.push(input.dataset.answer);
+        }
+    });
+    let wrongHtml = wrongWords.length > 0 ? `<div style="margin-top:8px;font-size:13px;color:#ef5350;">❌ 错误单词：${wrongWords.map(w => `<span style="background:#ffebee;padding:2px 8px;border-radius:4px;margin:0 2px;">${w}</span>`).join('')}</div>` : '<div style="margin-top:8px;font-size:13px;color:#43a047;">🎉 全部正确！</div>';
+    resultsEl.innerHTML = `
+        <h3>📊 填空结果</h3>
+        <div class="fill-score" style="color:${pctColor};">${pct}%</div>
+        <div class="fill-detail">正确 ${correct}/${total}</div>
+        ${wrongHtml}
+    `;
+    if (pct >= 60 && currentArticle) {
+        let u = safeUser(getUser());
+        let idx = currentArticle.id;
+        u.listeningTotal = (u.listeningTotal || 0) + 1;
+        if (!u.listeningLog) u.listeningLog = {};
+        if (u.listeningLog[idx]) { u.listeningLog[idx].count += 1; u.listeningLog[idx].lastTime = Date.now(); }
+        else { u.listeningLog[idx] = { count: 1, lastTime: Date.now() }; }
+        let now = Date.now();
+        if (u.log[idx]) { u.log[idx].c += 1; u.log[idx].next = nextDate(now, u.log[idx].c); }
+        else { if (!u.learn.includes(idx)) u.learn.push(idx); u.log[idx] = { t: now, c: 1, next: nextDate(now, 1) }; }
+        if (u.log[idx].c >= PERIOD.length && !u.done.includes(idx)) u.done.push(idx);
+        if (!u.dailyLog) u.dailyLog = {};
+        let today = todayKey();
+        if (!u.dailyLog[today]) u.dailyLog[today] = { learn: 0, review: 0 };
+        u.dailyLog[today].review++;
+        u.stars = (u.stars || 0) + 3;
+        setUser(u);
+        renderAll();
+    }
+}
+
+function resetFillInputs() {
+    document.querySelectorAll('#fill-text .fill-input').forEach(input => {
+        input.value = '';
+        input.disabled = false;
+        input.classList.remove('correct', 'wrong');
+    });
+    document.getElementById('fill-results').style.display = 'none';
 }
 
 window.onload = async function() { await initArticles(); renderAll(); loadSettings(); };
