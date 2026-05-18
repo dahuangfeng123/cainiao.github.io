@@ -353,11 +353,11 @@ async def score(
         y, sr = librosa.load(audio_path, sr=None)
         duration = round(len(y) / sr, 3)
         t_audio_load = time.time()
-        audio_load_ms = round((t_audio_load - t0) * 1000, 1)
+        audio_load_s = round(t_audio_load - t0, 2)
 
         asr_result = await transcribe(audio_path)
         t_asr = time.time()
-        asr_ms = round((t_asr - t_audio_load) * 1000, 1)
+        asr_s = round(t_asr - t_audio_load, 2)
         heard_text = asr_result["text"]
         words = asr_result["words"]
 
@@ -395,20 +395,20 @@ async def score(
                 }
 
         t_acoustic = time.time()
-        acoustic_ms = round((t_acoustic - t_asr) * 1000, 1)
+        acoustic_s = round(t_acoustic - t_asr, 2)
 
         # 流利度
         fluency = fluency_score(words, duration)
         t_fluency = time.time()
-        fluency_ms = round((t_fluency - t_acoustic) * 1000, 1)
+        fluency_s = round(t_fluency - t_acoustic, 2)
 
-        total_ms = round((t_fluency - t0) * 1000, 1)
+        total_s = round(t_fluency - t0, 2)
 
         # 单词正确性
         word_correct = heard_text.lower().strip() == target_clean.lower().strip()
 
         print(
-            f"[Score] timing: audio_load={audio_load_ms}ms asr={asr_ms}ms acoustic={acoustic_ms}ms fluency={fluency_ms}ms total={total_ms}ms"
+            f"[Score] timing: audio_load={audio_load_s}s asr={asr_s}s acoustic={acoustic_s}s fluency={fluency_s}s total={total_s}s"
         )
         print(
             f"[Score] result: phone_accuracy={acoustic.get('phone_accuracy', 0)} fluency={fluency.get('fluency', 0)}"
@@ -421,12 +421,12 @@ async def score(
                 "word_correct": word_correct,
                 "is_sentence": is_sent,
                 "target_phones": acoustic.get("target_phones", []),
-                "timing_ms": {
-                    "audio_load": audio_load_ms,
-                    "asr": asr_ms,
-                    "acoustic": acoustic_ms,
-                    "fluency": fluency_ms,
-                    "total": total_ms,
+                "timing": {
+                    "audio_load": audio_load_s,
+                    "asr": asr_s,
+                    "acoustic": acoustic_s,
+                    "fluency": fluency_s,
+                    "total": total_s,
                 },
                 **acoustic,
                 **fluency,
@@ -568,9 +568,9 @@ async def score_sentence(
                     }
                 )
 
-        total_ms = round((time.time() - t0) * 1000, 1)
+        total_s = round(time.time() - t0, 2)
         print(
-            f"[ScoreSentence] target='{target}' heard='{heard_text}' word_accuracy={word_accuracy} timing={total_ms}ms"
+            f"[ScoreSentence] target='{target}' heard='{heard_text}' word_accuracy={word_accuracy} timing={total_s}s"
         )
 
         return JSONResponse(
@@ -581,7 +581,7 @@ async def score_sentence(
                 "phone_results": phone_results,
                 **fluency,
                 "duration": duration,
-                "timing_ms": total_ms,
+                "timing": total_s,
             }
         )
 
