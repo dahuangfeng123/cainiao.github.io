@@ -3,17 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>听力练习 - Demo</title>
+<title>🎧 听力练习</title>
 <style>
+:root{--primary:#1D9E75;--primary-light:#43a047;--bg:#f5f1eb;--card:#fff;--text:#333;--text2:#666;--text3:#999;--border:#e0e0e0;--danger:#e53935;--warning:#fb8c00;--info:#1e88e5;}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;background:#f5f1eb;color:#333;min-height:100vh;overflow-x:hidden;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 .header{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#1D9E75,#185FA5);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,0.15);}
 .header h1{font-size:18px;font-weight:600;}
-.header-actions{display:flex;align-items:center;gap:12px;}
-.user-btn{background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:500;}
+.header-right{display:flex;align-items:center;gap:12px;}
+.user-btn{background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:500;transition:all 0.2s;}
 .user-btn:hover{background:rgba(255,255,255,0.3);}
+.nav{display:flex;background:#fff;border-bottom:1px solid #eee;overflow-x:auto;-webkit-overflow-scrolling:touch;position:sticky;top:52px;z-index:99;}
+.nav a{flex:1;text-align:center;padding:10px 0;font-size:14px;color:var(--text2);text-decoration:none;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap;cursor:pointer;}
+.nav a.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:600;}
 .container{max-width:800px;margin:0 auto;padding:12px;}
-.card{background:#fff;border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.page{display:none;}
+.page.active{display:block;}
+.card{background:var(--card);border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
 .card h2{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 18px;border:none;border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;}
 .btn:active{transform:scale(0.96);}
@@ -23,18 +29,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 .btn-gray{background:#e0e0e0;color:#666;}
 .btn-red{background:linear-gradient(135deg,#e53935,#ef5350);color:#fff;}
 .btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
-.tag{display:inline-block;padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;border:1px solid #ddd;background:#f5f5f5;color:#666;transition:all 0.2s;}
-.tag.on{background:#1D9E75;color:#fff;border-color:#1D9E75;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.tag{display:inline-block;padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;border:1px solid #ddd;background:#f5f5f5;color:#666;transition:all 0.2s;margin:2px;}
+.tag.on{background:var(--primary);color:#fff;border-color:var(--primary);}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.stat-box{background:var(--bg);border-radius:10px;padding:12px;text-align:center;}
+.stat-box .val{font-size:22px;font-weight:700;color:var(--primary);}
+.stat-box .label{font-size:11px;color:var(--text3);margin-top:2px;}
 .article-item{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:10px;margin-bottom:8px;background:#fafafa;transition:background 0.2s;}
 .article-item:hover{background:#f0f0f0;}
 .article-info{flex:1;min-width:0;}
 .article-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.article-meta{font-size:12px;color:#999;margin-top:2px;}
+.article-meta{font-size:12px;color:var(--text3);margin-top:2px;}
 .article-actions{display:flex;gap:8px;flex-shrink:0;}
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
-.stat-box{background:#f5f1eb;border-radius:10px;padding:12px;text-align:center;}
-.stat-box .val{font-size:22px;font-weight:700;color:#1D9E75;}
-.stat-box .label{font-size:11px;color:#999;margin-top:2px;}
+.review-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #f0f0f0;}
+.review-item:last-child{border-bottom:none;}
+.review-left .title{font-size:14px;font-weight:600;}
+.review-left .meta{font-size:12px;color:var(--text3);margin-top:2px;}
+.empty{text-align:center;padding:30px;color:var(--text3);font-size:14px;}
+.search-box{width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:12px;}
 
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;display:none;justify-content:center;align-items:center;}
 .modal-overlay.active{display:flex;}
@@ -43,47 +56,49 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 .modal-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:22px;cursor:pointer;color:#999;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
 .modal-close:hover{background:#f0f0f0;}
 .modal h2{font-size:18px;margin-bottom:16px;}
+.ed-field{margin-bottom:16px;}
+.ed-label{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;}
+.ed-input{width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;transition:all 0.2s;background:#fafafa;}
+.ed-input:focus{outline:none;border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(29,158,117,0.15);}
+.ed-input::placeholder{color:#bbb;}
+.ed-textarea{width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:vertical;min-height:100px;transition:all 0.2s;background:#fafafa;line-height:1.6;}
+.ed-textarea:focus{outline:none;border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(29,158,117,0.15);}
+.ed-textarea::placeholder{color:#bbb;}
+.ed-hint{font-size:12px;color:var(--text3);margin-top:4px;padding-left:2px;}
+.ed-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
 
-.audio-controls{background:#f5f1eb;border-radius:14px;padding:16px;margin-bottom:16px;}
+.audio-controls{background:var(--bg);border-radius:14px;padding:16px;margin-bottom:16px;}
 .audio-btns{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
 .audio-btn{width:44px;height:44px;border-radius:50%;border:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
 .audio-btn:active{transform:scale(0.92);}
-.audio-btn.play{background:linear-gradient(135deg,#1D9E75,#43a047);color:#fff;box-shadow:0 3px 12px rgba(29,158,117,0.3);}
-.audio-btn.play:hover{box-shadow:0 5px 16px rgba(29,158,117,0.4);}
+.audio-btn.play{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 3px 12px rgba(29,158,117,0.3);}
 .audio-btn.replay{background:#fff;color:#666;border:1px solid #ddd;}
-.audio-btn.replay:hover{background:#f0f0f0;}
-.audio-status{font-size:13px;color:#999;flex:1;}
-.audio-status.playing{color:#1D9E75;font-weight:500;}
+.audio-status{font-size:13px;color:var(--text3);flex:1;}
+.audio-status.playing{color:var(--primary);font-weight:500;}
+.audio-status.loading{color:#ffa726;font-weight:500;animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 .volume-row{display:flex;align-items:center;gap:8px;}
-.volume-row label{font-size:12px;color:#999;white-space:nowrap;}
+.volume-row label{font-size:12px;color:var(--text3);white-space:nowrap;}
 .volume-row input[type=range]{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:#ddd;border-radius:2px;outline:none;}
-.volume-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#1D9E75;cursor:pointer;}
+.volume-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--primary);cursor:pointer;}
 
 .answer-area{margin-bottom:16px;}
-.answer-area textarea{width:100%;min-height:120px;padding:12px;border:2px solid #e0e0e0;border-radius:12px;font-size:14px;line-height:1.8;resize:vertical;font-family:inherit;transition:border-color 0.2s;}
-.answer-area textarea:focus{outline:none;border-color:#1D9E75;}
-.answer-hint{font-size:12px;color:#999;margin-top:4px;}
+.answer-area textarea{width:100%;min-height:120px;padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px;line-height:1.8;resize:vertical;font-family:inherit;transition:border-color 0.2s;}
+.answer-area textarea:focus{outline:none;border-color:var(--primary);}
+.answer-hint{font-size:12px;color:var(--text3);margin-top:4px;}
 
-.answer-reveal{background:#f5f1eb;border-radius:12px;padding:16px;margin-bottom:16px;display:none;}
-.answer-reveal h3{font-size:14px;margin-bottom:8px;color:#1D9E75;}
-.answer-reveal .full-text{font-size:14px;line-height:2;white-space:pre-wrap;color:#333;}
+.answer-reveal{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;display:none;}
+.answer-reveal h3{font-size:14px;margin-bottom:8px;color:var(--primary);}
+.answer-reveal .full-text{font-size:14px;line-height:2;white-space:pre-wrap;color:var(--text);}
 
-.modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
-
-.score-bar{display:flex;align-items:center;gap:12px;padding:12px;background:#f5f1eb;border-radius:10px;margin-bottom:12px;}
+.score-bar{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;margin-bottom:12px;}
 .score-bar .pct{font-size:28px;font-weight:700;}
 .score-bar .pct.high{color:#43a047;}
 .score-bar .pct.mid{color:#ffa726;}
 .score-bar .pct.low{color:#ef5350;}
-.score-bar .detail{font-size:13px;color:#666;}
+.score-bar .detail{font-size:13px;color:var(--text2);}
 
-.review-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #f0f0f0;}
-.review-item:last-child{border-bottom:none;}
-.review-item .title{font-size:14px;font-weight:500;}
-.review-item .meta{font-size:12px;color:#999;}
-.review-item .btns{display:flex;gap:6px;}
-
-.empty{text-align:center;padding:30px;color:#999;font-size:14px;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
 
 .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:24px;font-size:14px;font-weight:500;z-index:9999;animation:toastIn 0.3s ease;pointer-events:none;}
 .toast.success{background:#43a047;color:#fff;}
@@ -91,6 +106,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 .toast.error{background:#e53935;color:#fff;}
 .toast.info{background:#1e88e5;color:#fff;}
 @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+.mine-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px;}
+.mine-row:last-child{border-bottom:none;}
+.mine-row .label{color:var(--text2);}
+.mine-row .value{font-weight:600;}
 
 @media(max-width:480px){
   .container{padding:8px;}
@@ -104,41 +124,138 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 
 <div class="header">
   <h1>🎧 听力练习</h1>
-  <div class="header-actions">
+  <div class="header-right">
     <span style="font-size:13px;opacity:0.8;">⭐ <span id="header-stars">0</span></span>
     <button class="user-btn" onclick="toggleUser()" id="user-btn">同学A</button>
   </div>
 </div>
 
+<div class="nav" id="main-nav">
+  <a class="on" data-page="home">🏠 首页</a>
+  <a data-page="review">📖 待复习</a>
+  <a data-page="lib">📚 短文库</a>
+  <a data-page="manage">⚙️ 管理</a>
+  <a data-page="mine">👤 个人</a>
+</div>
+
 <div class="container">
 
-  <div class="card">
-    <h2>📊 听力统计</h2>
-    <div class="stats-grid">
-      <div class="stat-box"><div class="val" id="stat-total">0</div><div class="label">听力练习次数</div></div>
-      <div class="stat-box"><div class="val" id="stat-articles">0</div><div class="label">练习短文数</div></div>
-      <div class="stat-box"><div class="val" id="stat-avg">-</div><div class="label">平均匹配度</div></div>
+  <!-- 首页 -->
+  <div class="page active" id="page-home">
+    <div class="card">
+      <h2>📊 听力统计</h2>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="val" id="stat-total">0</div><div class="label">听力练习次数</div></div>
+        <div class="stat-box"><div class="val" id="stat-articles">0</div><div class="label">练习短文数</div></div>
+        <div class="stat-box"><div class="val" id="stat-learned">0</div><div class="label">已学习</div></div>
+        <div class="stat-box"><div class="val" id="stat-done">0</div><div class="label">已掌握</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📋 今日待复习</h2>
+      <div id="home-review-list"></div>
+    </div>
+    <div class="card">
+      <h2>🎯 快速开始</h2>
+      <p style="color:var(--text3);font-size:13px;margin-bottom:12px;">随机抽取短文进行听力练习</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-green" onclick="startQuickListen(3)">🎧 听3篇</button>
+        <button class="btn btn-blue" onclick="startQuickListen(5)">🎧 听5篇</button>
+        <button class="btn btn-orange" onclick="startQuickListen(10)">🎧 听10篇</button>
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <h2>📖 今日待复习</h2>
-    <div id="review-list"></div>
+  <!-- 待复习 -->
+  <div class="page" id="page-review">
+    <div class="card">
+      <h2>📖 今日待复习</h2>
+      <div id="review-list"></div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>📚 英语短文库</h2>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;" id="category-tags"></div>
-    <div id="article-list"></div>
+  <!-- 短文库 -->
+  <div class="page" id="page-lib">
+    <div class="card">
+      <h2>🔍 分类筛选</h2>
+      <div id="category-tags"></div>
+    </div>
+    <div class="card">
+      <h2>📚 英语短文库（<span id="article-count">0</span> 篇）</h2>
+      <input type="text" class="search-box" id="article-search" placeholder="搜索标题或单词..." oninput="renderArticleList()">
+      <div id="article-list"></div>
+    </div>
+  </div>
+
+  <!-- 短文管理 -->
+  <div class="page" id="page-manage">
+    <div class="card">
+      <h2>📝 短文管理（<span id="manage-count">0</span> 篇）</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button class="btn btn-green" onclick="openArticleEditor()">➕ 添加短文</button>
+        <button class="btn btn-blue" onclick="exportArticles('json')">📥 导出JSON</button>
+        <button class="btn btn-blue" onclick="exportArticles('csv')">📥 导出CSV</button>
+        <button class="btn btn-orange" onclick="document.getElementById('import-file').click()">📤 导入</button>
+        <input type="file" id="import-file" accept=".json,.csv" style="display:none" onchange="importArticles(event)">
+        <select id="import-mode" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+          <option value="append">追加导入</option>
+          <option value="replace">替换导入</option>
+        </select>
+      </div>
+      <div id="manage-list"></div>
+    </div>
+  </div>
+
+  <!-- 个人中心 -->
+  <div class="page" id="page-mine">
+    <div class="card">
+      <h2>📊 我的学习数据</h2>
+      <div class="mine-row"><span class="label">已学习</span><span class="value" id="my-total">0 篇</span></div>
+      <div class="mine-row"><span class="label">待复习</span><span class="value" id="my-wait">0 篇</span></div>
+      <div class="mine-row"><span class="label">已掌握</span><span class="value" id="my-done">0 篇</span></div>
+      <div class="mine-row"><span class="label">听力练习次数</span><span class="value" id="my-listen-total">0</span></div>
+      <div class="mine-row"><span class="label">听力练习短文数</span><span class="value" id="my-listen-articles">0</span></div>
+      <div class="mine-row"><span class="label">⭐ 星星</span><span class="value" style="color:#fbbc04;" id="my-stars">0</span></div>
+    </div>
+    <div class="card">
+      <h2>🔊 语音设置</h2>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:6px;">TTS 模型：</label>
+        <select id="tts-model" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#fff;" onchange="onModelChange()">
+        </select>
+        <p style="color:var(--text3);font-size:12px;margin-top:6px;" id="tts-model-desc">选择语音合成引擎</p>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:6px;">TTS 声音：</label>
+        <select id="tts-voice" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#fff;" onchange="saveSettings()">
+        </select>
+        <p style="color:var(--text3);font-size:12px;margin-top:6px;" id="tts-voice-desc"></p>
+      </div>
+      <div style="margin-bottom:8px;">
+        <label style="font-size:13px;color:var(--text2);">TTS 语速：</label>
+        <input type="range" id="tts-speed" min="50" max="150" value="85" style="vertical-align:middle;" oninput="updateSpeedDisplay(); saveSettings();">
+        <span id="tts-speed-val" style="font-size:12px;color:var(--text3);">0.85x</span>
+      </div>
+      <p style="color:var(--text3);font-size:13px;">较低语速适合听力初学者</p>
+      <div style="margin-top:12px;">
+        <button class="btn btn-blue" id="preview-btn" onclick="previewVoice()" style="width:100%;">🔊 试听当前设置</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>⚠️ 重置数据</h2>
+      <p style="color:var(--text3);font-size:13px;margin-bottom:12px;">重置当前用户的所有学习数据，包括听力记录</p>
+      <button class="btn btn-red" onclick="resetData()">重置我的数据</button>
+    </div>
   </div>
 
 </div>
 
+<!-- 单篇听力弹窗 -->
 <div class="modal-overlay" id="listen-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeListenModal()">✕</button>
     <h2 id="modal-title">🎧 听力练习</h2>
-    <div style="font-size:13px;color:#999;margin-bottom:12px;" id="modal-meta"></div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:12px;" id="modal-meta"></div>
 
     <div class="audio-controls">
       <div class="audio-btns">
@@ -146,21 +263,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
         <button class="audio-btn replay" onclick="replayAudio()">🔄</button>
         <span class="audio-status" id="audio-status">点击播放按钮开始</span>
       </div>
+      <div style="margin:8px 0 4px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--text3);width:36px;text-align:right;" id="audio-current">0:00</span>
+        <div style="flex:1;height:6px;background:#e0e0e0;border-radius:3px;cursor:pointer;position:relative;" id="audio-progress-bar" onclick="seekAudio(event)">
+          <div style="height:100%;background:var(--primary);border-radius:3px;width:0%;transition:width 0.1s;" id="audio-progress"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text3);width:36px;" id="audio-duration">0:00</span>
+      </div>
       <div class="volume-row">
         <label>🔊</label>
         <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="changeVolume(this.value)">
-        <span style="font-size:12px;color:#999;width:32px;text-align:right;" id="volume-val">80%</span>
+        <span style="font-size:12px;color:var(--text3);width:32px;text-align:right;" id="volume-val">80%</span>
       </div>
     </div>
 
     <div class="answer-area">
-      <textarea id="answer-input" placeholder="播放音频后，输入听到的英语短文全文..."></textarea>
+      <textarea id="answer-input" placeholder="播放音频后，输入听到的英语短文全文..." onclick="hideAnswerOnFocus()"></textarea>
       <div class="answer-hint">💡 可多次播放，输入完成后点击"查看答案"核对</div>
     </div>
 
     <div class="answer-reveal" id="answer-reveal">
       <h3>📝 原文</h3>
       <div class="full-text" id="reveal-text"></div>
+      <canvas id="answer-canvas" style="display:none;max-width:100%;border-radius:8px;"></canvas>
     </div>
 
     <div class="score-bar" id="score-bar" style="display:none;">
@@ -168,10 +293,106 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
       <div class="detail" id="score-detail"></div>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn btn-orange" onclick="showAnswer()">👁️ 查看答案</button>
-      <button class="btn btn-green" onclick="completeListening()">✅ 完成听力复习</button>
+    <div class="modal-actions" id="listen-actions">
+      <button class="btn btn-green" id="complete-btn" onclick="completeListening()" style="display:none;">✅ 完成听力复习</button>
       <button class="btn btn-gray" onclick="closeListenModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批量听力弹窗 -->
+<div class="modal-overlay" id="batch-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeBatchModal()">✕</button>
+    <h2>🎧 听力考试 <span id="batch-progress" style="font-size:14px;color:var(--text3);font-weight:400;"></span></h2>
+
+    <div style="margin-bottom:12px;">
+      <div style="background:var(--bg);border-radius:8px;height:8px;overflow:hidden;">
+        <div id="batch-bar" style="height:100%;background:var(--primary);border-radius:8px;transition:width 0.3s;width:0%;"></div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;color:var(--text3);margin-bottom:8px;" id="batch-meta"></div>
+
+    <div class="audio-controls">
+      <div class="audio-btns">
+        <button class="audio-btn play" id="batch-play-btn" onclick="toggleBatchPlay()">▶</button>
+        <button class="audio-btn replay" onclick="replayBatchAudio()">🔄</button>
+        <span class="audio-status" id="batch-audio-status">点击播放按钮听短文</span>
+      </div>
+      <div style="margin:8px 0 4px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--text3);width:36px;text-align:right;" id="batch-audio-current">0:00</span>
+        <div style="flex:1;height:6px;background:#e0e0e0;border-radius:3px;cursor:pointer;position:relative;" id="batch-audio-progress-bar" onclick="seekBatchAudio(event)">
+          <div style="height:100%;background:var(--primary);border-radius:3px;width:0%;transition:width 0.1s;" id="batch-audio-progress"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text3);width:36px;" id="batch-audio-duration">0:00</span>
+      </div>
+      <div class="volume-row">
+        <label>🔊</label>
+        <input type="range" id="batch-volume" min="0" max="100" value="80" oninput="changeBatchVolume(this.value)">
+        <span style="font-size:12px;color:var(--text3);width:32px;text-align:right;" id="batch-volume-val">80%</span>
+      </div>
+    </div>
+
+    <div class="answer-area">
+      <textarea id="batch-answer" placeholder="播放音频后，输入听到的英语短文全文..." style="min-height:100px;" onclick="hideBatchAnswer()"></textarea>
+      <div class="answer-hint" id="batch-hint">💡 可多次播放，输入后点击提交</div>
+    </div>
+
+    <div class="answer-reveal" id="batch-answer-reveal" style="display:none;">
+      <h3>📝 原文</h3>
+      <div class="full-text" id="batch-reveal-text"></div>
+      <canvas id="batch-answer-canvas" style="display:none;max-width:100%;border-radius:8px;"></canvas>
+    </div>
+
+    <div class="score-bar" id="batch-score-bar" style="display:none;">
+      <div class="pct" id="batch-score-pct">0%</div>
+      <div class="detail" id="batch-score-detail"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-orange" id="batch-reveal-btn" onclick="revealBatchAnswer()" style="display:none;">👁️ 查看答案</button>
+      <button class="btn btn-green" id="batch-submit-btn" onclick="submitBatchAnswer()">✅ 提交并下一题</button>
+      <button class="btn btn-gray" id="batch-skip-btn" onclick="skipBatchAnswer()">跳过</button>
+    </div>
+  </div>
+</div>
+
+<!-- 考试结果弹窗 -->
+<div class="modal-overlay" id="result-modal">
+  <div class="modal" style="max-width:640px;">
+    <button class="modal-close" onclick="closeResultModal()">✕</button>
+    <h2>📊 考试结果 <span id="result-summary" style="font-size:14px;color:var(--text3);font-weight:400;"></span></h2>
+    <div id="result-list" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-blue" onclick="retakeBatch()" style="width:100%;">🔄 重考</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="editor-modal">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeArticleEditor()">✕</button>
+    <h2 id="editor-title">📝 添加短文</h2>
+    <div class="ed-field">
+      <label class="ed-label">📖 标题</label>
+      <input type="text" id="ed-title" class="ed-input" placeholder="输入短文标题">
+    </div>
+    <div class="ed-field">
+      <label class="ed-label">🔤 关联单词（逗号分隔）</label>
+      <input type="text" id="ed-words" class="ed-input" placeholder="cat,dog,sleeping">
+      <div class="ed-hint">关联 danci 单词库中的单词，方便听力与单词联动</div>
+    </div>
+    <div class="ed-field">
+      <label class="ed-label">📂 分类</label>
+      <input type="text" id="ed-category" class="ed-input" placeholder="English">
+    </div>
+    <div class="ed-field">
+      <label class="ed-label">📝 英文文本</label>
+      <textarea id="ed-text" class="ed-textarea" rows="5" placeholder="输入英语短文..."></textarea>
+    </div>
+    <div class="ed-actions">
+      <button class="btn btn-green" onclick="saveArticleFromEditor()">💾 保存</button>
+      <button class="btn btn-gray" onclick="closeArticleEditor()">取消</button>
     </div>
   </div>
 </div>
@@ -179,48 +400,116 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 <script>
 const TTS_URL = 'http://localhost:5003/tts';
 
-const ARTICLES = [
-  {
-    id: 0, title: "The Seasons", author: "Traditional", category: "自然",
-    text: "Spring is green,\nSummer is bright,\nAutumn is gold,\nWinter is white.\nFour seasons make a year,\nEach one dear and near."
-  },
-  {
-    id: 1, title: "Twinkle Twinkle Little Star", author: "Jane Taylor", category: "经典",
-    text: "Twinkle, twinkle, little star,\nHow I wonder what you are!\nUp above the world so high,\nLike a diamond in the sky.\nTwinkle, twinkle, little star,\nHow I wonder what you are!"
-  },
-  {
-    id: 2, title: "The Rain", author: "Robert Louis Stevenson", category: "自然",
-    text: "The rain is raining all around,\nIt falls on field and tree,\nIt rains on the umbrellas here,\nAnd on the ships at sea."
-  },
-  {
-    id: 3, title: "My Shadow", author: "Robert Louis Stevenson", category: "生活",
-    text: "I have a little shadow that goes in and out with me,\nAnd what can be the use of him is more than I can see.\nHe is very, very like me from the heels up to the head;\nAnd I see him jump before me, when I jump into my bed."
-  },
-  {
-    id: 4, title: "At the Seaside", author: "Robert Louis Stevenson", category: "自然",
-    text: "When I was down beside the sea,\nA wooden spade they gave to me\nTo dig the sandy shore.\nMy holes were empty like a cup,\nIn every hole the sea came up,\nTill it could come no more."
-  },
-  {
-    id: 5, title: "The Owl and the Pussycat", author: "Edward Lear", category: "经典",
-    text: "The Owl and the Pussycat went to sea\nIn a beautiful pea-green boat,\nThey took some honey, and plenty of money,\nWrapped up in a five-pound note."
-  },
-  {
-    id: 6, title: "A Morning Song", author: "Eleanor Farjeon", category: "生活",
-    text: "Morning has broken,\nLike the first morning,\nBlackbird has spoken,\nLike the first bird.\nPraise for the singing,\nPraise for the morning,\nPraise for them springing\nFresh from the world."
-  },
-  {
-    id: 7, title: "The Wind", author: "Christina Rossetti", category: "自然",
-    text: "Who has seen the wind?\nNeither I nor you:\nBut when the leaves hang trembling,\nThe wind is passing through.\nWho has seen the wind?\nNeither you nor I:\nBut when the trees bow down their heads,\nThe wind is passing by."
-  },
-  {
-    id: 8, title: "Time", author: "Percy B. Shelley", category: "经典",
-    text: "Unfathomable Sea! whose waves are years,\nOcean of Time, whose waters of deep woe\nAre brackish with the salt of human tears!\nThou shoreless flood, which in thy ebb and flow\nClaspest the limits of mortality!"
-  },
-  {
-    id: 9, title: "The Little Turtle", author: "Vachel Lindsay", category: "生活",
-    text: "There was a little turtle,\nHe lived in a box.\nHe swam in a puddle,\nHe climbed on the rocks.\nHe snapped at a mosquito,\nHe snapped at a flea,\nHe snapped at a minnow,\nAnd he snapped at me."
-  }
+const DEFAULT_ARTICLES = [
+  { id:1, title:"The Seasons", words:"spring,summer,autumn,winter,season,year", category:"自然",
+    text:"Spring is green,\nSummer is bright,\nAutumn is gold,\nWinter is white.\nFour seasons make a year,\nEach one dear and near." },
+  { id:2, title:"Twinkle Twinkle Little Star", words:"twinkle,star,wonder,world,diamond,sky", category:"经典",
+    text:"Twinkle, twinkle, little star,\nHow I wonder what you are!\nUp above the world so high,\nLike a diamond in the sky.\nTwinkle, twinkle, little star,\nHow I wonder what you are!" },
+  { id:3, title:"The Rain", words:"rain,field,tree,umbrella,ship,sea", category:"自然",
+    text:"The rain is raining all around,\nIt falls on field and tree,\nIt rains on the umbrellas here,\nAnd on the ships at sea." },
+  { id:4, title:"My Shadow", words:"shadow,use,like,heel,head,jump,bed", category:"生活",
+    text:"I have a little shadow that goes in and out with me,\nAnd what can be the use of him is more than I can see.\nHe is very, very like me from the heels up to the head;\nAnd I see him jump before me, when I jump into my bed." },
+  { id:5, title:"At the Seaside", words:"seaside,sea,spade,dig,sandy,hole,empty,cup", category:"自然",
+    text:"When I was down beside the sea,\nA wooden spade they gave to me\nTo dig the sandy shore.\nMy holes were empty like a cup,\nIn every hole the sea came up,\nTill it could come no more." },
+  { id:6, title:"The Owl and the Pussycat", words:"owl,pussycat,sea,boat,honey,money,note", category:"经典",
+    text:"The Owl and the Pussycat went to sea\nIn a beautiful pea-green boat,\nThey took some honey, and plenty of money,\nWrapped up in a five-pound note." },
+  { id:7, title:"A Morning Song", words:"morning,broken,blackbird,spoken,bird,praise,springing,fresh,world", category:"生活",
+    text:"Morning has broken,\nLike the first morning,\nBlackbird has spoken,\nLike the first bird.\nPraise for the singing,\nPraise for the morning,\nPraise for them springing\nFresh from the world." },
+  { id:8, title:"The Wind", words:"wind,leaves,trembling,passing,trees,bow", category:"自然",
+    text:"Who has seen the wind?\nNeither I nor you:\nBut when the leaves hang trembling,\nThe wind is passing through.\nWho has seen the wind?\nNeither you nor I:\nBut when the trees bow down their heads,\nThe wind is passing by." },
+  { id:9, title:"Time", words:"unfathomable,sea,waves,years,ocean,woe,brackish,salt,tears,shoreless,flood,mortality", category:"经典",
+    text:"Unfathomable Sea! whose waves are years,\nOcean of Time, whose waters of deep woe\nAre brackish with the salt of human tears!\nThou shoreless flood, which in thy ebb and flow\nClaspest the limits of mortality!" },
+  { id:10, title:"The Little Turtle", words:"turtle,box,swam,puddle,climbed,rocks,snapped,mosquito,flea,minnow", category:"生活",
+    text:"There was a little turtle,\nHe lived in a box.\nHe swam in a puddle,\nHe climbed on the rocks.\nHe snapped at a mosquito,\nHe snapped at a flea,\nHe snapped at a minnow,\nAnd he snapped at me." },
+  { id:11, title:"Cat", words:"cat,sleeping,mat", category:"English", text:"The cat is sleeping on the mat." },
+  { id:12, title:"Sun", words:"sun,hot,bright", category:"English", text:"The sun is hot and bright." },
+  { id:13, title:"Blue Pen", words:"blue,pen,like", category:"English", text:"I like the blue pen." },
+  { id:14, title:"Dog", words:"dog,runs,fast", category:"English", text:"The dog runs very fast." },
+  { id:15, title:"Door", words:"door,close,please", category:"English", text:"Please close the door." },
+  { id:16, title:"Apple", words:"apple,red,sweet", category:"English", text:"The apple is red and sweet." },
+  { id:17, title:"Park", words:"park,go,let", category:"English", text:"Let's go to the park." },
+  { id:18, title:"Teacher", words:"teacher,reads,story", category:"English", text:"The teacher reads a story." },
+  { id:19, title:"Kitchen", words:"kitchen,mom", category:"English", text:"My mom is in the kitchen." },
+  { id:20, title:"Moon", words:"moon,comes,night", category:"English", text:"The moon comes out at night." },
+  { id:21, title:"Cat and Dog", words:"cat,dog,friends", category:"English", text:"The cat and the dog are friends." },
+  { id:22, title:"Sun and Moon", words:"sun,moon,hot,cold", category:"English", text:"The sun is hot and the moon is cold." },
+  { id:23, title:"Apple and Banana", words:"apple,banana,like", category:"English", text:"I like apples and bananas." },
+  { id:24, title:"Run and Jump", words:"run,jump,park", category:"English", text:"Let's run and jump in the park." },
+  { id:25, title:"Mom and Dad", words:"mom,dad,love", category:"English", text:"My mom and dad love me." },
+  { id:26, title:"Read and Write", words:"read,write,school", category:"English", text:"We read and write at school." },
+  { id:27, title:"Red and Blue", words:"red,blue,pen,desk", category:"English", text:"The red and blue pens are on the desk." },
+  { id:28, title:"Big and Small", words:"big,small,box,ball", category:"English", text:"The big box and the small ball are here." },
+  { id:29, title:"Sing and Dance", words:"sing,dance,well", category:"English", text:"She can sing and dance very well." },
+  { id:30, title:"Day and Night", words:"day,night,bright,dark", category:"English", text:"The day is bright and the night is dark." }
 ];
+
+let ARTICLES = [];
+let db = null;
+const DB_NAME = 'MoringReadDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'articles';
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        let request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (e) => {
+            let database = e.target.result;
+            if (!database.objectStoreNames.contains(STORE_NAME)) {
+                let store = database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                store.createIndex('category', 'category', { unique: false });
+                store.createIndex('words', 'words', { unique: false });
+            }
+        };
+        request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+        request.onerror = (e) => reject(e);
+    });
+}
+
+function getAllArticles() {
+    return new Promise((resolve, reject) => {
+        let tx = db.transaction(STORE_NAME, 'readonly');
+        let store = tx.objectStore(STORE_NAME);
+        let req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+function putArticle(article) {
+    return new Promise((resolve, reject) => {
+        let tx = db.transaction(STORE_NAME, 'readwrite');
+        let store = tx.objectStore(STORE_NAME);
+        let req = store.put(article);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+function deleteArticle(id) {
+    return new Promise((resolve, reject) => {
+        let tx = db.transaction(STORE_NAME, 'readwrite');
+        let store = tx.objectStore(STORE_NAME);
+        let req = store.delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+    });
+}
+
+function getNextId() {
+    return ARTICLES.length > 0 ? Math.max(...ARTICLES.map(a => a.id)) + 1 : 1;
+}
+
+async function initArticles() {
+    await openDB();
+    let articles = await getAllArticles();
+    if (articles.length === 0) {
+        for (let a of DEFAULT_ARTICLES) {
+            await putArticle(a);
+        }
+        articles = DEFAULT_ARTICLES.slice();
+    }
+    ARTICLES = articles.sort((a, b) => a.id - b.id);
+}
 
 const PERIOD = [0, 1, 2, 4, 7, 15, 30];
 
@@ -228,29 +517,216 @@ let user = "A";
 let currentArticle = null;
 let currentAudio = null;
 let isPlaying = false;
+let isLoading = false;
 let answerRevealed = false;
-let listeningCompleted = false;
+let audioFinished = false;
 let selectedCategory = '';
 
-function getUser() {
-    try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; }
-}
+let batchArticles = [];
+let batchIndex = 0;
+let batchAnswers = [];
+let batchAudio = null;
+let batchPlaying = false;
+let batchRevealed = false;
+let batchAudioFinished = false;
+let _batchProgressTimer = null;
+
+function getUser() { try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; } }
 function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
 function safeUser(u) {
-    let def = { learn: [], done: [], log: {}, exam: "", skilled: [], translate: false, dailyLog: {}, examScores: [], voice: "local", wrongPool: {}, stars: 0, combo: 0, learnMilestone: 0, lastTodayMilestone: {}, prizes: [], lotteryRedeemUnlock: null, listeningTotal: 0, listeningLog: {} };
+    let def = { learn:[], done:[], log:{}, dailyLog:{}, stars:0, listeningTotal:0, listeningLog:{}, voice:'af_sarah', ttsSpeed:85, ttsModel:'kokoro' };
     if (!u) return def;
     return { ...def, ...u };
 }
-function todayKey() {
-    let d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const KOKORO_VOICES = {
+    female: [
+        { id: 'af_heart', name: '温暖友好', stars: 5 },
+        { id: 'af_bella', name: '优雅精致', stars: 5 },
+        { id: 'af_nicole', name: '专业清晰', stars: 5 },
+        { id: 'af_sky', name: '明亮活力', stars: 5 },
+        { id: 'af_sarah', name: '清晰流利', stars: 5 },
+        { id: 'af_jessica', name: '富有表现力', stars: 4 },
+        { id: 'af_kore', name: '柔和温柔', stars: 4 },
+        { id: 'af_nova', name: '艺术梦幻', stars: 4 },
+        { id: 'af_alloy', name: '现代干脆', stars: 4 },
+        { id: 'af_aoede', name: '音乐抒情', stars: 4 },
+        { id: 'af_river', name: '流畅平静', stars: 4 }
+    ],
+    male: [
+        { id: 'am_michael', name: '专业稳重', stars: 5 },
+        { id: 'am_adam', name: '年轻活力', stars: 5 },
+        { id: 'am_eric', name: '友好温暖', stars: 4 },
+        { id: 'am_liam', name: '清晰自信', stars: 4 },
+        { id: 'am_fenrir', name: '深沉权威', stars: 4 },
+        { id: 'am_echo', name: '共鸣感强', stars: 4 },
+        { id: 'am_onyx', name: '大胆有力', stars: 4 },
+        { id: 'am_puck', name: '俏皮有趣', stars: 4 },
+        { id: 'am_santa', name: '欢乐温暖', stars: 4 }
+    ]
+};
+
+const EDGE_VOICES = {
+    female: [
+        { id: 'en-US-JennyNeural', name: 'Jenny', stars: 5 },
+        { id: 'en-US-AriaNeural', name: 'Aria', stars: 5 },
+        { id: 'en-US-AmberNeural', name: 'Amber', stars: 4 },
+        { id: 'en-US-EmmaNeural', name: 'Emma', stars: 4 },
+        { id: 'en-GB-SoniaNeural', name: 'Sonia (英音)', stars: 5 },
+        { id: 'en-GB-LibbyNeural', name: 'Libby (英音)', stars: 4 },
+        { id: 'en-AU-NatashaNeural', name: 'Natasha (澳音)', stars: 4 }
+    ],
+    male: [
+        { id: 'en-US-GuyNeural', name: 'Guy', stars: 5 },
+        { id: 'en-US-DavisNeural', name: 'Davis', stars: 4 },
+        { id: 'en-US-AndrewNeural', name: 'Andrew', stars: 4 },
+        { id: 'en-US-BrianNeural', name: 'Brian', stars: 4 },
+        { id: 'en-GB-RyanNeural', name: 'Ryan (英音)', stars: 5 },
+        { id: 'en-GB-ThomasNeural', name: 'Thomas (英音)', stars: 4 },
+        { id: 'en-AU-WilliamNeural', name: 'William (澳音)', stars: 4 }
+    ]
+};
+
+function buildVoiceOptions(model) {
+    let voices = model === 'edge' ? EDGE_VOICES : KOKORO_VOICES;
+    let html = '';
+    let starStr = (n) => '⭐'.repeat(n);
+    html += '<optgroup label="👩 女声">';
+    for (let v of voices.female) {
+        html += `<option value="${v.id}">${v.id} — ${v.name} ${starStr(v.stars)}</option>`;
+    }
+    html += '</optgroup>';
+    html += '<optgroup label="👨 男声">';
+    for (let v of voices.male) {
+        html += `<option value="${v.id}">${v.id} — ${v.name} ${starStr(v.stars)}</option>`;
+    }
+    html += '</optgroup>';
+    return html;
 }
-function nextDate(st, count) {
-    if (count >= PERIOD.length) return null;
-    let d = new Date(st);
-    d.setDate(d.getDate() + PERIOD[count]);
-    return d.getTime();
+
+function onModelChange() {
+    let model = document.getElementById('tts-model').value;
+    let voiceSelect = document.getElementById('tts-voice');
+    voiceSelect.innerHTML = buildVoiceOptions(model);
+    // 设置默认声音
+    let defaultVoice = model === 'edge' ? 'en-US-JennyNeural' : 'af_sarah';
+    voiceSelect.value = defaultVoice;
+    // 更新描述
+    let descEl = document.getElementById('tts-model-desc');
+    if (model === 'edge') {
+        descEl.textContent = '微软云端 TTS · 音质优秀 · 需联网';
+    } else {
+        descEl.textContent = 'Kokoro 82M · 离线运行 · 低延迟';
+    }
+    let voiceDescEl = document.getElementById('tts-voice-desc');
+    voiceDescEl.textContent = model === 'edge' ? '微软 Neural 语音，自然流畅' : '训练数据：约100小时音频 · 目标质量：自然流畅';
+    saveSettings();
 }
+
+function saveSettings() {
+    let u = safeUser(getUser());
+    u.ttsModel = document.getElementById('tts-model').value;
+    u.voice = document.getElementById('tts-voice').value;
+    u.ttsSpeed = parseInt(document.getElementById('tts-speed').value);
+    setUser(u);
+}
+
+function loadSettings() {
+    let u = safeUser(getUser());
+    let model = u.ttsModel || 'kokoro';
+    let modelSelect = document.getElementById('tts-model');
+    // 先加载可用模型列表
+    loadModels().then(() => {
+        modelSelect.value = model;
+        let voiceSelect = document.getElementById('tts-voice');
+        voiceSelect.innerHTML = buildVoiceOptions(model);
+        voiceSelect.value = u.voice || (model === 'edge' ? 'en-US-JennyNeural' : 'af_sarah');
+        document.getElementById('tts-speed').value = u.ttsSpeed || 85;
+        document.getElementById('tts-speed-val').textContent = (u.ttsSpeed / 100) + 'x';
+        // 更新描述
+        let descEl = document.getElementById('tts-model-desc');
+        descEl.textContent = model === 'edge' ? '微软云端 TTS · 音质优秀 · 需联网' : 'Kokoro 82M · 离线运行 · 低延迟';
+        let voiceDescEl = document.getElementById('tts-voice-desc');
+        voiceDescEl.textContent = model === 'edge' ? '微软 Neural 语音，自然流畅' : '训练数据：约100小时音频 · 目标质量：自然流畅';
+    });
+}
+
+async function loadModels() {
+    let modelSelect = document.getElementById('tts-model');
+    try {
+        let res = await fetch(TTS_URL.replace('/tts', '/models'));
+        let models = await res.json();
+        modelSelect.innerHTML = '';
+        for (let m of models) {
+            let opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.name;
+            modelSelect.appendChild(opt);
+        }
+        if (models.length === 0) {
+            modelSelect.innerHTML = '<option value="kokoro">Kokoro (本地)</option>';
+        }
+    } catch {
+        modelSelect.innerHTML = '<option value="kokoro">Kokoro (本地)</option><option value="edge">Edge TTS (云端)</option>';
+    }
+}
+
+function updateSpeedDisplay() {
+    let speedEl = document.getElementById('tts-speed');
+    if (speedEl) {
+        document.getElementById('tts-speed-val').textContent = (parseInt(speedEl.value) / 100).toFixed(2) + 'x';
+    }
+}
+
+let previewAudio = null;
+let previewLoading = false;
+
+async function previewVoice() {
+    if (previewLoading) return;
+    if (previewAudio) { previewAudio.pause(); previewAudio = null; }
+    
+    let btn = document.getElementById('preview-btn');
+    let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let text = 'Hello! This is a preview of the selected voice. How does it sound?';
+    
+    previewLoading = true;
+    btn.textContent = '⏳ 加载中...';
+    btn.style.opacity = '0.6';
+    
+    try {
+        const res = await fetch(TTS_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text, voice, speed, model }) });
+        if (!res.ok) {
+            toast('试听失败：模型不可用', 'error');
+            return;
+        }
+        const blob = await res.blob();
+        previewAudio = new Audio(URL.createObjectURL(blob));
+        previewAudio.play();
+        btn.textContent = '🔊 播放中...';
+        previewAudio.onended = () => {
+            btn.textContent = '🔊 试听当前设置';
+            btn.style.opacity = '1';
+            previewLoading = false;
+        };
+        previewAudio.onerror = () => {
+            toast('试听播放失败', 'error');
+            btn.textContent = '🔊 试听当前设置';
+            btn.style.opacity = '1';
+            previewLoading = false;
+        };
+    } catch {
+        toast('试听请求失败', 'error');
+        btn.textContent = '🔊 试听当前设置';
+        btn.style.opacity = '1';
+    } finally {
+        previewLoading = false;
+    }
+}
+
+function todayKey() { let d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function nextDate(st, count) { if (count >= PERIOD.length) return null; let d = new Date(st); d.setDate(d.getDate() + PERIOD[count]); return d.getTime(); }
 
 function toggleUser() {
     user = user === "A" ? "B" : "A";
@@ -258,70 +734,110 @@ function toggleUser() {
     renderAll();
 }
 
-async function speak(text, voice = 'en-US-JennyNeural') {
+function showPage(p) {
+    document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+    document.getElementById('page-' + p).classList.add('active');
+    document.querySelectorAll('.nav a').forEach(a => a.classList.remove('on'));
+    document.querySelector(`.nav a[data-page="${p}"]`).classList.add('on');
+    renderAll();
+}
+
+document.getElementById('main-nav').addEventListener('click', function(e) {
+    if (e.target.tagName === 'A' && e.target.dataset.page) showPage(e.target.dataset.page);
+});
+
+async function ttsFetch(text) {
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
     try {
-        const res = await fetch(TTS_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            //body: JSON.stringify({ text, voice, rate: '+0%', pitch: '+0Hz' })
-            body: JSON.stringify({ text, voice: 'af_sarah', speed: 1.0 })
-        });
+        const res = await fetch(TTS_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text, voice, speed, model }) });
+        if (!res.ok) {
+            console.error('TTS error:', res.status);
+            return null;
+        }
         const blob = await res.blob();
         return URL.createObjectURL(blob);
-    } catch (e) {
-        console.error('TTS error:', e);
-        return null;
-    }
+    } catch { return null; }
 }
 
 function playLocalTTS(text) {
     speechSynthesis.cancel();
     let utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'en-US';
-    utter.rate = 0.85;
-    let vol = parseInt(document.getElementById('volume-slider').value) / 100;
-    utter.volume = vol;
+    utter.rate = parseInt(document.getElementById('tts-speed').value) / 100;
+    utter.volume = parseInt(document.getElementById('volume-slider').value) / 100;
     speechSynthesis.speak(utter);
     isPlaying = true;
+    audioFinished = false;
     updatePlayUI();
-    utter.onend = () => { isPlaying = false; updatePlayUI(); };
+    utter.onend = () => { isPlaying = false; audioFinished = true; updatePlayUI(); };
     utter.onerror = () => { isPlaying = false; updatePlayUI(); };
 }
 
 async function togglePlay() {
     if (!currentArticle) return;
+    if (isLoading) return;
     if (isPlaying) {
-        if (currentAudio) { currentAudio.pause(); }
+        if (currentAudio) currentAudio.pause();
         speechSynthesis.cancel();
         isPlaying = false;
+        stopProgressTimer();
         updatePlayUI();
         return;
     }
+    // 恢复暂停的音频
+    if (currentAudio && currentAudio.paused && !audioFinished) {
+        currentAudio.play();
+        isPlaying = true;
+        startProgressTimer();
+        updatePlayUI();
+        return;
+    }
+    // 播放时隐藏答案
+    if (answerRevealed) {
+        answerRevealed = false;
+        document.getElementById('answer-reveal').style.display = 'none';
+        document.getElementById('score-bar').style.display = 'none';
+    }
     let vol = parseInt(document.getElementById('volume-slider').value) / 100;
+    isLoading = true;
+    audioFinished = false;
+    // 移除查看答案按钮
+    let oldBtn = document.getElementById('show-answer-btn');
+    if (oldBtn) oldBtn.remove();
+    resetProgress();
+    updatePlayUI();
     try {
-        let audioUrl = await speak(currentArticle.text);
-        if (audioUrl) {
-            currentAudio = new Audio(audioUrl);
+        let url = await ttsFetch(currentArticle.text);
+        if (url) {
+            currentAudio = new Audio(url);
             currentAudio.volume = vol;
             currentAudio.play();
             isPlaying = true;
+            isLoading = false;
             updatePlayUI();
-            currentAudio.onended = () => { isPlaying = false; updatePlayUI(); };
-            currentAudio.onerror = () => { isPlaying = false; updatePlayUI(); toast('音频播放失败', 'error'); };
-        } else {
-            playLocalTTS(currentArticle.text);
-        }
-    } catch {
-        playLocalTTS(currentArticle.text);
-    }
+            currentAudio.onended = () => { isPlaying = false; audioFinished = true; stopProgressTimer(); updatePlayUI(); };
+            currentAudio.onerror = () => { isPlaying = false; stopProgressTimer(); updatePlayUI(); toast('音频播放失败','error'); };
+            currentAudio.onloadedmetadata = () => { updateDuration(); startProgressTimer(); };
+        } else { isLoading = false; playLocalTTS(currentArticle.text); }
+    } catch { isLoading = false; playLocalTTS(currentArticle.text); }
 }
 
 function replayAudio() {
-    if (!currentArticle) return;
+    if (!currentArticle || isLoading) return;
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     speechSynthesis.cancel();
     isPlaying = false;
+    isLoading = false;
+    stopProgressTimer();
     updatePlayUI();
+    // 隐藏答案
+    if (answerRevealed) {
+        answerRevealed = false;
+        document.getElementById('answer-reveal').style.display = 'none';
+        document.getElementById('score-bar').style.display = 'none';
+    }
     setTimeout(() => togglePlay(), 100);
 }
 
@@ -330,69 +846,236 @@ function changeVolume(val) {
     if (currentAudio) currentAudio.volume = val / 100;
 }
 
+// ========== 进度条 ==========
+let _progressTimer = null;
+
+function formatTime(sec) {
+    if (!sec || !isFinite(sec)) return '0:00';
+    let m = Math.floor(sec / 60);
+    let s = Math.floor(sec % 60);
+    return m + ':' + String(s).padStart(2, '0');
+}
+
+function resetProgress() {
+    stopProgressTimer();
+    document.getElementById('audio-progress').style.width = '0%';
+    document.getElementById('audio-current').textContent = '0:00';
+    document.getElementById('audio-duration').textContent = '0:00';
+}
+
+function updateDuration() {
+    if (currentAudio && isFinite(currentAudio.duration)) {
+        document.getElementById('audio-duration').textContent = formatTime(currentAudio.duration);
+    }
+}
+
+function updateProgress() {
+    if (!currentAudio) return;
+    let cur = currentAudio.currentTime || 0;
+    let dur = currentAudio.duration || 1;
+    if (!isFinite(dur) || dur <= 0) return;
+    let pct = (cur / dur) * 100;
+    document.getElementById('audio-progress').style.width = pct + '%';
+    document.getElementById('audio-current').textContent = formatTime(cur);
+}
+
+function startProgressTimer() {
+    stopProgressTimer();
+    _progressTimer = setInterval(updateProgress, 200);
+}
+
+function stopProgressTimer() {
+    if (_progressTimer) { clearInterval(_progressTimer); _progressTimer = null; }
+}
+
+function seekAudio(e) {
+    if (!currentAudio || !isFinite(currentAudio.duration)) return;
+    let bar = document.getElementById('audio-progress-bar');
+    let rect = bar.getBoundingClientRect();
+    let pct = (e.clientX - rect.left) / rect.width;
+    pct = Math.max(0, Math.min(1, pct));
+    currentAudio.currentTime = pct * currentAudio.duration;
+    updateProgress();
+}
+
 function updatePlayUI() {
     let btn = document.getElementById('play-btn');
     let status = document.getElementById('audio-status');
-    if (isPlaying) {
-        btn.textContent = '⏸';
-        btn.style.background = 'linear-gradient(135deg,#e53935,#ef5350)';
-        status.textContent = '🔊 正在播放...';
-        status.className = 'audio-status playing';
+    if (isLoading) {
+        btn.textContent = '⏳'; btn.style.background = 'linear-gradient(135deg,#ffa726,#fb8c00)'; btn.style.pointerEvents = 'none';
+        status.textContent = '⏳ 音频加载中...'; status.className = 'audio-status loading';
+    } else if (isPlaying) {
+        btn.textContent = '⏸'; btn.style.background = 'linear-gradient(135deg,#e53935,#ef5350)'; btn.style.pointerEvents = 'auto';
+        status.textContent = '🔊 正在播放...'; status.className = 'audio-status playing';
     } else {
-        btn.textContent = '▶';
-        btn.style.background = 'linear-gradient(135deg,#1D9E75,#43a047)';
-        status.textContent = '点击播放按钮开始';
-        status.className = 'audio-status';
+        btn.textContent = '▶'; btn.style.background = 'linear-gradient(135deg,var(--primary),var(--primary-light))'; btn.style.pointerEvents = 'auto';
+        status.textContent = '点击播放按钮开始'; status.className = 'audio-status';
+        // 音频自然播放完成后才添加查看答案按钮
+        if (audioFinished && currentArticle) addShowAnswerButton();
     }
+}
+
+function addShowAnswerButton() {
+    let actions = document.getElementById('listen-actions');
+    if (!actions || document.getElementById('show-answer-btn')) return;
+    let btn = document.createElement('button');
+    btn.className = 'btn btn-orange';
+    btn.id = 'show-answer-btn';
+    btn.textContent = '👁️ 查看答案';
+    btn.onclick = showAnswer;
+    actions.insertBefore(btn, actions.firstChild);
 }
 
 function openListenModal(articleId) {
     currentArticle = ARTICLES.find(a => a.id === articleId);
     if (!currentArticle) return;
     answerRevealed = false;
-    listeningCompleted = false;
+    audioFinished = false;
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     speechSynthesis.cancel();
     isPlaying = false;
     updatePlayUI();
     document.getElementById('modal-title').textContent = '🎧 ' + currentArticle.title;
-    document.getElementById('modal-meta').textContent = `作者：${currentArticle.author} | 分类：${currentArticle.category}`;
+    document.getElementById('modal-meta').textContent = `分类：${currentArticle.category}`;
     document.getElementById('answer-input').value = '';
     document.getElementById('answer-input').disabled = false;
+    document.getElementById('answer-input').oninput = checkCompleteButton;
     document.getElementById('answer-reveal').style.display = 'none';
     document.getElementById('score-bar').style.display = 'none';
+    document.getElementById('complete-btn').style.display = 'none';
+    // 移除已存在的查看答案按钮
+    let oldBtn = document.getElementById('show-answer-btn');
+    if (oldBtn) oldBtn.remove();
     document.getElementById('listen-modal').classList.add('active');
+    setTimeout(() => togglePlay(), 300);
 }
 
 function closeListenModal() {
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     speechSynthesis.cancel();
     isPlaying = false;
+    isLoading = false;
     currentArticle = null;
     document.getElementById('listen-modal').classList.remove('active');
 }
 
 function showAnswer() {
     if (!currentArticle) return;
-    if (currentAudio) { currentAudio.pause(); }
-    speechSynthesis.cancel();
-    isPlaying = false;
-    updatePlayUI();
     answerRevealed = true;
     document.getElementById('answer-reveal').style.display = 'block';
-    document.getElementById('reveal-text').textContent = currentArticle.text;
+    
+    let canvas = renderAnswerCanvas(currentArticle.text, currentArticle.words || '');
+    canvas.style.display = 'block';
+    document.getElementById('reveal-text').style.display = 'none';
+    
     let input = document.getElementById('answer-input').value.trim();
     if (input) {
-        let score = calcSimilarity(input, currentArticle.text);
-        let pct = Math.round(score * 100);
+        let wordList = (currentArticle.words || '').split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+        let inputWordSet = new Set(input.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
+        let matched = wordList.filter(w => inputWordSet.has(w)).length;
+        let totalWords = currentArticle.text.split(/\s+/).filter(Boolean).length;
+        let inputWords = input.split(/\s+/).filter(Boolean).length;
+        let wordPct = wordList.length > 0 ? Math.round(matched / wordList.length * 100) : 0;
+        
         document.getElementById('score-bar').style.display = 'flex';
         let pctEl = document.getElementById('score-pct');
-        pctEl.textContent = pct + '%';
-        pctEl.className = 'pct ' + (pct >= 80 ? 'high' : pct >= 60 ? 'mid' : 'low');
-        let inputWords = input.split(/\s+/).length;
-        let totalWords = currentArticle.text.split(/\s+/).length;
-        document.getElementById('score-detail').textContent = `输入 ${inputWords} 词 / 原文 ${totalWords} 词`;
+        pctEl.textContent = wordPct + '%';
+        pctEl.className = 'pct ' + (wordPct >= 80 ? 'high' : wordPct >= 60 ? 'mid' : 'low');
+        document.getElementById('score-detail').textContent = `输入 ${inputWords} 词 / 关联词 ${matched}/${wordList.length} / 原文 ${totalWords} 词`;
     }
+}
+
+function checkCompleteButton() {
+    let input = document.getElementById('answer-input').value.trim().toLowerCase();
+    let inputWords = new Set(input.replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
+    let btn = document.getElementById('complete-btn');
+    if (!currentArticle) { btn.style.display = 'none'; return; }
+    
+    let wordList = (currentArticle.words || '').split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    if (wordList.length === 0) { btn.style.display = 'none'; return; }
+    
+    let matched = wordList.filter(w => inputWords.has(w)).length;
+    let pct = matched / wordList.length;
+    
+    if (pct >= 0.6) {
+        btn.style.display = 'inline-flex';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function hideAnswerOnFocus() {
+    if (answerRevealed) {
+        answerRevealed = false;
+        document.getElementById('answer-reveal').style.display = 'none';
+        document.getElementById('score-bar').style.display = 'none';
+    }
+}
+
+function renderAnswerCanvas(text, words) {
+    let canvas = document.getElementById('answer-canvas');
+    let ctx = canvas.getContext('2d');
+    let wordList = words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+    // 设置画布尺寸
+    let maxWidth = 600;
+    let lineHeight = 28;
+    let padding = 20;
+    
+    ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
+    
+    // 计算文本换行
+    let lines = [];
+    let currentLine = '';
+    let textWords = text.split(/(\s+)/);
+    
+    for (let i = 0; i < textWords.length; i++) {
+        let word = textWords[i];
+        let testLine = currentLine + word;
+        let metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth - padding * 2 && currentLine !== '') {
+            lines.push(currentLine);
+            currentLine = word;
+        } else {
+            currentLine = testLine;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    
+    canvas.width = maxWidth;
+    canvas.height = lines.length * lineHeight + padding * 2;
+    
+    // 绘制背景
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 绘制文本
+    ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
+    ctx.textBaseline = 'top';
+    
+    let y = padding;
+    for (let line of lines) {
+        let x = padding;
+        let lineWords = line.split(/(\s+)/);
+        for (let word of lineWords) {
+            let cleanWord = word.replace(/[^\w]/g, '').toLowerCase();
+            let isKeyword = wordList.includes(cleanWord);
+            
+            if (isKeyword && word.trim()) {
+                ctx.fillStyle = '#1D9E75';
+                ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
+            } else {
+                ctx.fillStyle = '#333';
+                ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
+            }
+            
+            ctx.fillText(word, x, y);
+            x += ctx.measureText(word).width;
+        }
+        y += lineHeight;
+    }
+    
+    return canvas;
 }
 
 function completeListening() {
@@ -400,30 +1083,20 @@ function completeListening() {
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     speechSynthesis.cancel();
     isPlaying = false;
+    isLoading = false;
     let u = safeUser(getUser());
     let idx = currentArticle.id;
     u.listeningTotal = (u.listeningTotal || 0) + 1;
     if (!u.listeningLog) u.listeningLog = {};
-    if (u.listeningLog[idx]) {
-        u.listeningLog[idx].count += 1;
-        u.listeningLog[idx].lastTime = Date.now();
-    } else {
-        u.listeningLog[idx] = { count: 1, lastTime: Date.now() };
-    }
+    if (u.listeningLog[idx]) { u.listeningLog[idx].count += 1; u.listeningLog[idx].lastTime = Date.now(); }
+    else { u.listeningLog[idx] = { count:1, lastTime:Date.now() }; }
     let now = Date.now();
-    if (u.log[idx]) {
-        u.log[idx].c += 1;
-        u.log[idx].next = nextDate(now, u.log[idx].c);
-    } else {
-        if (!u.learn.includes(idx)) u.learn.push(idx);
-        u.log[idx] = { t: now, c: 1, next: nextDate(now, 1) };
-    }
-    if (u.log[idx].c >= PERIOD.length) {
-        if (!u.done.includes(idx)) u.done.push(idx);
-    }
+    if (u.log[idx]) { u.log[idx].c += 1; u.log[idx].next = nextDate(now, u.log[idx].c); }
+    else { if (!u.learn.includes(idx)) u.learn.push(idx); u.log[idx] = { t:now, c:1, next:nextDate(now,1) }; }
+    if (u.log[idx].c >= PERIOD.length && !u.done.includes(idx)) u.done.push(idx);
     if (!u.dailyLog) u.dailyLog = {};
     let today = todayKey();
-    if (!u.dailyLog[today]) u.dailyLog[today] = { learn: 0, review: 0 };
+    if (!u.dailyLog[today]) u.dailyLog[today] = { learn:0, review:0 };
     u.dailyLog[today].review++;
     u.stars = (u.stars || 0) + 5;
     setUser(u);
@@ -432,27 +1105,18 @@ function completeListening() {
     renderAll();
 }
 
-function calcSimilarity(input, original) {
+function calcSimilarity(input, original, words) {
     if (!input || !original) return 0;
-    let a = input.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
-    let b = original.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
-    if (b.length === 0) return 0;
-    if (a.length === 0) return 0;
-    let matched = 0;
-    let bUsed = new Array(b.length).fill(false);
-    for (let w of a) {
-        for (let j = 0; j < b.length; j++) {
-            if (!bUsed[j] && (w === b[j] || levenshtein(w, b[j]) <= 1)) {
-                matched++;
-                bUsed[j] = true;
-                break;
-            }
-        }
+    let wordList = words ? words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean) : [];
+    let inputWordSet = new Set(input.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
+    if (wordList.length === 0) {
+        let b = original.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+        if (b.length === 0) return 0;
+        let matched = b.filter(w => inputWordSet.has(w)).length;
+        return matched / b.length;
     }
-    let precision = matched / a.length;
-    let recall = matched / b.length;
-    if (precision + recall === 0) return 0;
-    return 2 * precision * recall / (precision + recall);
+    let matched = wordList.filter(w => inputWordSet.has(w)).length;
+    return matched / wordList.length;
 }
 
 function levenshtein(a, b) {
@@ -462,122 +1126,718 @@ function levenshtein(a, b) {
     let dp = [];
     for (let i = 0; i <= la; i++) dp[i] = [i];
     for (let j = 0; j <= lb; j++) dp[0][j] = j;
-    for (let i = 1; i <= la; i++) {
-        for (let j = 1; j <= lb; j++) {
-            let cost = a[i - 1] === b[j - 1] ? 0 : 1;
-            dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
-        }
-    }
+    for (let i = 1; i <= la; i++) for (let j = 1; j <= lb; j++) { let cost = a[i-1]===b[j-1]?0:1; dp[i][j] = Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost); }
     return dp[la][lb];
 }
 
 function getReviewList() {
     let u = safeUser(getUser());
-    let now = new Date();
-    now.setHours(23, 59, 59, 999);
+    let now = new Date(); now.setHours(23,59,59,999);
     let todayEnd = now.getTime();
-    let reviewItems = [];
+    let items = [];
     for (let idx in u.log) {
         let info = u.log[idx];
         if (info.next && info.next <= todayEnd && info.c < PERIOD.length) {
             let article = ARTICLES.find(a => a.id === parseInt(idx));
-            if (article) reviewItems.push({ idx: parseInt(idx), article, info });
+            if (article) items.push({ idx:parseInt(idx), article, info });
         }
     }
-    return reviewItems;
+    return items;
 }
 
-function renderStats() {
+function renderHomeStats() {
     let u = safeUser(getUser());
     document.getElementById('stat-total').textContent = u.listeningTotal || 0;
     document.getElementById('stat-articles').textContent = Object.keys(u.listeningLog || {}).length;
-    let logs = u.listeningLog || {};
-    let totalArticles = Object.keys(logs).length;
-    document.getElementById('stat-avg').textContent = totalArticles > 0 ? '—' : '-';
+    document.getElementById('stat-learned').textContent = u.learn.length;
+    document.getElementById('stat-done').textContent = u.done.length;
     document.getElementById('header-stars').textContent = u.stars || 0;
+}
+
+function renderHomeReview() {
+    let items = getReviewList();
+    let el = document.getElementById('home-review-list');
+    if (items.length === 0) { el.innerHTML = '<div class="empty">今日无待复习短文 🎉</div>'; return; }
+    let show = items.slice(0, 5);
+    el.innerHTML = show.map(item => `
+        <div class="review-item">
+            <div class="review-left">
+                <div class="title">${item.article.title}</div>
+                <div class="meta">单词：${item.article.words} | 复习第${item.info.c + 1}次</div>
+            </div>
+            <button class="btn btn-blue btn-sm" onclick="openListenModal(${item.article.id})">🎧</button>
+        </div>
+    `).join('') + (items.length > 5 ? `<div style="text-align:center;padding:8px;color:var(--text3);font-size:13px;">还有 ${items.length - 5} 篇...去待复习页面查看</div>` : '');
 }
 
 function renderReviewList() {
     let items = getReviewList();
     let el = document.getElementById('review-list');
-    if (items.length === 0) {
-        el.innerHTML = '<div class="empty">暂无待复习短文 🎉</div>';
-        return;
-    }
-    el.innerHTML = items.map(item => `
-        <div class="review-item">
-            <div>
+    if (items.length === 0) { el.innerHTML = '<div class="empty">暂无待复习短文 🎉</div>'; return; }
+    el.innerHTML = items.map(item => {
+        let log = (safeUser(getUser()).listeningLog || {})[item.article.id];
+        let listenCount = log ? log.count : 0;
+        return `<div class="review-item">
+            <div class="review-left">
                 <div class="title">${item.article.title}</div>
-                <div class="meta">${item.article.author} | 复习第${item.info.c + 1}次</div>
+                <div class="meta">单词：${item.article.words} | 复习第${item.info.c + 1}次 | 听力${listenCount}次</div>
             </div>
-            <div class="btns">
-                <button class="btn btn-blue" style="padding:6px 14px;font-size:12px;" onclick="openListenModal(${item.article.id})">🎧 听力练习</button>
-            </div>
-        </div>
-    `).join('');
+            <button class="btn btn-blue btn-sm" onclick="openListenModal(${item.article.id})">🎧 听力</button>
+        </div>`;
+    }).join('');
 }
 
 function renderCategoryTags() {
     let categories = [...new Set(ARTICLES.map(a => a.category))];
     let el = document.getElementById('category-tags');
-    let html = `<span class="tag ${selectedCategory === '' ? 'on' : ''}" onclick="filterCategory('')">全部</span>`;
-    categories.forEach(c => {
-        html += `<span class="tag ${selectedCategory === c ? 'on' : ''}" onclick="filterCategory('${c}')">${c}</span>`;
-    });
-    el.innerHTML = html;
+    el.innerHTML = `<span class="tag ${selectedCategory===''?'on':''}" onclick="filterCategory('')">全部</span>` +
+        categories.map(c => `<span class="tag ${selectedCategory===c?'on':''}" onclick="filterCategory('${c}')">${c}</span>`).join('');
 }
 
-function filterCategory(cat) {
-    selectedCategory = cat;
-    renderCategoryTags();
-    renderArticleList();
-}
+function filterCategory(cat) { selectedCategory = cat; renderCategoryTags(); renderArticleList(); }
 
 function renderArticleList() {
     let u = safeUser(getUser());
     let filtered = selectedCategory ? ARTICLES.filter(a => a.category === selectedCategory) : ARTICLES;
+    let kw = (document.getElementById("article-search").value || "").trim().toLowerCase();
+    if (kw) filtered = filtered.filter(a => a.title.toLowerCase().includes(kw) || a.words.toLowerCase().includes(kw));
+    document.getElementById('article-count').textContent = filtered.length;
     let el = document.getElementById('article-list');
-    if (filtered.length === 0) {
-        el.innerHTML = '<div class="empty">该分类暂无短文</div>';
-        return;
-    }
+    if (filtered.length === 0) { el.innerHTML = '<div class="empty">该分类暂无短文</div>'; return; }
     el.innerHTML = filtered.map(a => {
         let log = (u.listeningLog || {})[a.id];
         let reviewInfo = u.log[a.id];
         let statusHtml = '';
         if (reviewInfo) {
-            let nextDate = reviewInfo.next ? new Date(reviewInfo.next) : null;
             let isMastered = reviewInfo.c >= PERIOD.length;
-            if (isMastered) {
-                statusHtml = '<span style="color:#43a047;font-size:11px;font-weight:500;">✅ 已掌握</span>';
-            } else if (nextDate && nextDate <= new Date().getTime()) {
-                statusHtml = '<span style="color:#ef5350;font-size:11px;font-weight:500;">📌 待复习</span>';
-            } else {
-                statusHtml = '<span style="color:#999;font-size:11px;">复习' + reviewInfo.c + '/' + (PERIOD.length - 1) + '</span>';
-            }
+            let nextD = reviewInfo.next ? new Date(reviewInfo.next) : null;
+            if (isMastered) statusHtml = '<span style="color:#43a047;font-size:11px;font-weight:500;">✅ 已掌握</span>';
+            else if (nextD && nextD <= new Date().getTime()) statusHtml = '<span style="color:#ef5350;font-size:11px;font-weight:500;">📌 待复习</span>';
+            else statusHtml = `<span style="color:#999;font-size:11px;">复习${reviewInfo.c}/${PERIOD.length-1}</span>`;
         }
         let listenCount = log ? log.count : 0;
-        return `
-        <div class="article-item">
+        return `<div class="article-item">
             <div class="article-info">
                 <div class="article-title">${a.title} ${statusHtml}</div>
-                <div class="article-meta">${a.author} | ${a.category} | 听力${listenCount}次</div>
+                <div class="article-meta">单词：${a.words} | ${a.category} | 听力${listenCount}次</div>
             </div>
             <div class="article-actions">
-                <button class="btn btn-blue" style="padding:6px 14px;font-size:12px;" onclick="openListenModal(${a.id})">🎧 开始</button>
+                <button class="btn btn-blue btn-sm" onclick="openListenModal(${a.id})">🎧 开始</button>
             </div>
         </div>`;
     }).join('');
 }
 
+function renderMineStats() {
+    let u = safeUser(getUser());
+    let today = new Date(); today.setHours(0,0,0,0);
+    let ts = today.getTime();
+    let countWait = (usr) => { let c = 0; for (let idx in usr.log) { if (usr.log[idx].next && usr.log[idx].next <= ts + 86400000 && usr.log[idx].c < PERIOD.length) c++; } return c; };
+    document.getElementById('my-total').textContent = u.learn.length + ' 篇';
+    document.getElementById('my-wait').textContent = countWait(u) + ' 篇';
+    document.getElementById('my-done').textContent = u.done.length + ' 篇';
+    document.getElementById('my-listen-total').textContent = u.listeningTotal || 0;
+    document.getElementById('my-listen-articles').textContent = Object.keys(u.listeningLog || {}).length;
+    document.getElementById('my-stars').textContent = u.stars || 0;
+}
+
+function resetData() {
+    if (!confirm('确定重置同学' + user + '的所有学习数据？此操作不可恢复！')) return;
+    localStorage.removeItem("wuser" + user);
+    toast('数据已重置', 'info');
+    renderAll();
+}
+
+function startQuickListen(count) {
+    let pool = selectedCategory ? ARTICLES.filter(a => a.category === selectedCategory) : [...ARTICLES];
+    if (pool.length === 0) { toast('暂无短文', 'warning'); return; }
+    pool.sort(() => Math.random() - 0.5);
+    batchArticles = pool.slice(0, Math.min(count, pool.length));
+    batchIndex = 0;
+    batchAnswers = [];
+    document.getElementById('batch-modal').classList.add('active');
+    renderBatchQuestion();
+}
+
+function renderBatchQuestion() {
+    if (batchIndex >= batchArticles.length) { finishBatch(); return; }
+    let article = batchArticles[batchIndex];
+    batchRevealed = false;
+    batchAudioFinished = false;
+    document.getElementById('batch-progress').textContent = `${batchIndex + 1} / ${batchArticles.length}`;
+    document.getElementById('batch-bar').style.width = ((batchIndex + 1) / batchArticles.length * 100) + '%';
+    document.getElementById('batch-meta').textContent = `${article.title}`;
+    document.getElementById('batch-answer').value = '';
+    document.getElementById('batch-answer').disabled = false;
+    document.getElementById('batch-answer-reveal').style.display = 'none';
+    document.getElementById('batch-score-bar').style.display = 'none';
+    document.getElementById('batch-submit-btn').disabled = false;
+    document.getElementById('batch-skip-btn').disabled = false;
+    document.getElementById('batch-reveal-btn').style.display = 'none';
+    document.getElementById('batch-hint').textContent = '💡 可多次播放，输入后点击提交';
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    speechSynthesis.cancel();
+    batchPlaying = false;
+    stopBatchProgressTimer();
+    resetBatchProgress();
+    updateBatchPlayUI();
+    setTimeout(() => toggleBatchPlay(), 300);
+}
+
+async function toggleBatchPlay() {
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    if (batchPlaying) {
+        if (batchAudio) batchAudio.pause();
+        speechSynthesis.cancel();
+        batchPlaying = false;
+        stopBatchProgressTimer();
+        updateBatchPlayUI();
+        return;
+    }
+    // 恢复暂停的音频
+    if (batchAudio && batchAudio.paused && !batchAudioFinished) {
+        batchAudio.play();
+        batchPlaying = true;
+        startBatchProgressTimer();
+        updateBatchPlayUI();
+        return;
+    }
+    // 播放时隐藏答案
+    if (batchRevealed) {
+        batchRevealed = false;
+        document.getElementById('batch-answer-reveal').style.display = 'none';
+        document.getElementById('batch-score-bar').style.display = 'none';
+    }
+    document.getElementById('batch-reveal-btn').style.display = 'none';
+    let vol = parseInt(document.getElementById('batch-volume').value) / 100;
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    resetBatchProgress();
+    try {
+        let url = await ttsFetch(article.text);
+        if (url) {
+            batchAudio = new Audio(url);
+            batchAudio.volume = vol;
+            batchAudio.play();
+            batchPlaying = true;
+            batchAudioFinished = false;
+            updateBatchPlayUI();
+            batchAudio.onended = () => { batchPlaying = false; batchAudioFinished = true; stopBatchProgressTimer(); updateBatchPlayUI(); showBatchRevealBtn(); };
+            batchAudio.onerror = () => { batchPlaying = false; stopBatchProgressTimer(); updateBatchPlayUI(); toast('音频播放失败','error'); };
+            batchAudio.onloadedmetadata = () => { updateBatchDuration(); startBatchProgressTimer(); };
+        } else { playLocalBatchTTS(article.text); }
+    } catch { playLocalBatchTTS(article.text); }
+}
+
+function playLocalBatchTTS(text) {
+    speechSynthesis.cancel();
+    let utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'en-US';
+    utter.rate = parseInt(document.getElementById('tts-speed').value) / 100;
+    utter.volume = parseInt(document.getElementById('batch-volume').value) / 100;
+    speechSynthesis.speak(utter);
+    batchPlaying = true;
+    batchAudioFinished = false;
+    updateBatchPlayUI();
+    utter.onend = () => { batchPlaying = false; batchAudioFinished = true; updateBatchPlayUI(); showBatchRevealBtn(); };
+}
+
+function replayBatchAudio() {
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    speechSynthesis.cancel();
+    batchPlaying = false;
+    batchAudioFinished = false;
+    stopBatchProgressTimer();
+    resetBatchProgress();
+    updateBatchPlayUI();
+    if (batchRevealed) {
+        batchRevealed = false;
+        document.getElementById('batch-answer-reveal').style.display = 'none';
+        document.getElementById('batch-score-bar').style.display = 'none';
+    }
+    document.getElementById('batch-reveal-btn').style.display = 'none';
+    setTimeout(() => toggleBatchPlay(), 100);
+}
+
+function changeBatchVolume(val) {
+    document.getElementById('batch-volume-val').textContent = val + '%';
+    if (batchAudio) batchAudio.volume = val / 100;
+}
+
+function updateBatchPlayUI() {
+    let btn = document.getElementById('batch-play-btn');
+    let status = document.getElementById('batch-audio-status');
+    if (batchPlaying) {
+        btn.textContent = '⏸'; btn.style.background = 'linear-gradient(135deg,#e53935,#ef5350)';
+        status.textContent = '🔊 正在播放...'; status.className = 'audio-status playing';
+    } else {
+        btn.textContent = '▶'; btn.style.background = 'linear-gradient(135deg,var(--primary),var(--primary-light))';
+        status.textContent = '点击播放按钮听短文'; status.className = 'audio-status';
+    }
+}
+
+function resetBatchProgress() {
+    stopBatchProgressTimer();
+    document.getElementById('batch-audio-progress').style.width = '0%';
+    document.getElementById('batch-audio-current').textContent = '0:00';
+    document.getElementById('batch-audio-duration').textContent = '0:00';
+}
+
+function updateBatchDuration() {
+    if (batchAudio && isFinite(batchAudio.duration)) {
+        document.getElementById('batch-audio-duration').textContent = formatTime(batchAudio.duration);
+    }
+}
+
+function updateBatchProgress() {
+    if (!batchAudio) return;
+    let cur = batchAudio.currentTime || 0;
+    let dur = batchAudio.duration || 1;
+    if (!isFinite(dur) || dur <= 0) return;
+    let pct = (cur / dur) * 100;
+    document.getElementById('batch-audio-progress').style.width = pct + '%';
+    document.getElementById('batch-audio-current').textContent = formatTime(cur);
+}
+
+function startBatchProgressTimer() {
+    stopBatchProgressTimer();
+    _batchProgressTimer = setInterval(updateBatchProgress, 200);
+}
+
+function stopBatchProgressTimer() {
+    if (_batchProgressTimer) { clearInterval(_batchProgressTimer); _batchProgressTimer = null; }
+}
+
+function seekBatchAudio(e) {
+    if (!batchAudio || !isFinite(batchAudio.duration)) return;
+    let bar = document.getElementById('batch-audio-progress-bar');
+    let rect = bar.getBoundingClientRect();
+    let pct = (e.clientX - rect.left) / rect.width;
+    pct = Math.max(0, Math.min(1, pct));
+    batchAudio.currentTime = pct * batchAudio.duration;
+    updateBatchProgress();
+}
+
+function revealBatchAnswer() {
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    if (batchAudio) batchAudio.pause();
+    speechSynthesis.cancel();
+    batchPlaying = false;
+    stopBatchProgressTimer();
+    updateBatchPlayUI();
+    batchRevealed = true;
+
+    let canvas = renderBatchAnswerCanvas(article.text, article.words || '');
+    canvas.style.display = 'block';
+    document.getElementById('batch-reveal-text').style.display = 'none';
+    document.getElementById('batch-answer-reveal').style.display = 'block';
+
+    let input = document.getElementById('batch-answer').value.trim();
+    if (input) {
+        let wordList = (article.words || '').split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+        let inputWordSet = new Set(input.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
+        let matched = wordList.filter(w => inputWordSet.has(w)).length;
+        let totalWords = article.text.split(/\s+/).filter(Boolean).length;
+        let inputWords = input.split(/\s+/).filter(Boolean).length;
+        let wordPct = wordList.length > 0 ? Math.round(matched / wordList.length * 100) : 0;
+
+        document.getElementById('batch-score-bar').style.display = 'flex';
+        let pctEl = document.getElementById('batch-score-pct');
+        pctEl.textContent = wordPct + '%';
+        pctEl.className = 'pct ' + (wordPct >= 80 ? 'high' : wordPct >= 60 ? 'mid' : 'low');
+        document.getElementById('batch-score-detail').textContent = `输入 ${inputWords} 词 / 关联词 ${matched}/${wordList.length} / 原文 ${totalWords} 词`;
+    }
+}
+
+function hideBatchAnswer() {
+    if (batchRevealed) {
+        batchRevealed = false;
+        document.getElementById('batch-answer-reveal').style.display = 'none';
+        document.getElementById('batch-score-bar').style.display = 'none';
+    }
+}
+
+function showBatchRevealBtn() {
+    document.getElementById('batch-reveal-btn').style.display = 'inline-flex';
+}
+
+function renderBatchAnswerCanvas(text, words) {
+    let canvas = document.getElementById('batch-answer-canvas');
+    let ctx = canvas.getContext('2d');
+    let wordList = words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    let maxWidth = 600;
+    let lineHeight = 28;
+    let padding = 20;
+    ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
+    let lines = [];
+    let currentLine = '';
+    let textWords = text.split(/(\s+)/);
+    for (let i = 0; i < textWords.length; i++) {
+        let word = textWords[i];
+        let testLine = currentLine + word;
+        let metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth - padding * 2 && currentLine !== '') {
+            lines.push(currentLine);
+            currentLine = word;
+        } else {
+            currentLine = testLine;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    canvas.width = maxWidth;
+    canvas.height = lines.length * lineHeight + padding * 2;
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
+    ctx.textBaseline = 'top';
+    let y = padding;
+    for (let line of lines) {
+        let x = padding;
+        let lineWords = line.split(/(\s+)/);
+        for (let word of lineWords) {
+            let cleanWord = word.replace(/[^\w]/g, '').toLowerCase();
+            let isKeyword = wordList.includes(cleanWord);
+            if (isKeyword && word.trim()) {
+                ctx.fillStyle = '#1D9E75';
+                ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
+            } else {
+                ctx.fillStyle = '#333';
+                ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
+            }
+            ctx.fillText(word, x, y);
+            x += ctx.measureText(word).width;
+        }
+        y += lineHeight;
+    }
+    return canvas;
+}
+
+function submitBatchAnswer() {
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    let input = document.getElementById('batch-answer').value.trim();
+    let score = input ? calcSimilarity(input, article.text, article.words) : 0;
+    let pct = Math.round(score * 100);
+    let correct = pct >= 60;
+    batchAnswers.push({ idx:article.id, article, input, correct, simScore:pct });
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    speechSynthesis.cancel();
+    batchPlaying = false;
+    stopBatchProgressTimer();
+    batchIndex++;
+    renderBatchQuestion();
+}
+
+function skipBatchAnswer() {
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    batchAnswers.push({ idx:article.id, article, input:'', correct:false, simScore:0, skipped:true });
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    speechSynthesis.cancel();
+    batchPlaying = false;
+    stopBatchProgressTimer();
+    batchIndex++;
+    renderBatchQuestion();
+}
+
+function finishBatch() {
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    speechSynthesis.cancel();
+    batchPlaying = false;
+    stopBatchProgressTimer();
+    let u = safeUser(getUser());
+    let correctCount = batchAnswers.filter(a => a.correct).length;
+    let now = Date.now();
+    let today = todayKey();
+    if (!u.dailyLog) u.dailyLog = {};
+    if (!u.dailyLog[today]) u.dailyLog[today] = { learn:0, review:0 };
+    batchAnswers.forEach(a => {
+        u.listeningTotal = (u.listeningTotal || 0) + 1;
+        if (!u.listeningLog) u.listeningLog = {};
+        if (u.listeningLog[a.idx]) { u.listeningLog[a.idx].count += 1; u.listeningLog[a.idx].lastTime = now; }
+        else { u.listeningLog[a.idx] = { count:1, lastTime:now }; }
+        if (a.correct) {
+            if (u.log[a.idx]) { u.log[a.idx].c += 1; u.log[a.idx].next = nextDate(now, u.log[a.idx].c); }
+            else { if (!u.learn.includes(a.idx)) u.learn.push(a.idx); u.log[a.idx] = { t:now, c:1, next:nextDate(now,1) }; }
+            if (u.log[a.idx].c >= PERIOD.length && !u.done.includes(a.idx)) u.done.push(a.idx);
+            u.dailyLog[today].review++;
+        }
+    });
+    let starReward = correctCount * 5;
+    u.stars = (u.stars || 0) + starReward;
+    setUser(u);
+    closeBatchModal();
+    showBatchResult(correctCount, starReward);
+    renderAll();
+}
+
+function closeBatchModal() {
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    speechSynthesis.cancel();
+    batchPlaying = false;
+    document.getElementById('batch-modal').classList.remove('active');
+}
+
+let _resultAudio = null;
+
+function showBatchResult(correctCount, starReward) {
+    document.getElementById('result-summary').textContent = `正确 ${correctCount}/${batchAnswers.length}，+${starReward}⭐`;
+    let list = document.getElementById('result-list');
+    let html = '';
+    batchAnswers.forEach((a, i) => {
+        let pct = a.simScore || 0;
+        let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
+        let statusIcon = a.correct ? '✅' : (a.skipped ? '⏭️' : '❌');
+        let wordList = (a.article.words || '').split(',').map(w => w.trim()).filter(Boolean);
+        html += `<div style="border:1px solid #e0e0e0;border-radius:10px;padding:12px;margin-bottom:10px;background:${a.correct?'#f0faf4':'#fff5f5'};">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-weight:600;font-size:14px;">${statusIcon} ${i+1}. ${a.article.title}</span>
+                <span style="font-weight:700;font-size:18px;color:${pctColor};">${pct}%</span>
+            </div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:6px;">关联词：${wordList.length > 0 ? wordList.map(w => `<span style="background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:4px;margin:0 2px;">${w}</span>`).join('') : '无'}</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:4px;white-space:pre-wrap;line-height:1.6;background:#f9f9f9;padding:8px;border-radius:6px;">${a.article.text}</div>
+            ${a.input ? `<div style="font-size:13px;color:#555;margin-top:6px;white-space:pre-wrap;line-height:1.6;background:#fff8e1;padding:8px;border-radius:6px;border:1px dashed #ffc107;">📝 ${a.input}</div>` : '<div style="font-size:12px;color:#999;margin-top:6px;">未作答</div>'}
+            <div style="margin-top:8px;text-align:right;">
+                <button class="btn btn-blue" style="font-size:12px;padding:4px 12px;" onclick="playResultAudio(${i})">🔊 播放</button>
+            </div>
+        </div>`;
+    });
+    list.innerHTML = html;
+    document.getElementById('result-modal').classList.add('active');
+}
+
+function closeResultModal() {
+    if (_resultAudio) { _resultAudio.pause(); _resultAudio = null; }
+    speechSynthesis.cancel();
+    document.getElementById('result-modal').classList.remove('active');
+}
+
+async function playResultAudio(index) {
+    if (_resultAudio) { _resultAudio.pause(); _resultAudio = null; }
+    speechSynthesis.cancel();
+    let a = batchAnswers[index];
+    if (!a || !a.article) return;
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+    try {
+        const res = await fetch(TTS_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text:a.article.text, voice, speed, model }) });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        _resultAudio = new Audio(URL.createObjectURL(blob));
+        _resultAudio.play();
+    } catch {}
+}
+
+function retakeBatch() {
+    closeResultModal();
+    let articles = batchAnswers.map(a => a.article);
+    batchArticles = articles;
+    batchIndex = 0;
+    batchAnswers = [];
+    batchRevealed = false;
+    batchAudioFinished = false;
+    document.getElementById('batch-modal').classList.add('active');
+    renderBatchQuestion();
+}
+
 function renderAll() {
-    renderStats();
+    renderHomeStats();
+    renderHomeReview();
     renderReviewList();
     renderCategoryTags();
     renderArticleList();
+    renderManageList();
+    renderMineStats();
+    let speedEl = document.getElementById('tts-speed');
+    if (speedEl) speedEl.oninput = () => { 
+        document.getElementById('tts-speed-val').textContent = (parseInt(speedEl.value)/100).toFixed(2) + 'x'; 
+        saveSettings(); 
+    };
 }
 
-function toast(msg, type = 'info') {
+let editingArticleId = null;
+
+function openArticleEditor(id) {
+    editingArticleId = id || null;
+    if (editingArticleId) {
+        let a = ARTICLES.find(x => x.id === editingArticleId);
+        if (!a) return;
+        document.getElementById('editor-title').textContent = '✏️ 编辑短文';
+        document.getElementById('ed-title').value = a.title;
+        document.getElementById('ed-words').value = a.words || '';
+        document.getElementById('ed-category').value = a.category || '';
+        document.getElementById('ed-text').value = a.text || '';
+    } else {
+        document.getElementById('editor-title').textContent = '📝 添加短文';
+        document.getElementById('ed-title').value = '';
+        document.getElementById('ed-words').value = '';
+        document.getElementById('ed-category').value = '';
+        document.getElementById('ed-text').value = '';
+    }
+    document.getElementById('editor-modal').classList.add('active');
+}
+
+function closeArticleEditor() {
+    editingArticleId = null;
+    document.getElementById('editor-modal').classList.remove('active');
+}
+
+async function saveArticleFromEditor() {
+    let title = document.getElementById('ed-title').value.trim();
+    let words = document.getElementById('ed-words').value.trim();
+    let category = document.getElementById('ed-category').value.trim();
+    let text = document.getElementById('ed-text').value.trim();
+    if (!title || !text) { toast('标题和文本不能为空', 'error'); return; }
+    if (editingArticleId) {
+        let a = ARTICLES.find(x => x.id === editingArticleId);
+        if (a) {
+            a.title = title; a.words = words; a.category = category; a.text = text;
+            await putArticle(a);
+        }
+    } else {
+        let newId = getNextId();
+        let article = { id: newId, title, words, category, text };
+        await putArticle(article);
+        ARTICLES.push(article);
+        ARTICLES.sort((a, b) => a.id - b.id);
+    }
+    closeArticleEditor();
+    toast(editingArticleId ? '短文已更新' : '短文已添加', 'success');
+    renderAll();
+}
+
+async function deleteArticleConfirm(id) {
+    let a = ARTICLES.find(x => x.id === id);
+    if (!a) return;
+    if (!confirm(`确定删除「${a.title}」？`)) return;
+    await deleteArticle(id);
+    ARTICLES = ARTICLES.filter(x => x.id !== id);
+    toast('短文已删除', 'success');
+    renderAll();
+}
+
+function renderManageList() {
+    let el = document.getElementById('manage-list');
+    document.getElementById('manage-count').textContent = ARTICLES.length;
+    if (ARTICLES.length === 0) {
+        el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:30px;">暂无短文，点击上方按钮添加</div>';
+        return;
+    }
+    let html = '';
+    ARTICLES.forEach(a => {
+        html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">#${a.id} ${a.title}</div>
+                <div style="font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">单词：${a.words || '-'} | ${a.category || '-'}</div>
+            </div>
+            <button class="btn btn-blue" style="padding:4px 10px;font-size:12px;" onclick="openArticleEditor(${a.id})">编辑</button>
+            <button class="btn btn-red" style="padding:4px 10px;font-size:12px;" onclick="deleteArticleConfirm(${a.id})">删除</button>
+        </div>`;
+    });
+    el.innerHTML = html;
+}
+
+function exportArticles(format) {
+    if (ARTICLES.length === 0) { toast('暂无短文可导出', 'error'); return; }
+    let filename, content, mime;
+    if (format === 'json') {
+        filename = 'articles.json';
+        content = JSON.stringify(ARTICLES, null, 2);
+        mime = 'application/json';
+    } else {
+        filename = 'articles.csv';
+        let header = 'id,title,words,category,text';
+        let rows = ARTICLES.map(a => [
+            a.id,
+            '"' + (a.title || '').replace(/"/g, '""') + '"',
+            '"' + (a.words || '').replace(/"/g, '""') + '"',
+            '"' + (a.category || '').replace(/"/g, '""') + '"',
+            '"' + (a.text || '').replace(/"/g, '""').replace(/\n/g, '\\n') + '"'
+        ].join(','));
+        content = header + '\n' + rows.join('\n');
+        mime = 'text/csv';
+    }
+    let blob = new Blob([content], { type: mime + ';charset=utf-8' });
+    let url = URL.createObjectURL(blob);
+    let link = document.createElement('a');
+    link.href = url; link.download = filename; link.click();
+    URL.revokeObjectURL(url);
+    toast(`已导出 ${ARTICLES.length} 篇短文 (${format.toUpperCase()})`, 'success');
+}
+
+async function importArticles(event) {
+    let file = event.target.files[0];
+    if (!file) return;
+    let mode = document.getElementById('import-mode').value;
+    let text = await file.text();
+    let imported = [];
+
+    if (file.name.endsWith('.json')) {
+        try { imported = JSON.parse(text); } catch(e) { toast('JSON格式错误：' + e.message, 'error'); event.target.value = ''; return; }
+        if (!Array.isArray(imported)) { toast('JSON需要是数组格式', 'error'); event.target.value = ''; return; }
+    } else if (file.name.endsWith('.csv')) {
+        let lines = text.split('\n').filter(l => l.trim());
+        if (lines.length < 2) { toast('CSV文件为空', 'error'); event.target.value = ''; return; }
+        for (let i = 1; i < lines.length; i++) {
+            let parts = parseCSVLine(lines[i]);
+            if (parts.length >= 5) {
+                imported.push({
+                    id: parseInt(parts[0]) || 0,
+                    title: parts[1],
+                    words: parts[2],
+                    category: parts[3],
+                    text: parts[4].replace(/\\n/g, '\n')
+                });
+            }
+        }
+    } else {
+        toast('仅支持 .json 和 .csv 文件', 'error'); event.target.value = ''; return;
+    }
+
+    if (imported.length === 0) { toast('未解析到有效数据', 'error'); event.target.value = ''; return; }
+
+    if (mode === 'replace') {
+        for (let a of ARTICLES) { await deleteArticle(a.id); }
+        ARTICLES = [];
+    }
+
+    let maxId = ARTICLES.length > 0 ? Math.max(...ARTICLES.map(a => a.id)) : 0;
+    for (let a of imported) {
+        maxId++;
+        a.id = maxId;
+        await putArticle(a);
+        ARTICLES.push(a);
+    }
+    ARTICLES.sort((a, b) => a.id - b.id);
+    toast(`已导入 ${imported.length} 篇短文（${mode === 'replace' ? '替换' : '追加'}）`, 'success');
+    event.target.value = '';
+    renderAll();
+}
+
+function parseCSVLine(line) {
+    let result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        let ch = line[i];
+        if (inQuotes) {
+            if (ch === '"') {
+                if (i + 1 < line.length && line[i + 1] === '"') { current += '"'; i++; }
+                else { inQuotes = false; }
+            } else { current += ch; }
+        } else {
+            if (ch === '"') { inQuotes = true; }
+            else if (ch === ',') { result.push(current); current = ''; }
+            else { current += ch; }
+        }
+    }
+    result.push(current);
+    return result;
+}
+
+function toast(msg, type='info') {
     let el = document.createElement('div');
     el.className = 'toast ' + type;
     el.textContent = msg;
@@ -585,7 +1845,7 @@ function toast(msg, type = 'info') {
     setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2500);
 }
 
-document.addEventListener('DOMContentLoaded', renderAll);
+window.onload = async function() { await initArticles(); renderAll(); loadSettings(); };
 </script>
 </body>
 </html>
