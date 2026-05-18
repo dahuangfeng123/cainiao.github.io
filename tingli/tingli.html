@@ -1417,7 +1417,10 @@ function renderBatchQuestion() {
         batchPron.style.display = 'none';
     }
     
-    setTimeout(() => toggleBatchPlay(), 300);
+    // 拼读模式不自动朗读，用户点击"听标准发音"按钮播放
+    if (currentMode !== 'pronunciation') {
+        setTimeout(() => toggleBatchPlay(), 300);
+    }
 }
 
 async function toggleBatchPlay() {
