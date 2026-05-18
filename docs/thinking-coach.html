@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>做事先画图 - 思维教练</title>
+<meta name="description" content="5步把一件事想清楚、画明白。全家可用的工程思维训练工具。">
+<meta name="theme-color" content="#ff6b35">
+<style>
+  :root {
+    --bg: #faf7f2;
+    --bg-pattern: #f5f0e8;
+    --card: #ffffff;
+    --primary: #e85d26;
+    --primary-hover: #d14e1a;
+    --primary-light: #fff3ec;
+    --primary-glow: rgba(232,93,38,0.15);
+    --secondary: #2bab9e;
+    --secondary-hover: #249689;
+    --secondary-light: #eaf8f6;
+    --danger: #e8453c;
+    --danger-light: #fef0ef;
+    --success: #38a856;
+    --success-light: #edf9f0;
+    --text: #1a1a1a;
+    --text-secondary: #5a5a5a;
+    --text-hint: #9a9a9a;
+    --border: #e8e4de;
+    --border-focus: #e85d26;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 24px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.1);
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-full: 999px;
+    --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Background pattern */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 20%, var(--primary-glow) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(43,171,158,0.08) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 16px;
+    min-height: 100vh;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    text-align: center;
+    padding: 28px 0 12px;
+  }
+  .header-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .header-logo-icon {
+    width: 40px; height: 40px;
+    background: var(--primary);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 2px 12px rgba(232,93,38,0.3);
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .header-tagline {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  /* ===== Progress ===== */
+  .progress {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    margin: 16px 0 24px;
+    padding: 0 8px;
+  }
+  .progress-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 48px;
+  }
+  .progress-dot {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    background: var(--border);
+    color: var(--text-hint);
+    transition: all var(--transition);
+    cursor: pointer;
+    position: relative;
+    border: 2px solid transparent;
+  }
+  .progress-dot:hover { border-color: var(--primary-glow); }
+  .progress-dot.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: scale(1.12);
+    box-shadow: 0 2px 16px rgba(232,93,38,0.35);
+  }
+  .progress-dot.done {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+  }
+  .progress-dot.done::after {
+    content: '✓'; position: absolute;
+    font-size: 15px; font-weight: 800;
+  }
+  .progress-dot.done { font-size: 0; }
+  .progress-label {
+    font-size: 10px;
+    color: var(--text-hint);
+    margin-top: 6px;
+    white-space: nowrap;
+    transition: color var(--transition);
+    font-weight: 500;
+  }
+  .progress-node.active .progress-label,
+  .progress-node.done .progress-label {
+    color: var(--text-secondary);
+  }
+  .progress-line {
+    width: 28px; height: 2px;
+    background: var(--border);
+    margin-top: 16px;
+    border-radius: 1px;
+    transition: background var(--transition);
+    flex-shrink: 0;
+  }
+  .progress-line.done { background: var(--success); }
+
+  /* ===== Cards ===== */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    padding: 28px 26px;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 20px;
+    border: 1px solid rgba(0,0,0,0.04);
+    animation: cardIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .step-content { display: none; }
+  .step-content.active { display: block; }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .step-icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .step-icon-goal { background: var(--primary-light); }
+  .step-icon-part { background: var(--secondary-light); }
+  .step-icon-order { background: #f0f0ff; }
+  .step-icon-risk { background: var(--danger-light); }
+  .step-icon-final { background: linear-gradient(135deg, var(--primary-light), var(--secondary-light)); }
+  .step-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .step-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* ===== Coach Bubble ===== */
+  .coach {
+    background: var(--primary-light);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    margin-bottom: 22px;
+    font-size: 15px;
+    line-height: 1.75;
+    position: relative;
+    border: 1px solid rgba(232,93,38,0.08);
+  }
+  .coach-icon {
+    font-size: 20px;
+    margin-right: 4px;
+  }
+  .coach b { color: var(--primary); }
+  .coach .highlight-secondary { color: var(--secondary); font-weight: 600; }
+  .coach .highlight-danger { color: var(--danger); font-weight: 600; }
+
+  /* ===== Inputs ===== */
+  .field { margin-bottom: 16px; }
+  .field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+  }
+  .field-input {
+    width: 100%;
+    padding: 11px 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-family: inherit;
+    transition: all var(--transition);
+    outline: none;
+    background: var(--card);
+  }
+  .field-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+  .field-input::placeholder { color: var(--text-hint); }
+  .field-hint {
+    font-size: 12px;
+    color: var(--text-hint);
+    margin-top: 6px;
+  }
+
+  /* ===== Tags ===== */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    font-weight: 600;
+    animation: tagPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid transparent;
+  }
+  @keyframes tagPop {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .tag-close {
+    cursor: pointer;
+    opacity: 0.4;
+    font-weight: 800;
+    font-size: 14px;
+    transition: opacity 0.2s;
+    margin-left: 2px;
+  }
+  .tag-close:hover { opacity: 1; }
+  .tag-goal { background: var(--primary-light); color: var(--primary); border-color: rgba(232,93,38,0.15); }
+  .tag-part { background: var(--secondary-light); color: var(--secondary); border-color: rgba(43,171,158,0.15); }
+
+  /* ===== Buttons ===== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 24px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition);
+    outline: none;
+    text-decoration: none;
+  }
+  .btn:focus-visible {
+    box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(232,93,38,0.25);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: var(--secondary);
+    color: white;
+  }
+  .btn-secondary:hover {
+    background: var(--secondary-hover);
+    transform: translateY(-1px);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1.5px solid var(--border);
+  }
+  .btn-ghost:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+  }
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+  }
+
+  /* ===== Diagram Area ===== */
+  .diagram {
+    margin-top: 20px;
+    padding: 24px 16px;
+    background: #fcfbf9;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--border);
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: auto;
+    position: relative;
+  }
+  .diagram svg { max-width: 100%; height: auto; }
+  .diagram-empty {
+    color: var(--text-hint);
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+  }
+  .diagram-empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+  /* ===== Welcome ===== */
+  .welcome { text-align: center; padding: 32px 16px 20px; }
+  .welcome-hero {
+    font-size: 56px;
+    margin-bottom: 16px;
+    display: block;
+  }
+  .welcome h2 {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .welcome p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    max-width: 360px;
+    margin: 0 auto 20px;
+  }
+  .examples {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    max-width: 380px;
+    margin: 16px auto 24px;
+  }
+  .example {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--primary-light);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all var(--transition);
+    border: 1.5px solid transparent;
+    text-align: left;
+    color: var(--primary);
+  }
+  .example:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+  .example:active { transform: translateY(0); }
+
+  /* ===== Order List ===== */
+  .order-list {
+    list-style: none;
+  }
+  .order-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    transition: all var(--transition);
+    user-select: none;
+  }
+  .order-item:hover { border-color: var(--secondary); }
+  .order-handle {
+    color: var(--text-hint);
+    font-size: 14px;
+    cursor: grab;
+  }
+  .order-num {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--secondary);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .order-name {
+    flex: 1;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .order-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .order-btns button {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-hint);
+    transition: all var(--transition);
+  }
+  .order-btns button:hover {
+    border-color: var(--secondary);
+    color: var(--secondary);
+  }
+  .order-btns button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  /* ===== Risk Items ===== */
+  .risk-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--danger-light);
+    border: 1px solid rgba(232,69,60,0.1);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    animation: tagPop 0.3s ease;
+  }
+  .risk-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+  .risk-body { flex: 1; }
+  .risk-text { font-size: 14px; font-weight: 600; color: var(--danger); }
+  .risk-solution-input {
+    width: 100%;
+    padding: 7px 12px;
+    border: 1.5px solid rgba(232,69,60,0.15);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    margin-top: 6px;
+    transition: border-color var(--transition);
+    background: white;
+  }
+  .risk-solution-input:focus {
+    border-color: var(--success);
+    box-shadow: 0 0 0 2px rgba(56,168,86,0.1);
+  }
+  .risk-remove {
+    cursor: pointer;
+    color: var(--danger);
+    opacity: 0.3;
+    font-weight: 800;
+    font-size: 16px;
+    margin-left: auto;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+  }
+  .risk-remove:hover { opacity: 1; }
+
+  /* ===== Final Step ===== */
+  .final-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .final-stat {
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+  }
+  .final-stat-num {
+    font-size: 28px;
+    font-weight: 800;
+  }
+  .final-stat-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .final-stat-goal .final-stat-num { color: var(--primary); }
+  .final-stat-part .final-stat-num { color: var(--secondary); }
+  .final-stat-risk .final-stat-num { color: var(--success); }
+
+  .final-badge {
+    text-align: center;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--primary-light), var(--secondary-light));
+    border-radius: var(--radius-sm);
+    margin-top: 16px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--text);
+    color: white;
+    padding: 10px 22px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 1000;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    box-shadow: var(--shadow-lg);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ===== Footer ===== */
+  .footer {
+    text-align: center;
+    padding: 24px 0 16px;
+    font-size: 12px;
+    color: var(--text-hint);
+  }
+  .footer a { color: var(--primary); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 600px) {
+    .app { padding: 10px; }
+    .card { padding: 20px 16px; border-radius: var(--radius-md); }
+    .header h1 { font-size: 22px; }
+    .step-title { font-size: 17px; }
+    .step-icon { width: 40px; height: 40px; font-size: 20px; border-radius: 10px; }
+    .progress-dot { width: 28px; height: 28px; font-size: 11px; }
+    .progress-label { font-size: 9px; }
+    .progress-line { width: 16px; }
+    .examples { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .final-summary { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .final-stat { padding: 8px 4px; }
+    .final-stat-num { font-size: 22px; }
+    .coach { font-size: 14px; padding: 14px 16px; }
+  }
+
+  /* ===== Print ===== */
+  @media print {
+    body::before { display: none; }
+    .header, .progress, .footer, .coach, .field, .tags, .actions,
+    .order-list, .risk-item, #step0, #step1, #step2, #step3, #step4 { display: none !important; }
+    .step-content.active { display: none !important; }
+    #step5.step-content.active { display: block !important; }
+    #step5 .card { box-shadow: none; border: none; padding: 0; }
+    #step5 .step-header, #step5 .coach { display: none !important; }
+    #step5 .diagram { border: none; background: none; padding: 0; }
+    #step5 .final-summary { display: grid !important; }
+    #step5 .final-badge { display: block !important; }
+    #step5 .actions { display: none !important; }
+  }
+
+  /* ===== Reduced Motion ===== */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* ===== Export Canvas (hidden) ===== */
+  #exportCanvas { display: none; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-logo">
+      <div class="header-logo-icon">🏗️</div>
+      <h1>做事先画图</h1>
+    </div>
+    <p class="header-tagline">想清楚再动手，不当无头苍蝇</p>
+  </header>
+
+  <!-- Progress -->
+  <nav class="progress" id="progress" role="navigation" aria-label="步骤导航"></nav>
+
+  <!-- Step 0: Welcome -->
+  <section class="step-content active" id="step0">
+    <div class="card">
+      <div class="welcome">
+        <span class="welcome-hero" aria-hidden="true">🎯</span>
+        <h2>要做一件事？先别急着动手！</h2>
+        <p>跟我走5步，把这件事想清楚、画明白，做事就不慌了。</p>
+        <div class="examples">
+          <div class="example" onclick="setTask('全家去露营')" role="button" tabindex="0">🏕️ 全家去露营</div>
+          <div class="example" onclick="setTask('给妈妈办生日会')" role="button" tabindex="0">🎂 给妈妈办生日会</div>
+          <div class="example" onclick="setTask('改造我的房间')" role="button" tabindex="0">🛏️ 改造我的房间</div>
+          <div class="example" onclick="setTask('养一只小猫')" role="button" tabindex="0">🐱 养一只小猫</div>
+        </div>
+        <div class="field" style="text-align:left; max-width:380px; margin:0 auto;">
+          <label class="field-label" for="taskInput">或者，告诉我你想做什么事：</label>
+          <input class="field-input" type="text" id="taskInput" placeholder="比如：全家去露营"
+            onkeydown="if(event.key==='Enter')goStep(1)" autocomplete="off">
+        </div>
+        <div class="actions" style="justify-content:center; margin-top:20px;">
+          <button class="btn btn-primary" onclick="goStep(1)">开始想清楚 →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 1: 定目标 -->
+  <section class="step-content" id="step1" aria-label="第一步：定目标">
+    <div class="card">
+      <div class="step-header">
+        <div class="step-icon step-icon-goal">🎯</div>
+        <div>
+          <div class="step-title">定目标</div>
+          <div class="step-subtitle" id="taskTitle"></div>
+        </div>
+      </div>
+      <div class="coach">
+        <span class="coach-icon">🤔</span>
+        做这件事，你<b>最想要</b>的是什么？别想太多，说出你心里最在意的几样东西。<br>
+        比如"露营"——可能你最想要的是<b>放松</b>、是<b>一家人待一起</b>、还是<b>好玩</b>？
+      </div>
+      <div class="field">
+        <label class="field-label" for="goalInput">你最想要什么？</label>
+        <input class="field-input" type="text" id="goalInput" placeholder="输入后按回车添加，比如：放松"
+          onkeydown="if(event.key==='Enter')addGoal()" autocomplete="off">
+        <div class="field-hint">可以添加多个目标，按回车逐个添加</div>
+      </div>
+      <div class="tags" id="goalTags"></div>
+      <div class="diagram" id="goalDiagram">
+        <div class="diagram-empty"><div class="diagram-empty-icon">🎯</div>添加目标后，这里会画出靶心图</div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="goStep(0)">← 返回</button>
+        <button class="btn btn-primary" onclick="goStep(2)">下一步：拆几块 →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 2: 拆几块 -->
+  <section class="step-content" id="step2" aria-label="第二步：拆几块">
+    <div class="card">
+      <div class="step-header">
+        <div class="step-icon step-icon-part">🧩</div>
+        <div>
+          <div class="step-title">拆几块</div>
+          <div class="step-subtitle">大事变小，就不怕了</div>
+        </div>
+      </div>
+      <div class="coach">
+        <span class="coach-icon">✂️</span>
+        一件事看着很大，拆成几块就不可怕了。<br>
+        想想这件事可以分成哪几个"小任务"？比如露营可以拆成：<span class="highlight-secondary">去哪儿</span>、<span class="highlight-secondary">带什么</span>、<span class="highlight-secondary">谁干什么</span>、<span class="highlight-secondary">安全怎么办</span>。
+      </div>
+      <div class="field">
+        <label class="field-label" for="partInput">这件事可以拆成哪几块？</label>
+        <input class="field-input" type="text" id="partInput" placeholder="输入后按回车添加，比如：选地点"
+          onkeydown="if(event.key==='Enter')addPart()" autocomplete="off">
+        <div class="field-hint">建议拆成 3~6 块，不要太细也不要太粗</div>
+      </div>
+      <div class="tags" id="partTags"></div>
+      <div class="diagram" id="partDiagram">
+        <div class="diagram-empty"><div class="diagram-empty-icon">🌳</div>添加任务块后，这里会画出分解图</div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="goStep(1)">← 上一步</button>
+        <button class="btn btn-primary" onclick="goStep(3)">下一步：排先后 →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 3: 排先后 -->
+  <section class="step-content" id="step3" aria-label="第三步：排先后">
+    <div class="card">
+      <div class="step-header">
+        <div class="step-icon step-icon-order">🔄</div>
+        <div>
+          <div class="step-title">排先后</div>
+          <div class="step-subtitle">有的事必须先做，有的事可以后做</div>
+        </div>
+      </div>
+      <div class="coach">
+        <span class="coach-icon">🚦</span>
+        不是所有事情都能同时开始！有的必须先搞定，别的才能动。<br>
+        用上下箭头，把任务按<b>谁先谁后</b>排个队吧！
+      </div>
+      <ul class="order-list" id="orderList"></ul>
+      <div class="diagram" id="flowDiagram">
+        <div class="diagram-empty"><div class="diagram-empty-icon">🔄</div>调整顺序后，这里会画出流程图</div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="goStep(2)">← 上一步</button>
+        <button class="btn btn-primary" onclick="goStep(4)">下一步：想想坑 →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 4: 想想坑 -->
+  <section class="step-content" id="step4" aria-label="第四步：想想坑">
+    <div class="card">
+      <div class="step-header">
+        <div class="step-icon step-icon-risk">⚠️</div>
+        <div>
+          <div class="step-title">想想坑</div>
+          <div class="step-subtitle">提前想到问题，遇事不慌</div>
+        </div>
+      </div>
+      <div class="coach">
+        <span class="coach-icon">🕵️</span>
+        做事最怕意外！现在先想想，哪件事最容易出问题？<br>
+        比如"露营"——可能<span class="highlight-danger">下雨</span>了怎么办？<span class="highlight-danger">忘带东西</span>了怎么办？<br>
+        想到一个坑，就顺手想一个<b>补救办法</b>。
+      </div>
+      <div class="field">
+        <label class="field-label" for="riskInput">可能出现什么问题？</label>
+        <input class="field-input" type="text" id="riskInput" placeholder="输入后按回车添加，比如：下雨"
+          onkeydown="if(event.key==='Enter')addRisk()" autocomplete="off">
+      </div>
+      <div id="riskList"></div>
+      <div class="diagram" id="riskDiagram">
+        <div class="diagram-empty"><div class="diagram-empty-icon">⚠️</div>添加风险后，这里会画出风险对策图</div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="goStep(3)">← 上一步</button>
+        <button class="btn btn-primary" onclick="goStep(5)">最后一步：出方案 →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 5: 出方案 -->
+  <section class="step-content" id="step5" aria-label="第五步：出方案">
+    <div class="card">
+      <div class="step-header">
+        <div class="step-icon step-icon-final">🗺️</div>
+        <div>
+          <div class="step-title">出方案</div>
+          <div class="step-subtitle">这就是你的行动计划！</div>
+        </div>
+      </div>
+      <div class="coach">
+        <span class="coach-icon">🎉</span>
+        看看，这就是你一步一步想出来的方案！<br>
+        有了目标、拆了任务、排了顺序、还想到了坑——你已经在用<b>工程思维</b>做事了！
+      </div>
+      <div class="final-summary" id="finalSummary"></div>
+      <div class="diagram" id="finalDiagram" style="min-height:280px;"></div>
+      <div class="final-badge" id="finalBadge"></div>
+      <div class="actions" style="justify-content:center; margin-top:18px;">
+        <button class="btn btn-ghost" onclick="goStep(4)">← 回去看坑</button>
+        <button class="btn btn-secondary" onclick="saveAsImage()">📥 保存图片</button>
+        <button class="btn btn-primary" onclick="resetAll()">🔄 换一件事</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    做事先画图 · 工程思维训练工具 · 全家可用
+  </footer>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Hidden canvas for export -->
+<canvas id="exportCanvas"></canvas>
+
+<script>
+// ============ State ============
+const STORAGE_KEY = 'thinking-coach-state';
+const state = {
+  task: '',
+  goals: [],
+  parts: [],
+  order: [],
+  risks: [],
+  currentStep: 0
+};
+
+const STEPS = [
+  { id: 0, label: '开始', emoji: '🏠' },
+  { id: 1, label: '定目标', emoji: '🎯' },
+  { id: 2, label: '拆几块', emoji: '🧩' },
+  { id: 3, label: '排先后', emoji: '🔄' },
+  { id: 4, label: '想想坑', emoji: '⚠️' },
+  { id: 5, label: '出方案', emoji: '🗺️' },
+];
+
+// ============ Persistence ============
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      task: state.task,
+      goals: state.goals,
+      parts: state.parts,
+      order: state.order,
+      risks: state.risks,
+      currentStep: state.currentStep
+    }));
+  } catch (e) { /* ignore */ }
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      Object.assign(state, data);
+      return true;
+    }
+  } catch (e) { /* ignore */ }
+  return false;
+}
+
+// ============ Toast ============
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ============ Navigation ============
+function goStep(n) {
+  if (n === 1 && !state.task.trim()) {
+    const input = document.getElementById('taskInput');
+    if (input && input.value.trim()) {
+      state.task = input.value.trim();
+    } else {
+      input && input.focus();
+      showToast('请先告诉我你想做什么事');
+      return;
+    }
+  }
+  // Validate step transitions
+  if (n >= 2 && state.goals.length === 0) {
+    showToast('请先添加至少一个目标');
+    return;
+  }
+  if (n >= 3 && state.parts.length === 0) {
+    showToast('请先添加至少一个任务块');
+    return;
+  }
+
+  state.currentStep = n;
+  document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  renderProgress();
+
+  if (n === 1) {
+    document.getElementById('taskTitle').textContent = '📋 ' + state.task;
+    setTimeout(() => document.getElementById('goalInput').focus(), 100);
+  }
+  if (n === 2) setTimeout(() => document.getElementById('partInput').focus(), 100);
+  if (n === 3) { syncOrder(); renderOrderList(); }
+  if (n === 4) setTimeout(() => document.getElementById('riskInput').focus(), 100);
+  if (n === 5) renderFinal();
+
+  saveState();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function setTask(text) {
+  document.getElementById('taskInput').value = text;
+  state.task = text;
+  goStep(1);
+}
+
+function resetAll() {
+  state.task = '';
+  state.goals = [];
+  state.parts = [];
+  state.order = [];
+  state.risks = [];
+  state.currentStep = 0;
+  document.getElementById('taskInput').value = '';
+  saveState();
+  goStep(0);
+  showToast('已清空，重新开始吧！');
+}
+
+// ============ Progress ============
+function renderProgress() {
+  const bar = document.getElementById('progress');
+  bar.innerHTML = '';
+  STEPS.forEach((step, i) => {
+    if (i > 0) {
+      const line = document.createElement('div');
+      line.className = 'progress-line' + (i <= state.currentStep ? ' done' : '');
+      bar.appendChild(line);
+    }
+    const node = document.createElement('div');
+    node.className = 'progress-node';
+    if (i === state.currentStep) node.classList.add('active');
+    if (i < state.currentStep) node.classList.add('done');
+
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot';
+    if (i < state.currentStep) dot.classList.add('done');
+    if (i === state.currentStep) dot.classList.add('active');
+    dot.textContent = i;
+    dot.setAttribute('role', 'button');
+    dot.setAttribute('aria-label', step.label);
+    dot.tabIndex = 0;
+    dot.onclick = () => { if (i <= state.currentStep) goStep(i); };
+    dot.onkeydown = (e) => { if (e.key === 'Enter' && i <= state.currentStep) goStep(i); };
+
+    const label = document.createElement('div');
+    label.className = 'progress-label';
+    label.textContent = step.label;
+
+    node.appendChild(dot);
+    node.appendChild(label);
+    bar.appendChild(node);
+  });
+}
+
+// ============ Step 1: Goals ============
+function addGoal() {
+  const input = document.getElementById('goalInput');
+  const val = input.value.trim();
+  if (!val) return;
+  if (state.goals.length >= 6) { showToast('最多添加6个目标'); return; }
+  state.goals.push(val);
+  input.value = '';
+  renderGoalTags();
+  renderGoalDiagram();
+  saveState();
+  input.focus();
+}
+
+function removeGoal(i) {
+  state.goals.splice(i, 1);
+  renderGoalTags();
+  renderGoalDiagram();
+  saveState();
+}
+
+function renderGoalTags() {
+  document.getElementById('goalTags').innerHTML = state.goals.map((g, i) =>
+    `<span class="tag tag-goal">${esc(g)}<span class="tag-close" onclick="removeGoal(${i})">×</span></span>`
+  ).join('');
+}
+
+function renderGoalDiagram() {
+  const area = document.getElementById('goalDiagram');
+  if (!state.goals.length) {
+    area.innerHTML = '<div class="diagram-empty"><div class="diagram-empty-icon">🎯</div>添加目标后，这里会画出靶心图</div>';
+    return;
+  }
+  const w = 520, h = 360;
+  const cx = w/2, cy = h/2;
+  const palette = ['#e85d26','#f07842','#f49460','#f8af7e','#fcc9a0','#fee3c4'];
+  const n = state.goals.length;
+  const maxR = 130;
+  const minR = 30;
+  let svg = '';
+
+  // Outer decorative ring
+  svg += `<circle cx="${cx}" cy="${cy}" r="${maxR + 15}" fill="none" stroke="#f0ece6" stroke-width="1" stroke-dasharray="6,4"/>`;
+
+  // Rings
+  for (let i = 0; i < n; i++) {
+    const r = maxR - i * ((maxR - minR) / Math.max(n, 1));
+    const c = palette[Math.min(i, palette.length - 1)];
+    svg += `<circle cx="${cx}" cy="${cy}" r="${Math.max(r, minR)}" fill="${c}" opacity="${0.9 - i * 0.08}"/>`;
+  }
+  // Center
+  svg += `<circle cx="${cx}" cy="${cy}" r="${minR - 5}" fill="${palette[0]}"/>`;
+  const centerText = state.task.length > 8 ? state.task.substring(0, 8) + '..' : state.task;
+  svg += `<text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="inherit">${esc(centerText)}</text>`;
+
+  // Labels with connecting lines
+  for (let i = 0; i < n; i++) {
+    const r = maxR - i * ((maxR - minR) / Math.max(n, 1));
+    const angle = -Math.PI * 0.7 + i * (Math.PI * 1.4 / Math.max(n - 1, 1));
+    const labelR = r + 22;
+    const lx = cx + labelR * Math.cos(angle);
+    const ly = cy + labelR * Math.sin(angle);
+    // Connector
+    const innerX = cx + (r - 2) * Math.cos(angle);
+    const innerY = cy + (r - 2) * Math.sin(angle);
+    svg += `<line x1="${innerX}" y1="${innerY}" x2="${lx}" y2="${ly}" stroke="${palette[i]}" stroke-width="1.5" opacity="0.4"/>`;
+    // Label bg
+    const textW = Math.max(esc(state.goals[i]).length * 14 + 16, 50);
+    svg += `<rect x="${lx - textW/2}" y="${ly - 12}" width="${textW}" height="22" rx="11" fill="white" stroke="${palette[i]}" stroke-width="1.5"/>`;
+    svg += `<text x="${lx}" y="${ly + 4}" text-anchor="middle" fill="${palette[i]}" font-size="12" font-weight="700" font-family="inherit">${esc(state.goals[i])}</text>`;
+  }
+
+  area.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${svg}</svg>`;
+}
+
+// ============ Step 2: Parts ============
+function addPart() {
+  const input = document.getElementById('partInput');
+  const val = input.value.trim();
+  if (!val) return;
+  if (state.parts.length >= 8) { showToast('最多添加8个任务块'); return; }
+  state.parts.push(val);
+  input.value = '';
+  renderPartTags();
+  renderPartDiagram();
+  saveState();
+  input.focus();
+}
+
+function removePart(i) {
+  state.parts.splice(i, 1);
+  renderPartTags();
+  renderPartDiagram();
+  saveState();
+}
+
+function renderPartTags() {
+  document.getElementById('partTags').innerHTML = state.parts.map((p, i) =>
+    `<span class="tag tag-part">${esc(p)}<span class="tag-close" onclick="removePart(${i})">×</span></span>`
+  ).join('');
+}
+
+function renderPartDiagram() {
+  const area = document.getElementById('partDiagram');
+  if (!state.parts.length) {
+    area.innerHTML = '<div class="diagram-empty"><div class="diagram-empty-icon">🌳</div>添加任务块后，这里会画出分解图</div>';
+    return;
+  }
+  const n = state.parts.length;
+  const palette = ['#2bab9e','#35a08e','#3f957e','#4a8a6e','#547f5e','#5f744e','#69693e','#745e2e'];
+  const w = 560, h = Math.max(220, 90 + n * 54);
+  let svg = '';
+
+  // Root
+  const rootW = Math.max(esc(state.task).length * 15 + 30, 100);
+  svg += `<rect x="${w/2 - rootW/2}" y="12" width="${rootW}" height="38" rx="19" fill="#e85d26"/>`;
+  const rootText = state.task.length > 14 ? state.task.substring(0, 14) + '..' : state.task;
+  svg += `<text x="${w/2}" y="37" text-anchor="middle" fill="white" font-size="14" font-weight="700" font-family="inherit">${esc(rootText)}</text>`;
+
+  for (let i = 0; i < n; i++) {
+    const color = palette[i % palette.length];
+    const py = 72 + i * 50;
+    const partW = Math.max(esc(state.parts[i]).length * 14 + 24, 80);
+    const px = w / 2 - partW / 2;
+
+    // Line
+    svg += `<line x1="${w/2}" y1="50" x2="${w/2}" y2="${py}" stroke="#e0dcd6" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+    // Part box
+    svg += `<rect x="${px}" y="${py}" width="${partW}" height="34" rx="10" fill="${color}"/>`;
+    svg += `<text x="${w/2}" y="${py + 22}" text-anchor="middle" fill="white" font-size="13" font-weight="600" font-family="inherit">${esc(state.parts[i])}</text>`;
+  }
+
+  area.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${svg}</svg>`;
+}
+
+// ============ Step 3: Order ============
+function syncOrder() {
+  // Add new parts, remove deleted ones
+  state.order = state.order.filter(p => state.parts.includes(p));
+  state.parts.forEach(p => {
+    if (!state.order.includes(p)) state.order.push(p);
+  });
+}
+
+function renderOrderList() {
+  const list = document.getElementById('orderList');
+  list.innerHTML = state.order.map((p, i) =>
+    `<li class="order-item">
+      <span class="order-handle">⠿</span>
+      <span class="order-num">${i + 1}</span>
+      <span class="order-name">${esc(p)}</span>
+      <div class="order-btns">
+        <button onclick="moveUp(${i})" ${i===0?'disabled':''} aria-label="上移">▲</button>
+        <button onclick="moveDown(${i})" ${i===state.order.length-1?'disabled':''} aria-label="下移">▼</button>
+      </div>
+    </li>`
+  ).join('');
+  renderFlowDiagram();
+}
+
+function moveUp(i) {
+  if (i <= 0) return;
+  [state.order[i], state.order[i-1]] = [state.order[i-1], state.order[i]];
+  renderOrderList();
+  saveState();
+}
+function moveDown(i) {
+  if (i >= state.order.length - 1) return;
+  [state.order[i], state.order[i+1]] = [state.order[i+1], state.order[i]];
+  renderOrderList();
+  saveState();
+}
+
+function renderFlowDiagram() {
+  const area = document.getElementById('flowDiagram');
+  if (!state.order.length) {
+    area.innerHTML = '<div class="diagram-empty"><div class="diagram-empty-icon">🔄</div>调整顺序后，这里会画出流程图</div>';
+    return;
+  }
+  const n = state.order.length;
+  const nodeW = 120, nodeH = 42, gapY = 24;
+  const palette = ['#2bab9e','#35a08e','#3f957e','#4a8a6e','#547f5e','#5f744e','#69693e','#745e2e'];
+  const h = n * nodeH + (n - 1) * gapY + 40;
+  const w = 280;
+
+  let svg = '';
+  for (let i = 0; i < n; i++) {
+    const ny = 16 + i * (nodeH + gapY);
+    const nx = (w - nodeW) / 2;
+    const color = palette[i % palette.length];
+
+    // Arrow
+    if (i < n - 1) {
+      const arrowY1 = ny + nodeH;
+      const arrowY2 = ny + nodeH + gapY;
+      svg += `<line x1="${w/2}" y1="${arrowY1 + 2}" x2="${w/2}" y2="${arrowY2 - 6}" stroke="#d0ccc6" stroke-width="2"/>`;
+      svg += `<polygon points="${w/2 - 5},${arrowY2 - 10} ${w/2},${arrowY2 - 4} ${w/2 + 5},${arrowY2 - 10}" fill="#d0ccc6"/>`;
+    }
+    // Node
+    svg += `<rect x="${nx}" y="${ny}" width="${nodeW}" height="${nodeH}" rx="10" fill="${color}"/>`;
+    svg += `<text x="${nx + 14}" y="${ny + 15}" fill="rgba(255,255,255,0.65)" font-size="9" font-weight="700" font-family="inherit">第${i+1}步</text>`;
+    const dn = state.order[i].length > 8 ? state.order[i].substring(0, 8) + '..' : state.order[i];
+    svg += `<text x="${nx + nodeW/2}" y="${ny + 32}" text-anchor="middle" fill="white" font-size="13" font-weight="600" font-family="inherit">${esc(dn)}</text>`;
+  }
+
+  area.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${svg}</svg>`;
+}
+
+// ============ Step 4: Risks ============
+function addRisk() {
+  const input = document.getElementById('riskInput');
+  const val = input.value.trim();
+  if (!val) return;
+  if (state.risks.length >= 6) { showToast('最多添加6个风险'); return; }
+  state.risks.push({ text: val, solution: '' });
+  input.value = '';
+  renderRiskList();
+  renderRiskDiagram();
+  saveState();
+  input.focus();
+}
+
+function removeRisk(i) {
+  state.risks.splice(i, 1);
+  renderRiskList();
+  renderRiskDiagram();
+  saveState();
+}
+
+function updateSolution(i, val) {
+  state.risks[i].solution = val;
+  renderRiskDiagram();
+  saveState();
+}
+
+function renderRiskList() {
+  document.getElementById('riskList').innerHTML = state.risks.map((r, i) =>
+    `<div class="risk-item">
+      <span class="risk-icon">⚠️</span>
+      <div class="risk-body">
+        <div class="risk-text">${esc(r.text)}</div>
+        <input class="risk-solution-input" type="text" placeholder="💡 有什么补救办法？"
+          value="${esc(r.solution)}" oninput="updateSolution(${i}, this.value)">
+      </div>
+      <span class="risk-remove" onclick="removeRisk(${i})">×</span>
+    </div>`
+  ).join('');
+}
+
+function renderRiskDiagram() {
+  const area = document.getElementById('riskDiagram');
+  if (!state.risks.length) {
+    area.innerHTML = '<div class="diagram-empty"><div class="diagram-empty-icon">⚠️</div>添加风险后，这里会画出风险对策图</div>';
+    return;
+  }
+  const n = state.risks.length;
+  const w = 540, h = Math.max(120, 30 + n * 72);
+  let svg = '';
+
+  for (let i = 0; i < n; i++) {
+    const y = 10 + i * 68;
+    // Risk box
+    svg += `<rect x="16" y="${y}" width="180" height="44" rx="10" fill="#e8453c" opacity="0.88"/>`;
+    svg += `<text x="32" y="${y + 16}" fill="rgba(255,255,255,0.75)" font-size="9" font-weight="700" font-family="inherit">⚠️ 可能出的问题</text>`;
+    const rt = state.risks[i].text.length > 10 ? state.risks[i].text.substring(0, 10) + '..' : state.risks[i].text;
+    svg += `<text x="32" y="${y + 34}" fill="white" font-size="12" font-weight="600" font-family="inherit">${esc(rt)}</text>`;
+
+    const sol = state.risks[i].solution;
+    if (sol) {
+      svg += `<line x1="204" y1="${y + 22}" x2="260" y2="${y + 22}" stroke="#38a856" stroke-width="2"/>`;
+      svg += `<polygon points="256,${y+17} 264,${y+22} 256,${y+27}" fill="#38a856"/>`;
+      svg += `<rect x="270" y="${y}" width="240" height="44" rx="10" fill="#38a856" opacity="0.88"/>`;
+      svg += `<text x="286" y="${y + 16}" fill="rgba(255,255,255,0.75)" font-size="9" font-weight="700" font-family="inherit">✅ 补救办法</text>`;
+      const st = sol.length > 14 ? sol.substring(0, 14) + '..' : sol;
+      svg += `<text x="286" y="${y + 34}" fill="white" font-size="12" font-weight="600" font-family="inherit">${esc(st)}</text>`;
+    } else {
+      svg += `<line x1="204" y1="${y + 22}" x2="240" y2="${y + 22}" stroke="#d0ccc6" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+      svg += `<text x="250" y="${y + 26}" fill="#b0aca6" font-size="11" font-family="inherit">还没想补救办法</text>`;
+    }
+  }
+
+  area.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${svg}</svg>`;
+}
+
+// ============ Step 5: Final ============
+function renderFinal() {
+  const n = state.order.length;
+  const goals = state.goals;
+  const risksSolved = state.risks.filter(r => r.solution);
+  const risksAll = state.risks;
+
+  // Summary stats
+  document.getElementById('finalSummary').innerHTML = `
+    <div class="final-stat final-stat-goal"><div class="final-stat-num">${goals.length}</div><div class="final-stat-label">🎯 目标</div></div>
+    <div class="final-stat final-stat-part"><div class="final-stat-num">${n}</div><div class="final-stat-label">🧩 任务</div></div>
+    <div class="final-stat final-stat-risk"><div class="final-stat-num">${risksSolved.length}/${risksAll.length}</div><div class="final-stat-label">✅ 风险有对策</div></div>
+  `;
+
+  // Badge
+  const badges = [];
+  if (goals.length >= 1) badges.push('目标清晰');
+  if (n >= 3) badges.push('任务拆解');
+  if (state.order.length > 0) badges.push('有序安排');
+  if (risksSolved.length >= 1) badges.push('风险预判');
+  document.getElementById('finalBadge').innerHTML = badges.length >= 3
+    ? `🏆 你已获得「${badges.join(' · ')}」成就！这就是工程思维！`
+    : `💪 继续完善你的方案，争取拿下更多成就！`;
+
+  // Diagram
+  renderFinalDiagram();
+}
+
+function renderFinalDiagram() {
+  const area = document.getElementById('finalDiagram');
+  if (!state.order.length) {
+    area.innerHTML = '<div class="diagram-empty">请先完成前面几步</div>';
+    return;
+  }
+
+  const n = state.order.length;
+  const goals = state.goals;
+  const risksSolved = state.risks.filter(r => r.solution);
+  const nodeW = 130, nodeH = 40, gapY = 12;
+  const goalsH = goals.length ? 70 : 0;
+  const flowH = n * nodeH + (n - 1) * gapY + 20;
+  const risksH = risksSolved.length ? risksSolved.length * 52 + 30 : 0;
+  const totalH = 60 + goalsH + flowH + risksH + 60;
+  const w = 580;
+  let svg = '';
+
+  // Title banner
+  svg += `<defs>
+    <linearGradient id="gHead" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e85d26"/><stop offset="100%" stop-color="#f07842"/>
+    </linearGradient>
+  </defs>`;
+  svg += `<rect x="${w/2 - 180}" y="12" width="360" height="40" rx="20" fill="url(#gHead)"/>`;
+  const tName = state.task.length > 16 ? state.task.substring(0, 16) + '..' : state.task;
+  svg += `<text x="${w/2}" y="38" text-anchor="middle" fill="white" font-size="15" font-weight="800" font-family="inherit">📋 ${esc(tName)} · 行动地图</text>`;
+
+  let curY = 68;
+
+  // Goals
+  if (goals.length) {
+    svg += `<text x="24" y="${curY}" fill="#e85d26" font-size="11" font-weight="700" font-family="inherit">🎯 目标</text>`;
+    curY += 8;
+    const gw = Math.min(120, (w - 48) / goals.length);
+    goals.forEach((g, i) => {
+      const gx = 24 + i * gw;
+      svg += `<rect x="${gx}" y="${curY}" width="${gw - 6}" height="28" rx="8" fill="#e85d26" opacity="0.12"/>`;
+      const gn = g.length > 8 ? g.substring(0, 8) + '..' : g;
+      svg += `<text x="${gx + (gw-6)/2}" y="${curY + 19}" text-anchor="middle" fill="#e85d26" font-size="11" font-weight="600" font-family="inherit">${esc(gn)}</text>`;
+    });
+    curY += 42;
+  }
+
+  // Flow
+  svg += `<text x="24" y="${curY}" fill="#2bab9e" font-size="11" font-weight="700" font-family="inherit">🔄 步骤</text>`;
+  curY += 10;
+  const palette = ['#2bab9e','#35a08e','#3f957e','#4a8a6e','#547f5e','#5f744e','#69693e','#745e2e'];
+  const flowX = 30;
+
+  for (let i = 0; i < n; i++) {
+    const ny = curY + i * (nodeH + gapY);
+    const color = palette[i % palette.length];
+    if (i < n - 1) {
+      const ay1 = ny + nodeH, ay2 = ny + nodeH + gapY;
+      svg += `<line x1="${flowX + nodeW/2}" y1="${ay1}" x2="${flowX + nodeW/2}" y2="${ay2}" stroke="#d0ccc6" stroke-width="1.5"/>`;
+      svg += `<polygon points="${flowX + nodeW/2 - 4},${ay2 - 5} ${flowX + nodeW/2},${ay2} ${flowX + nodeW/2 + 4},${ay2 - 5}" fill="#d0ccc6"/>`;
+    }
+    svg += `<rect x="${flowX}" y="${ny}" width="${nodeW}" height="${nodeH}" rx="10" fill="${color}"/>`;
+    svg += `<text x="${flowX + 12}" y="${ny + 14}" fill="rgba(255,255,255,0.6)" font-size="9" font-weight="700" font-family="inherit">第${i+1}步</text>`;
+    const dn = state.order[i].length > 8 ? state.order[i].substring(0, 8) + '..' : state.order[i];
+    svg += `<text x="${flowX + nodeW/2}" y="${ny + 30}" text-anchor="middle" fill="white" font-size="12" font-weight="600" font-family="inherit">${esc(dn)}</text>`;
+  }
+  curY += n * (nodeH + gapY) + 10;
+
+  // Risks
+  if (risksSolved.length) {
+    svg += `<text x="24" y="${curY}" fill="#e8453c" font-size="11" font-weight="700" font-family="inherit">⚠️ 风险与对策</text>`;
+    curY += 8;
+    risksSolved.forEach((r, i) => {
+      const ry = curY + i * 48;
+      svg += `<rect x="24" y="${ry}" width="200" height="20" rx="6" fill="#e8453c" opacity="0.1"/>`;
+      const rt = r.text.length > 14 ? r.text.substring(0, 14) + '..' : r.text;
+      svg += `<text x="34" y="${ry + 14}" fill="#e8453c" font-size="10" font-weight="600" font-family="inherit">⚠️ ${esc(rt)}</text>`;
+      svg += `<rect x="34" y="${ry + 24}" width="200" height="18" rx="6" fill="#38a856" opacity="0.1"/>`;
+      const st = r.solution.length > 14 ? r.solution.substring(0, 14) + '..' : r.solution;
+      svg += `<text x="44" y="${ry + 37}" fill="#2e8c47" font-size="10" font-weight="600" font-family="inherit">✅ ${esc(st)}</text>`;
+    });
+  }
+
+  area.innerHTML = `<svg viewBox="0 0 ${w} ${totalH}" xmlns="http://www.w3.org/2000/svg" id="finalSVG">${svg}</svg>`;
+}
+
+// ============ Export ============
+function saveAsImage() {
+  const svgEl = document.getElementById('finalSVG');
+  if (!svgEl) { showToast('请先完成方案'); return; }
+
+  const svgData = new XMLSerializer().serializeToString(svgEl);
+  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+
+  const img = new Image();
+  img.onload = function() {
+    const canvas = document.getElementById('exportCanvas');
+    const scale = 2;
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#faf7f2';
+    ctx.fillRect(0, 0, img.width, img.height);
+    ctx.drawImage(img, 0, 0);
+
+    canvas.toBlob(function(blob) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (state.task || '行动地图') + '-行动地图.png';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('图片已保存！');
+    }, 'image/png');
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+// ============ Helpers ============
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ============ Init ============
+(function init() {
+  const hasState = loadState();
+  renderProgress();
+
+  if (hasState && state.currentStep > 0) {
+    // Restore state
+    if (state.goals.length) renderGoalTags();
+    if (state.parts.length) renderPartTags();
+    if (state.risks.length) renderRiskList();
+
+    // Go to saved step
+    document.getElementById('taskInput').value = state.task;
+    state.currentStep = 0; // reset so goStep works
+    goStep(Math.min(state.currentStep || 0, 5));
+
+    if (state.goals.length) renderGoalDiagram();
+    if (state.parts.length) renderPartDiagram();
+    if (state.risks.length) renderRiskDiagram();
+    if (state.order.length) { renderOrderList(); }
+
+    showToast('已恢复上次的进度');
+  }
+})();
+
+// Example cards keyboard support
+document.querySelectorAll('.example').forEach(el => {
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') el.click();
+  });
+});
+</script>
+
+</body>
+</html>
