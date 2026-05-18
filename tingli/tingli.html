@@ -118,7 +118,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
   .stats-grid{grid-template-columns:repeat(2,1fr);}
   .modal{width:96%;padding:16px;border-radius:14px;}
 }
-.mode-tabs{display:none;gap:4px;margin:12px 0;background:linear-gradient(90deg, #e8f5e9, #fff3e0, #fce4ec);border-radius:12px;padding:6px 12px;}
+.mode-tabs{display:flex;gap:4px;margin:12px 0;background:linear-gradient(90deg, #e8f5e9, #fff3e0, #fce4ec);border-radius:12px;padding:6px 12px;}
 .mode-tab{flex:1;padding:8px 0;border:2px solid transparent;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:var(--text2);transition:all 0.2s;}
 .mode-tab.on{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(29,158,117,0.3);}
 .pron-target{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;}
@@ -1009,8 +1009,6 @@ function openListenModal(articleId) {
     if (isRecording) stopRecordingCleanup();
     speechSynthesis.cancel();
     isPlaying = false;
-    // 显示菜单栏下的模式选择器
-    document.getElementById('mode-tabs').style.display = 'flex';
     // 使用保存的单词模式（不重复保存）
     let u = safeUser(getUser());
     switchMode(u.tingli.wordMode || 'fillblank', true);
@@ -1038,8 +1036,6 @@ function closeListenModal() {
     isPlaying = false;
     isLoading = false;
     currentArticle = null;
-    // 隐藏菜单栏下的模式选择器
-    document.getElementById('mode-tabs').style.display = 'none';
     document.getElementById('listen-modal').classList.remove('active');
 }
 
