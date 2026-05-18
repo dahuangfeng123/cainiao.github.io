@@ -4,6 +4,7 @@ kokoro-v1.0.onnx
 voices-v1.0.bin
 *.onnx
 *.bin
+*.ckpt
 __pycache__/
 *.pyc
 .venv/
