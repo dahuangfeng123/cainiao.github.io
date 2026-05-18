@@ -2577,7 +2577,12 @@ async function submitBatchPronunciation() {
     resultsEl.style.display = 'block';
     resultsEl.innerHTML = '<div style="text-align:center;padding:20px;">⏳ 评分中...</div>';
     try {
-        let res = await fetch(TTS_URL.replace('/tts', '/score'), { method: 'POST', body: formData });
+        let res = await fetch(SCORE_URL, { method: 'POST', body: formData });
+        if (!res.ok) {
+            toast('评分请求失败：' + res.status, 'error');
+            resultsEl.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">评分失败，请重试</div>';
+            return;
+        }
         let data = await res.json();
         let pct = Math.round(data.phone_accuracy || 0);
         let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
