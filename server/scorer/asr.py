@@ -26,6 +26,8 @@ def _transcribe_sync(audio_path: str) -> dict:
         audio_path,
         language="en",
         word_timestamps=True,
+        # faster-whisper 默认参数: beam_size=5, condition_on_previous_text=True, temperature=0.0
+        # 速度优化: beam_size=1(大幅减少搜索), condition_on_previous_text=False(不依赖前文), temperature=0(贪心搜索)
         beam_size=1,
         condition_on_previous_text=False,
         temperature=0,
