@@ -383,7 +383,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 
     <div style="font-size:13px;color:var(--text3);margin-bottom:8px;" id="batch-meta"></div>
 
-    <div class="audio-controls">
+    <div class="audio-controls" id="batch-audio-controls">
       <div class="audio-btns">
         <button class="audio-btn play" id="batch-play-btn" onclick="toggleBatchPlay()">▶</button>
         <button class="audio-btn replay" onclick="replayBatchAudio()">🔄</button>
@@ -403,9 +403,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
       </div>
     </div>
 
+    <div id="batch-mode-dictation">
     <div class="answer-area">
       <textarea id="batch-answer" placeholder="播放音频后，输入听到的英语短文全文..." style="min-height:100px;" onclick="hideBatchAnswer()"></textarea>
       <div class="answer-hint" id="batch-hint">💡 可多次播放，输入后点击提交</div>
+    </div>
+    </div>
+
+    <div id="batch-mode-fillblank" style="display:none;">
+      <div class="fill-text" id="batch-fill-text"></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn btn-green" onclick="checkBatchFillAnswers()">✅ 检查答案</button>
+        <button class="btn btn-gray" onclick="resetBatchFillInputs()">🔄 重置</button>
+      </div>
+      <div class="fill-results" id="batch-fill-results" style="display:none;"></div>
     </div>
 
     <div class="answer-reveal" id="batch-answer-reveal" style="display:none;">
@@ -1354,6 +1365,7 @@ function renderBatchQuestion() {
     document.getElementById('batch-submit-btn').disabled = false;
     document.getElementById('batch-skip-btn').disabled = false;
     document.getElementById('batch-reveal-btn').style.display = 'none';
+    document.getElementById('batch-fill-results').style.display = 'none';
     document.getElementById('batch-hint').textContent = '💡 可多次播放，输入后点击提交';
     if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     speechSynthesis.cancel();
@@ -1361,6 +1373,23 @@ function renderBatchQuestion() {
     stopBatchProgressTimer();
     resetBatchProgress();
     updateBatchPlayUI();
+    
+    // 根据当前模式初始化批量听力弹窗
+    let batchAudioCtrl = document.getElementById('batch-audio-controls');
+    let batchDictation = document.getElementById('batch-mode-dictation');
+    let batchFill = document.getElementById('batch-mode-fillblank');
+    
+    if (currentMode === 'fillblank') {
+        batchAudioCtrl.style.display = 'block';
+        batchDictation.style.display = 'none';
+        batchFill.style.display = 'block';
+        initBatchFillblankMode();
+    } else {
+        batchAudioCtrl.style.display = 'block';
+        batchDictation.style.display = 'block';
+        batchFill.style.display = 'none';
+    }
+    
     setTimeout(() => toggleBatchPlay(), 300);
 }
 
@@ -1931,15 +1960,27 @@ let pronAudio = null;
 function switchMode(mode, fromStorage = false) {
     currentMode = mode;
     document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('on', t.dataset.mode === mode));
+    
+    // 更新单篇听力弹窗模式
     let audioCtrl = document.getElementById('listen-audio-controls');
     let dictation = document.getElementById('mode-dictation');
     let pron = document.getElementById('mode-pronunciation');
     let fill = document.getElementById('mode-fillblank');
+    
+    // 更新批量听力弹窗模式
+    let batchAudioCtrl = document.getElementById('batch-audio-controls');
+    let batchDictation = document.getElementById('batch-mode-dictation');
+    let batchFill = document.getElementById('batch-mode-fillblank');
+    
     if (mode === 'dictation') {
         audioCtrl.style.display = 'block';
         dictation.style.display = 'block';
         pron.style.display = 'none';
         fill.style.display = 'none';
+        
+        batchAudioCtrl.style.display = 'block';
+        batchDictation.style.display = 'block';
+        batchFill.style.display = 'none';
     } else if (mode === 'pronunciation') {
         if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         speechSynthesis.cancel();
@@ -1951,12 +1992,22 @@ function switchMode(mode, fromStorage = false) {
         pron.style.display = 'block';
         fill.style.display = 'none';
         initPronunciationMode();
+        
+        // 批量听力弹窗不支持拼读模式，切换回听写
+        batchAudioCtrl.style.display = 'block';
+        batchDictation.style.display = 'block';
+        batchFill.style.display = 'none';
     } else if (mode === 'fillblank') {
         audioCtrl.style.display = 'block';
         dictation.style.display = 'none';
         pron.style.display = 'none';
         fill.style.display = 'block';
         initFillblankMode();
+        
+        batchAudioCtrl.style.display = 'block';
+        batchDictation.style.display = 'none';
+        batchFill.style.display = 'block';
+        initBatchFillblankMode();
     }
     // 用户手动切换模式时保存到 localStorage
     if (!fromStorage) {
@@ -2268,6 +2319,97 @@ function resetFillInputs() {
         input.classList.remove('correct', 'wrong');
     });
     document.getElementById('fill-results').style.display = 'none';
+}
+
+// 批量填空模式函数
+function initBatchFillblankMode() {
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    let text = article.text;
+    let words = article.words || '';
+    let wordList = words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    let wordSet = new Set(wordList);
+    let lines = text.split('\n');
+    let html = '';
+    let blankIndex = 0;
+    for (let line of lines) {
+        let tokens = line.split(/(\s+)/);
+        for (let token of tokens) {
+            if (!token.trim()) { html += token; continue; }
+            let match = token.match(/^([^\w]*)(\w+)([^\w]*)$/);
+            if (match) {
+                let [, prefix, word, suffix] = match;
+                if (wordSet.has(word.toLowerCase())) {
+                    let w = word.length;
+                    let inputW = Math.max(w * 12, 60);
+                    html += prefix + `<input type="text" class="fill-input" data-answer="${word}" data-index="${blankIndex}" autocomplete="off" style="width:${inputW}px;" placeholder="${'_'.repeat(w)}">` + suffix;
+                    blankIndex++;
+                } else {
+                    html += token;
+                }
+            } else {
+                html += token;
+            }
+        }
+        html += '\n';
+    }
+    document.getElementById('batch-fill-text').innerHTML = html.trim();
+    document.getElementById('batch-fill-results').style.display = 'none';
+    document.querySelectorAll('#batch-fill-text .fill-input').forEach(input => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                let inputs = document.querySelectorAll('#batch-fill-text .fill-input');
+                let idx = parseInt(this.dataset.index);
+                if (idx < inputs.length - 1) inputs[idx + 1].focus();
+            }
+        });
+    });
+}
+
+function checkBatchFillAnswers() {
+    let inputs = document.querySelectorAll('#batch-fill-text .fill-input');
+    let correct = 0;
+    let total = inputs.length;
+    inputs.forEach(input => {
+        let answer = input.dataset.answer.toLowerCase();
+        let userAnswer = input.value.trim().toLowerCase();
+        input.disabled = false;
+        if (userAnswer === answer) {
+            input.classList.add('correct');
+            input.classList.remove('wrong');
+            correct++;
+        } else {
+            input.classList.add('wrong');
+            input.classList.remove('correct');
+        }
+    });
+    let pct = total > 0 ? Math.round(correct / total * 100) : 0;
+    let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
+    let resultsEl = document.getElementById('batch-fill-results');
+    resultsEl.style.display = 'block';
+    let wrongWords = [];
+    inputs.forEach(input => {
+        if (input.classList.contains('wrong')) {
+            wrongWords.push(input.dataset.answer);
+        }
+    });
+    let wrongHtml = wrongWords.length > 0 ? `<div style="margin-top:8px;font-size:13px;color:#ef5350;">❌ 错误单词：${wrongWords.map(w => `<span style="background:#ffebee;padding:2px 8px;border-radius:4px;margin:0 2px;">${w}</span>`).join('')}</div>` : '<div style="margin-top:8px;font-size:13px;color:#43a047;">🎉 全部正确！</div>';
+    resultsEl.innerHTML = `
+        <h3>📊 填空结果</h3>
+        <div class="fill-score" style="color:${pctColor};">${pct}%</div>
+        <div class="fill-detail">正确 ${correct}/${total}</div>
+        ${wrongHtml}
+    `;
+}
+
+function resetBatchFillInputs() {
+    document.querySelectorAll('#batch-fill-text .fill-input').forEach(input => {
+        input.value = '';
+        input.disabled = false;
+        input.classList.remove('correct', 'wrong');
+    });
+    document.getElementById('batch-fill-results').style.display = 'none';
 }
 
 window.onload = async function() { await initArticles(); renderAll(); loadSettings(); };
