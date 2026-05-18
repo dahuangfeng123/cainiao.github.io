@@ -2554,13 +2554,20 @@ function stopBatchRecording() {
     btn.classList.remove('recording');
     btn.querySelector('.record-text').textContent = '点击录音';
     document.getElementById('batch-record-timer').style.display = 'none';
+    console.log('录音停止，采样数:', batchRecordedSamples.length);
     if (batchRecordedSamples.length > 0) {
         submitBatchPronunciation();
+    } else {
+        toast('未检测到录音数据', 'warning');
     }
 }
 
 async function submitBatchPronunciation() {
-    if (batchRecordedSamples.length === 0) return;
+    console.log('开始提交发音评分');
+    if (batchRecordedSamples.length === 0) {
+        console.log('采样数为0，跳过提交');
+        return;
+    }
     if (batchIndex >= batchArticles.length) return;
     let article = batchArticles[batchIndex];
     let merged = new Float32Array(batchRecordedSamples.reduce((a, b) => a + b.length, 0));
