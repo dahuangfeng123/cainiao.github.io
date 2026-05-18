@@ -69,6 +69,7 @@ async def score(
     try:
         # 音频时长
         y, sr    = librosa.load(audio_path, sr=None)
+        duration = round(len(y) / sr, 3)
         t_audio_load = time.time()
         audio_load_ms = round((t_audio_load - t0) * 1000, 1)
 
