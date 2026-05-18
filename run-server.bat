@@ -21,17 +21,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Starting main.py (TTS Learning Service)...
+echo Starting server.py (FastAPI Unified Service)...
 echo.
 
-uv run server/main.py
+uv run server/server.py
 
 if errorlevel 1 (
     echo.
     echo [ERROR] Failed to start!
     echo Please check:
     echo   1. Python environment is configured
-    echo   2. server/main.py exists
+    echo   2. server/server.py exists
     echo   3. Dependencies are installed
     echo.
     pause

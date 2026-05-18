@@ -493,7 +493,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 
 <script>
 const TTS_URL = 'http://localhost:5003/tts';
-const SCORE_URL = 'http://localhost:8000/score';
+const SCORE_URL = 'http://localhost:5003/score';
 
 const DEFAULT_ARTICLES = [
   { id:1, title:"The Seasons", words:"spring,summer,autumn,winter,season,year", category:"自然",
@@ -746,7 +746,10 @@ function buildVoiceOptions(model) {
     return html;
 }
 
+let _settingsLoading = false;
+
 function onModelChange() {
+    if (_settingsLoading) return;
     let model = document.getElementById('tts-model').value;
     let voiceSelect = document.getElementById('tts-voice');
     voiceSelect.innerHTML = buildVoiceOptions(model);
@@ -766,6 +769,7 @@ function onModelChange() {
 }
 
 function saveSettings() {
+    if (_settingsLoading) return;
     let u = safeUser(getUser());
     u.tingli.ttsModel = document.getElementById('tts-model').value;
     u.tingli.voice = document.getElementById('tts-voice').value;
@@ -774,6 +778,7 @@ function saveSettings() {
 }
 
 function loadSettings() {
+    _settingsLoading = true;
     let u = safeUser(getUser());
     let model = u.tingli.ttsModel || 'kokoro';
     let modelSelect = document.getElementById('tts-model');
@@ -793,11 +798,14 @@ function loadSettings() {
         // 加载保存的单词模式（默认填空）
         let savedMode = u.tingli.wordMode || 'fillblank';
         switchMode(savedMode, true);
+        _settingsLoading = false;
     });
 }
 
 async function loadModels() {
     let modelSelect = document.getElementById('tts-model');
+    let savedOnchange = modelSelect.onchange;
+    modelSelect.onchange = null;
     try {
         let res = await fetch(TTS_URL.replace('/tts', '/models'));
         let models = await res.json();
@@ -814,6 +822,7 @@ async function loadModels() {
     } catch {
         modelSelect.innerHTML = '<option value="kokoro">Kokoro (本地)</option><option value="edge">Edge TTS (云端)</option>';
     }
+    modelSelect.onchange = savedOnchange;
 }
 
 function updateSpeedDisplay() {
