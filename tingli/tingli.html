@@ -2577,7 +2577,10 @@ async function submitBatchPronunciation() {
     resultsEl.style.display = 'block';
     resultsEl.innerHTML = '<div style="text-align:center;padding:20px;">⏳ 评分中...</div>';
     try {
-        let res = await fetch(SCORE_URL, { method: 'POST', body: formData });
+        let controller = new AbortController();
+        let timeout = setTimeout(() => controller.abort(), 10000);
+        let res = await fetch(SCORE_URL, { method: 'POST', body: formData, signal: controller.signal });
+        clearTimeout(timeout);
         if (!res.ok) {
             toast('评分请求失败：' + res.status, 'error');
             resultsEl.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">评分失败，请重试</div>';
@@ -2597,7 +2600,9 @@ async function submitBatchPronunciation() {
             </div>
         `;
     } catch (err) {
-        resultsEl.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">评分失败，请重试</div>';
+        console.error('批量拼读评分错误:', err);
+        toast('评分失败：' + err.message, 'error');
+        resultsEl.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">评分失败，请检查服务器是否运行</div>';
     }
 }
 
