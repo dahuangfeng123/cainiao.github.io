@@ -648,7 +648,12 @@ function safeUser(u) {
     if (!u) return def;
     // 数据迁移：旧结构迁移到新结构
     let merged = { ...def, ...u };
-    if (!merged.tingli) merged.tingli = def.tingli;
+    // 正确合并 tingli 对象，而不是直接覆盖
+    if (!merged.tingli) {
+        merged.tingli = def.tingli;
+    } else {
+        merged.tingli = { ...def.tingli, ...merged.tingli };
+    }
     if (merged.learn && merged.learn.length) {
         merged.tingli.learn = [...merged.learn];
         delete merged.learn;
@@ -1282,7 +1287,7 @@ function getReviewList() {
     let now = new Date(); now.setHours(23,59,59,999);
     let todayEnd = now.getTime();
     let items = [];
-    for (let idx in u.tingli.log) {
+    for (let idx in u.tingli?.log || {}) {
         let info = u.tingli.log[idx];
         if (info.next && info.next <= todayEnd && info.c < PERIOD.length) {
             let article = ARTICLES.find(a => a.id === parseInt(idx));
@@ -1295,9 +1300,9 @@ function getReviewList() {
 function renderHomeStats() {
     let u = safeUser(getUser());
     document.getElementById('stat-total').textContent = u.listeningTotal || 0;
-    document.getElementById('stat-articles').textContent = Object.keys(u.tingli.listeningLog || {}).length;
-    document.getElementById('stat-learned').textContent = u.tingli.learn.length;
-    document.getElementById('stat-done').textContent = u.tingli.done.length;
+    document.getElementById('stat-articles').textContent = Object.keys(u.tingli?.listeningLog || {}).length;
+    document.getElementById('stat-learned').textContent = (u.tingli?.learn || []).length;
+    document.getElementById('stat-done').textContent = (u.tingli?.done || []).length;
     document.getElementById('header-stars').textContent = u.stars || 0;
 }
 
@@ -1352,8 +1357,8 @@ function renderArticleList() {
     let el = document.getElementById('article-list');
     if (filtered.length === 0) { el.innerHTML = '<div class="empty">该分类暂无短文</div>'; return; }
     el.innerHTML = filtered.map(a => {
-        let log = (u.tingli.listeningLog || {})[a.id];
-        let reviewInfo = u.tingli.log[a.id];
+        let log = (u.tingli?.listeningLog || {})[a.id];
+        let reviewInfo = (u.tingli?.log || {})[a.id];
         let statusHtml = '';
         if (reviewInfo) {
             let isMastered = reviewInfo.c >= PERIOD.length;
@@ -1379,12 +1384,12 @@ function renderMineStats() {
     let u = safeUser(getUser());
     let today = new Date(); today.setHours(0,0,0,0);
     let ts = today.getTime();
-    let countWait = (usr) => { let c = 0; for (let idx in usr.tingli.log) { if (usr.tingli.log[idx].next && usr.tingli.log[idx].next <= ts + 86400000 && usr.tingli.log[idx].c < PERIOD.length) c++; } return c; };
-    document.getElementById('my-total').textContent = u.tingli.learn.length + ' 篇';
+    let countWait = (usr) => { let c = 0; for (let idx in usr.tingli?.log || {}) { if (usr.tingli.log[idx].next && usr.tingli.log[idx].next <= ts + 86400000 && usr.tingli.log[idx].c < PERIOD.length) c++; } return c; };
+    document.getElementById('my-total').textContent = (u.tingli?.learn || []).length + ' 篇';
     document.getElementById('my-wait').textContent = countWait(u) + ' 篇';
-    document.getElementById('my-done').textContent = u.tingli.done.length + ' 篇';
+    document.getElementById('my-done').textContent = (u.tingli?.done || []).length + ' 篇';
     document.getElementById('my-listen-total').textContent = u.listeningTotal || 0;
-    document.getElementById('my-listen-articles').textContent = Object.keys(u.tingli.listeningLog || {}).length;
+    document.getElementById('my-listen-articles').textContent = Object.keys(u.tingli?.listeningLog || {}).length;
     document.getElementById('my-stars').textContent = u.stars || 0;
 }
 
