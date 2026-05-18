@@ -2695,6 +2695,9 @@ async function submitBatchPronunciation() {
                 <strong>识别结果：</strong>${heard || '(未识别到内容)'}
             </div>
             ${resultsHtml}
+            <div id="batch-next-btn" style="display:none;margin-top:16px;text-align:center;">
+                <button class="btn btn-primary" style="font-size:14px;padding:8px 24px;" onclick="batchGoNext()">➡️ 下一题</button>
+            </div>
         `;
         // 保存答案并进入下一题
         batchAnswers.push({ 
@@ -2710,15 +2713,20 @@ async function submitBatchPronunciation() {
             duration: duration,
             heard: heard
         });
-        // 延迟3秒后进入下一题，让用户看到评分结果
+        // 延迟1秒后显示下一题按钮
         setTimeout(() => {
-            batchIndex++;
-            renderBatchQuestion();
-        }, 3000);
+            let nextBtn = document.getElementById('batch-next-btn');
+            if (nextBtn) nextBtn.style.display = 'block';
+        }, 1000);
     } catch (err) {
         toast('评分请求出错：' + err.message, 'error');
         resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分出错，请检查服务是否启动</div>';
     }
+}
+
+function batchGoNext() {
+    batchIndex++;
+    renderBatchQuestion();
 }
 
 window.onload = async function() { await initArticles(); renderAll(); loadSettings(); };
