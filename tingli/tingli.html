@@ -1690,21 +1690,24 @@ function submitBatchAnswer() {
         let inputs = document.querySelectorAll('#batch-fill-text .fill-input');
         let correct = 0;
         let total = inputs.length;
+        let userInputs = [];
         inputs.forEach(input => {
-            let answer = input.dataset.answer.toLowerCase();
-            let userAnswer = input.value.trim().toLowerCase();
-            if (userAnswer === answer) correct++;
+            let answer = input.dataset.answer;
+            let userAnswer = input.value.trim();
+            userInputs.push(userAnswer);
+            if (userAnswer.toLowerCase() === answer.toLowerCase()) correct++;
         });
         let pct = total > 0 ? Math.round(correct / total * 100) : 0;
         batchAnswers.push({ 
             idx: article.id, 
             article, 
-            input: '', 
+            input: userInputs.join(' '), 
             correct: pct >= 60, 
             simScore: pct,
             mode: 'fillblank',
             fillCorrect: correct,
-            fillTotal: total
+            fillTotal: total,
+            fillAnswers: Array.from(inputs).map(i => ({ user: i.value.trim(), answer: i.dataset.answer }))
         });
     } else {
         // 听写模式
@@ -1805,6 +1808,12 @@ function showBatchResult(correctCount, starReward) {
         let extraInfo = '';
         if (a.mode === 'pronunciation') {
             extraInfo = `<div style="font-size:12px;color:var(--text3);margin-top:6px;">流利度: ${a.fluency || 0}% | 音素准确率: ${a.phone_accuracy || 0}%</div>`;
+        } else if (a.mode === 'fillblank' && a.fillAnswers) {
+            extraInfo = `<div style="font-size:12px;color:var(--text3);margin-top:6px;">填空正确: ${a.fillCorrect || 0}/${a.fillTotal || 0}</div>
+                <div style="margin-top:6px;font-size:12px;">${a.fillAnswers.map(f => {
+                    let isCorrect = f.user.toLowerCase() === f.answer.toLowerCase();
+                    return `<span style="display:inline-block;margin:2px;padding:2px 6px;border-radius:4px;background:${isCorrect ? '#e8f5e9' : '#ffebee'};">${isCorrect ? '✅' : '❌'} ${f.user || '(空)'} / ${f.answer}</span>`;
+                }).join('')}</div>`;
         } else if (a.mode === 'fillblank') {
             extraInfo = `<div style="font-size:12px;color:var(--text3);margin-top:6px;">填空正确: ${a.fillCorrect || 0}/${a.fillTotal || 0}</div>`;
         }
