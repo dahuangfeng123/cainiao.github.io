@@ -2476,6 +2476,7 @@ let batchPronAudio = null;
 function initBatchPronunciationMode() {
     if (batchIndex >= batchArticles.length) return;
     let article = batchArticles[batchIndex];
+    batchRecordedSamples = [];
     document.getElementById('batch-pron-target-text').textContent = article.text;
     document.getElementById('batch-pron-results').style.display = 'none';
     let btn = document.getElementById('batch-record-btn');
@@ -2528,19 +2529,21 @@ async function startBatchRecording() {
                 batchRecordedSamples.push(new Float32Array(e.inputBuffer.getChannelData(0)));
             }
         };
-        batchMediaStream.getAudioTracks()[0].onend = function() { batchIsRecording = false; };
+        source.connect(batchScriptNode);
+        batchScriptNode.connect(batchAudioCtx.destination);
         batchIsRecording = true;
         let btn = document.getElementById('batch-record-btn');
         btn.classList.add('recording');
-        btn.querySelector('.record-text').textContent = '录音中...';
+        btn.querySelector('.record-text').textContent = '点击停止';
         document.getElementById('batch-record-timer').style.display = 'block';
+        document.getElementById('batch-record-timer').textContent = '0.0s';
         batchRecordingDuration = 0;
         batchRecordingTimer = setInterval(() => {
             batchRecordingDuration += 0.1;
             document.getElementById('batch-record-timer').textContent = batchRecordingDuration.toFixed(1) + 's';
         }, 100);
     } catch (err) {
-        toast('无法访问麦克风', 'error');
+        toast('无法访问麦克风：' + err.message, 'error');
     }
 }
 
@@ -2548,35 +2551,30 @@ function stopBatchRecording() {
     if (!batchIsRecording) return;
     batchIsRecording = false;
     if (batchRecordingTimer) { clearInterval(batchRecordingTimer); batchRecordingTimer = null; }
-    if (batchMediaStream) { batchMediaStream.getTracks().forEach(t => t.stop()); batchMediaStream = null; }
     if (batchScriptNode) { batchScriptNode.disconnect(); batchScriptNode = null; }
+    if (batchMediaStream) { batchMediaStream.getTracks().forEach(t => t.stop()); batchMediaStream = null; }
     let btn = document.getElementById('batch-record-btn');
     btn.classList.remove('recording');
     btn.querySelector('.record-text').textContent = '点击录音';
     document.getElementById('batch-record-timer').style.display = 'none';
-    console.log('录音停止，采样数:', batchRecordedSamples.length);
     if (batchRecordedSamples.length > 0) {
         submitBatchPronunciation();
-    } else {
-        toast('未检测到录音数据', 'warning');
     }
 }
 
 async function submitBatchPronunciation() {
-    console.log('开始提交发音评分');
-    if (batchRecordedSamples.length === 0) {
-        console.log('采样数为0，跳过提交');
-        return;
-    }
+    if (batchRecordedSamples.length === 0) return;
     if (batchIndex >= batchArticles.length) return;
     let article = batchArticles[batchIndex];
+    let sampleRate = batchAudioCtx ? batchAudioCtx.sampleRate : 16000;
+    if (batchAudioCtx) { batchAudioCtx.close(); batchAudioCtx = null; }
     let merged = new Float32Array(batchRecordedSamples.reduce((a, b) => a + b.length, 0));
     let offset = 0;
     for (let s of batchRecordedSamples) {
         merged.set(s, offset);
         offset += s.length;
     }
-    let wavBlob = audioSamplesToWav(merged, batchAudioCtx.sampleRate);
+    let wavBlob = audioSamplesToWav(merged, sampleRate);
     let formData = new FormData();
     formData.append('audio', wavBlob, 'recording.wav');
     formData.append('target', article.text);
@@ -2584,10 +2582,7 @@ async function submitBatchPronunciation() {
     resultsEl.style.display = 'block';
     resultsEl.innerHTML = '<div style="text-align:center;padding:20px;">⏳ 评分中...</div>';
     try {
-        let controller = new AbortController();
-        let timeout = setTimeout(() => controller.abort(), 10000);
-        let res = await fetch(SCORE_URL, { method: 'POST', body: formData, signal: controller.signal });
-        clearTimeout(timeout);
+        let res = await fetch(SCORE_URL, { method: 'POST', body: formData });
         if (!res.ok) {
             toast('评分请求失败：' + res.status, 'error');
             resultsEl.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">评分失败，请重试</div>';
@@ -2607,9 +2602,7 @@ async function submitBatchPronunciation() {
             </div>
         `;
     } catch (err) {
-        console.error('批量拼读评分错误:', err);
-        toast('评分失败：' + err.message, 'error');
-        resultsEl.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">评分失败，请检查服务器是否运行</div>';
+        resultsEl.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">评分失败，请重试</div>';
     }
 }
 
