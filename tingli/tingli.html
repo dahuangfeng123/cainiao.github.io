@@ -626,6 +626,7 @@ let batchIndex = 0;
 let batchAnswers = [];
 let batchAudio = null;
 let batchPlaying = false;
+let batchLoading = false;
 let batchRevealed = false;
 let batchAudioFinished = false;
 let _batchProgressTimer = null;
@@ -1388,6 +1389,7 @@ function renderBatchQuestion() {
     if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     speechSynthesis.cancel();
     batchPlaying = false;
+    batchLoading = false;
     stopBatchProgressTimer();
     resetBatchProgress();
     updateBatchPlayUI();
@@ -1425,6 +1427,7 @@ function renderBatchQuestion() {
 
 async function toggleBatchPlay() {
     if (batchIndex >= batchArticles.length) return;
+    if (batchLoading) return;
     let article = batchArticles[batchIndex];
     if (batchPlaying) {
         if (batchAudio) batchAudio.pause();
@@ -1452,6 +1455,9 @@ async function toggleBatchPlay() {
     let vol = parseInt(document.getElementById('batch-volume').value) / 100;
     let speed = parseInt(document.getElementById('tts-speed').value) / 100;
     resetBatchProgress();
+    batchLoading = true;
+    batchAudioFinished = false;
+    updateBatchPlayUI();
     try {
         let url = await ttsFetch(article.text);
         if (url) {
@@ -1459,13 +1465,13 @@ async function toggleBatchPlay() {
             batchAudio.volume = vol;
             batchAudio.play();
             batchPlaying = true;
-            batchAudioFinished = false;
+            batchLoading = false;
             updateBatchPlayUI();
             batchAudio.onended = () => { batchPlaying = false; batchAudioFinished = true; stopBatchProgressTimer(); updateBatchPlayUI(); showBatchRevealBtn(); };
-            batchAudio.onerror = () => { batchPlaying = false; stopBatchProgressTimer(); updateBatchPlayUI(); toast('音频播放失败','error'); };
+            batchAudio.onerror = () => { batchPlaying = false; batchLoading = false; stopBatchProgressTimer(); updateBatchPlayUI(); toast('音频播放失败','error'); };
             batchAudio.onloadedmetadata = () => { updateBatchDuration(); startBatchProgressTimer(); };
-        } else { playLocalBatchTTS(article.text); }
-    } catch { playLocalBatchTTS(article.text); }
+        } else { batchLoading = false; playLocalBatchTTS(article.text); }
+    } catch { batchLoading = false; playLocalBatchTTS(article.text); }
 }
 
 function playLocalBatchTTS(text) {
@@ -1506,11 +1512,14 @@ function changeBatchVolume(val) {
 function updateBatchPlayUI() {
     let btn = document.getElementById('batch-play-btn');
     let status = document.getElementById('batch-audio-status');
-    if (batchPlaying) {
-        btn.textContent = '⏸'; btn.style.background = 'linear-gradient(135deg,#e53935,#ef5350)';
+    if (batchLoading) {
+        btn.textContent = '⏳'; btn.style.background = 'linear-gradient(135deg,#ffa726,#fb8c00)'; btn.style.pointerEvents = 'none';
+        status.textContent = '⏳ 音频加载中...'; status.className = 'audio-status loading';
+    } else if (batchPlaying) {
+        btn.textContent = '⏸'; btn.style.background = 'linear-gradient(135deg,#e53935,#ef5350)'; btn.style.pointerEvents = 'auto';
         status.textContent = '🔊 正在播放...'; status.className = 'audio-status playing';
     } else {
-        btn.textContent = '▶'; btn.style.background = 'linear-gradient(135deg,var(--primary),var(--primary-light))';
+        btn.textContent = '▶'; btn.style.background = 'linear-gradient(135deg,var(--primary),var(--primary-light))'; btn.style.pointerEvents = 'auto';
         status.textContent = '点击播放按钮听短文'; status.className = 'audio-status';
     }
 }
@@ -1718,6 +1727,7 @@ function closeBatchModal() {
     if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     speechSynthesis.cancel();
     batchPlaying = false;
+    batchLoading = false;
     document.getElementById('batch-modal').classList.remove('active');
 }
 
