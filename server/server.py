@@ -36,6 +36,12 @@ app.add_middleware(
 os.makedirs("temp", exist_ok=True)
 
 
+def is_sentence(text: str) -> bool:
+    """判断是否为句子（包含空格且长度超过一定阈值）"""
+    words = text.strip().split()
+    return len(words) > 1
+
+
 @app.post("/score")
 async def score(
     audio:  UploadFile = File(...),
@@ -53,6 +59,9 @@ async def score(
     t_acoustic = t0
     t_fluency = t0
 
+    target_clean = target.strip()
+    is_sent = is_sentence(target_clean)
+
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False, dir="temp") as f:
         f.write(await audio.read())
         audio_path = f.name
@@ -63,49 +72,39 @@ async def score(
         t_audio_load = time.time()
         audio_load_ms = round((t_audio_load - t0) * 1000, 1)
 
-        # faster-whisper 识别 + 词级时间戳（在线程池中运行）
+        # faster-whisper 识别 + 词级时间戳
         asr_result = await transcribe(audio_path)
         t_asr = time.time()
         asr_ms = round((t_asr - t_audio_load) * 1000, 1)
         heard_text = asr_result["text"]
         words      = asr_result["words"]
 
-        # 目标文本的标准音素（CMU 字典）
-        target_phones = word_to_phones(target)
-        t_phones = time.time()
-        phones_ms = round((t_phones - t_asr) * 1000, 1)
+        print(f"[Score] target='{target_clean}' is_sentence={is_sent} heard='{heard_text}' words={len(words)}")
 
-        print(f"[Score] target='{target}' target_phones={target_phones} heard='{heard_text}' words={words}")
-
-        if words:
-            # 获取识别到的单词及其置信度
-            first_word   = words[0]
-            heard_word   = first_word["word"]
-            probability  = first_word["probability"]
-
-            # 获取识别单词的音素
-            heard_phones = word_to_phones(heard_word)
-
-            print(f"[Score] heard_word='{heard_word}' heard_phones={heard_phones} probability={probability}")
-
-            # 使用音素对齐进行声学打分
-            acoustic = score_word(target_phones, heard_phones, probability)
-            t_acoustic = time.time()
-            acoustic_ms = round((t_acoustic - t_phones) * 1000, 1)
-
-            # 检查是否是完整句子匹配
-            word_correct = heard_text.lower().strip() == target.lower().strip()
+        if is_sent:
+            # 句子模式：逐词匹配
+            acoustic = score_sentence_phones(target_clean, words)
         else:
-            word_correct = False
-            acoustic     = {
-                "heard_phones":   [],
-                "results":        [{"phone": p, "correct": False, "similarity": 0.0} for p in target_phones],
-                "correct_count":  0,
-                "total_count":    len(target_phones) if target_phones else 1,
-                "phone_accuracy": 0.0,
-            }
-            t_acoustic = time.time()
-            acoustic_ms = round((t_acoustic - t_phones) * 1000, 1)
+            # 单词模式：使用第一个识别到的词
+            if words:
+                first_word   = words[0]
+                heard_word   = first_word["word"]
+                probability  = first_word["probability"]
+                target_phones = word_to_phones(target_clean)
+                heard_phones = word_to_phones(heard_word)
+                print(f"[Score] heard_word='{heard_word}' heard_phones={heard_phones} probability={probability}")
+                acoustic = score_word(target_phones, heard_phones, probability)
+            else:
+                acoustic = {
+                    "heard_phones":   [],
+                    "results":        [{"phone": p, "correct": False, "similarity": 0.0} for p in word_to_phones(target_clean)],
+                    "correct_count":  0,
+                    "total_count":    len(word_to_phones(target_clean)) if word_to_phones(target_clean) else 1,
+                    "phone_accuracy": 0.0,
+                }
+
+        t_acoustic = time.time()
+        acoustic_ms = round((t_acoustic - t_asr) * 1000, 1)
 
         # 流利度
         fluency = fluency_score(words, duration)
@@ -114,18 +113,21 @@ async def score(
 
         total_ms = round((t_fluency - t0) * 1000, 1)
 
-        print(f"[Score] timing: audio_load={audio_load_ms}ms asr={asr_ms}ms phones={phones_ms}ms acoustic={acoustic_ms}ms fluency={fluency_ms}ms total={total_ms}ms")
+        # 单词正确性
+        word_correct = heard_text.lower().strip() == target_clean.lower().strip()
+
+        print(f"[Score] timing: audio_load={audio_load_ms}ms asr={asr_ms}ms acoustic={acoustic_ms}ms fluency={fluency_ms}ms total={total_ms}ms")
         print(f"[Score] result: phone_accuracy={acoustic.get('phone_accuracy', 0)} fluency={fluency.get('fluency', 0)}")
 
         return JSONResponse({
-            "target":        target,
+            "target":        target_clean,
             "heard":         heard_text,
             "word_correct":  word_correct,
-            "target_phones": target_phones,
+            "is_sentence":   is_sent,
+            "target_phones": acoustic.get("target_phones", []),
             "timing_ms": {
                 "audio_load": audio_load_ms,
                 "asr": asr_ms,
-                "phones": phones_ms,
                 "acoustic": acoustic_ms,
                 "fluency": fluency_ms,
                 "total": total_ms,
@@ -137,6 +139,73 @@ async def score(
 
     finally:
         os.unlink(audio_path)
+
+
+def score_sentence_phones(target: str, asr_words: list) -> dict:
+    """
+    句子级音素打分：对比目标句子和识别结果中每个词的音素。
+    """
+    target_words = target.lower().split()
+    heard_words_text = [w["word"].lower() for w in asr_words]
+
+    all_results = []
+    total_correct = 0
+    total_phones = 0
+    heard_phones_all = []
+
+    for target_word in target_words:
+        target_phones = word_to_phones(target_word)
+
+        if not target_phones:
+            continue
+
+        # 找匹配的识别词
+        heard_word = None
+        heard_phones = []
+        for hw in heard_words_text:
+            if hw == target_word:
+                heard_word = hw
+                heard_phones = word_to_phones(hw)
+                break
+
+        if not heard_word:
+            # 尝试找相似词
+            for hw in heard_words_text:
+                if target_word in hw or hw in target_word:
+                    heard_word = hw
+                    heard_phones = word_to_phones(hw)
+                    break
+
+        if heard_phones:
+            result = score_word(target_phones, heard_phones, 1.0)
+            all_results.extend(result["results"])
+            total_correct += result["correct_count"]
+            heard_phones_all.extend(result["heard_phones"])
+        else:
+            # 没找到匹配，全部标记为错误
+            for p in target_phones:
+                all_results.append({"phone": p, "correct": False, "similarity": 0.0})
+
+        total_phones += len(target_phones)
+
+    # 去重 target_phones
+    unique_target_phones = []
+    seen = set()
+    for r in all_results:
+        if r["phone"] not in seen:
+            unique_target_phones.append(r["phone"])
+            seen.add(r["phone"])
+
+    phone_accuracy = round(total_correct / total_phones * 100, 1) if total_phones > 0 else 0.0
+
+    return {
+        "heard_phones":   heard_phones_all,
+        "results":        all_results,
+        "correct_count":  total_correct,
+        "total_count":    total_phones,
+        "phone_accuracy": phone_accuracy,
+        "target_phones":  unique_target_phones,
+    }
 
 
 @app.post("/score_sentence")
@@ -180,10 +249,9 @@ async def score_sentence(
 
         word_accuracy = round(word_matches / len(target_words) * 100, 1) if target_words else 0.0
 
-        # 音素级分析（取前几个词）
+        # 音素级分析
         phone_results = []
-
-        for i, w in enumerate(words[:5]):  # 分析前5个词
+        for i, w in enumerate(words[:5]):
             heard_word = w["word"]
             heard_phones = word_to_phones(heard_word)
             if heard_phones:
