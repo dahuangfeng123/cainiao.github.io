@@ -630,9 +630,50 @@ let _batchProgressTimer = null;
 function getUser() { try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; } }
 function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
 function safeUser(u) {
-    let def = { learn:[], done:[], log:{}, dailyLog:{}, stars:0, listeningTotal:0, listeningLog:{}, tingli:{voice:'af_sarah', ttsSpeed:85, ttsModel:'kokoro', wordMode:'fillblank'} };
+    let def = { 
+        tingli: {
+            learn:[], 
+            done:[], 
+            log:{}, 
+            dailyLog:{}, 
+            listeningLog:{},
+            voice:'af_sarah', 
+            ttsSpeed:85, 
+            ttsModel:'kokoro', 
+            wordMode:'fillblank'
+        },
+        stars:0, 
+        listeningTotal:0
+    };
     if (!u) return def;
-    return { ...def, ...u };
+    // 数据迁移：旧结构迁移到新结构
+    let merged = { ...def, ...u };
+    if (!merged.tingli) merged.tingli = def.tingli;
+    if (merged.learn && merged.learn.length) {
+        merged.tingli.learn = [...merged.learn];
+        delete merged.learn;
+    }
+    if (merged.done && merged.done.length) {
+        merged.tingli.done = [...merged.done];
+        delete merged.done;
+    }
+    if (merged.log && Object.keys(merged.log).length) {
+        merged.tingli.log = { ...merged.log };
+        delete merged.log;
+    }
+    if (merged.dailyLog && Object.keys(merged.dailyLog).length) {
+        merged.tingli.dailyLog = { ...merged.dailyLog };
+        delete merged.dailyLog;
+    }
+    if (merged.listeningLog && Object.keys(merged.listeningLog).length) {
+        merged.tingli.listeningLog = { ...merged.listeningLog };
+        delete merged.listeningLog;
+    }
+    if (u.voice) merged.tingli.voice = u.voice;
+    if (u.ttsSpeed) merged.tingli.ttsSpeed = u.ttsSpeed;
+    if (u.ttsModel) merged.tingli.ttsModel = u.ttsModel;
+    if (u.wordMode) merged.tingli.wordMode = u.wordMode;
+    return merged;
 }
 
 const KOKORO_VOICES = {
@@ -1193,17 +1234,17 @@ function completeListening() {
     let u = safeUser(getUser());
     let idx = currentArticle.id;
     u.listeningTotal = (u.listeningTotal || 0) + 1;
-    if (!u.listeningLog) u.listeningLog = {};
-    if (u.listeningLog[idx]) { u.listeningLog[idx].count += 1; u.listeningLog[idx].lastTime = Date.now(); }
-    else { u.listeningLog[idx] = { count:1, lastTime:Date.now() }; }
+    if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
+    if (u.tingli.listeningLog[idx]) { u.tingli.listeningLog[idx].count += 1; u.tingli.listeningLog[idx].lastTime = Date.now(); }
+    else { u.tingli.listeningLog[idx] = { count:1, lastTime:Date.now() }; }
     let now = Date.now();
-    if (u.log[idx]) { u.log[idx].c += 1; u.log[idx].next = nextDate(now, u.log[idx].c); }
-    else { if (!u.learn.includes(idx)) u.learn.push(idx); u.log[idx] = { t:now, c:1, next:nextDate(now,1) }; }
-    if (u.log[idx].c >= PERIOD.length && !u.done.includes(idx)) u.done.push(idx);
-    if (!u.dailyLog) u.dailyLog = {};
+    if (u.tingli.log[idx]) { u.tingli.log[idx].c += 1; u.tingli.log[idx].next = nextDate(now, u.tingli.log[idx].c); }
+    else { if (!u.tingli.learn.includes(idx)) u.tingli.learn.push(idx); u.tingli.log[idx] = { t:now, c:1, next:nextDate(now,1) }; }
+    if (u.tingli.log[idx].c >= PERIOD.length && !u.tingli.done.includes(idx)) u.tingli.done.push(idx);
+    if (!u.tingli.dailyLog) u.tingli.dailyLog = {};
     let today = todayKey();
-    if (!u.dailyLog[today]) u.dailyLog[today] = { learn:0, review:0 };
-    u.dailyLog[today].review++;
+    if (!u.tingli.dailyLog[today]) u.tingli.dailyLog[today] = { learn:0, review:0 };
+    u.tingli.dailyLog[today].review++;
     u.stars = (u.stars || 0) + 5;
     setUser(u);
     toast('✅ 听力复习完成！+5⭐', 'success');
@@ -1241,8 +1282,8 @@ function getReviewList() {
     let now = new Date(); now.setHours(23,59,59,999);
     let todayEnd = now.getTime();
     let items = [];
-    for (let idx in u.log) {
-        let info = u.log[idx];
+    for (let idx in u.tingli.log) {
+        let info = u.tingli.log[idx];
         if (info.next && info.next <= todayEnd && info.c < PERIOD.length) {
             let article = ARTICLES.find(a => a.id === parseInt(idx));
             if (article) items.push({ idx:parseInt(idx), article, info });
@@ -1254,9 +1295,9 @@ function getReviewList() {
 function renderHomeStats() {
     let u = safeUser(getUser());
     document.getElementById('stat-total').textContent = u.listeningTotal || 0;
-    document.getElementById('stat-articles').textContent = Object.keys(u.listeningLog || {}).length;
-    document.getElementById('stat-learned').textContent = u.learn.length;
-    document.getElementById('stat-done').textContent = u.done.length;
+    document.getElementById('stat-articles').textContent = Object.keys(u.tingli.listeningLog || {}).length;
+    document.getElementById('stat-learned').textContent = u.tingli.learn.length;
+    document.getElementById('stat-done').textContent = u.tingli.done.length;
     document.getElementById('header-stars').textContent = u.stars || 0;
 }
 
@@ -1311,8 +1352,8 @@ function renderArticleList() {
     let el = document.getElementById('article-list');
     if (filtered.length === 0) { el.innerHTML = '<div class="empty">该分类暂无短文</div>'; return; }
     el.innerHTML = filtered.map(a => {
-        let log = (u.listeningLog || {})[a.id];
-        let reviewInfo = u.log[a.id];
+        let log = (u.tingli.listeningLog || {})[a.id];
+        let reviewInfo = u.tingli.log[a.id];
         let statusHtml = '';
         if (reviewInfo) {
             let isMastered = reviewInfo.c >= PERIOD.length;
@@ -1338,12 +1379,12 @@ function renderMineStats() {
     let u = safeUser(getUser());
     let today = new Date(); today.setHours(0,0,0,0);
     let ts = today.getTime();
-    let countWait = (usr) => { let c = 0; for (let idx in usr.log) { if (usr.log[idx].next && usr.log[idx].next <= ts + 86400000 && usr.log[idx].c < PERIOD.length) c++; } return c; };
-    document.getElementById('my-total').textContent = u.learn.length + ' 篇';
+    let countWait = (usr) => { let c = 0; for (let idx in usr.tingli.log) { if (usr.tingli.log[idx].next && usr.tingli.log[idx].next <= ts + 86400000 && usr.tingli.log[idx].c < PERIOD.length) c++; } return c; };
+    document.getElementById('my-total').textContent = u.tingli.learn.length + ' 篇';
     document.getElementById('my-wait').textContent = countWait(u) + ' 篇';
-    document.getElementById('my-done').textContent = u.done.length + ' 篇';
+    document.getElementById('my-done').textContent = u.tingli.done.length + ' 篇';
     document.getElementById('my-listen-total').textContent = u.listeningTotal || 0;
-    document.getElementById('my-listen-articles').textContent = Object.keys(u.listeningLog || {}).length;
+    document.getElementById('my-listen-articles').textContent = Object.keys(u.tingli.listeningLog || {}).length;
     document.getElementById('my-stars').textContent = u.stars || 0;
 }
 
@@ -1770,18 +1811,18 @@ function finishBatch() {
     let correctCount = batchAnswers.filter(a => a.correct).length;
     let now = Date.now();
     let today = todayKey();
-    if (!u.dailyLog) u.dailyLog = {};
-    if (!u.dailyLog[today]) u.dailyLog[today] = { learn:0, review:0 };
+    if (!u.tingli.dailyLog) u.tingli.dailyLog = {};
+    if (!u.tingli.dailyLog[today]) u.tingli.dailyLog[today] = { learn:0, review:0 };
     batchAnswers.forEach(a => {
         u.listeningTotal = (u.listeningTotal || 0) + 1;
-        if (!u.listeningLog) u.listeningLog = {};
-        if (u.listeningLog[a.idx]) { u.listeningLog[a.idx].count += 1; u.listeningLog[a.idx].lastTime = now; }
-        else { u.listeningLog[a.idx] = { count:1, lastTime:now }; }
+        if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
+        if (u.tingli.listeningLog[a.idx]) { u.tingli.listeningLog[a.idx].count += 1; u.tingli.listeningLog[a.idx].lastTime = now; }
+        else { u.tingli.listeningLog[a.idx] = { count:1, lastTime:now }; }
         if (a.correct) {
-            if (u.log[a.idx]) { u.log[a.idx].c += 1; u.log[a.idx].next = nextDate(now, u.log[a.idx].c); }
-            else { if (!u.learn.includes(a.idx)) u.learn.push(a.idx); u.log[a.idx] = { t:now, c:1, next:nextDate(now,1) }; }
-            if (u.log[a.idx].c >= PERIOD.length && !u.done.includes(a.idx)) u.done.push(a.idx);
-            u.dailyLog[today].review++;
+            if (u.tingli.log[a.idx]) { u.tingli.log[a.idx].c += 1; u.tingli.log[a.idx].next = nextDate(now, u.tingli.log[a.idx].c); }
+            else { if (!u.tingli.learn.includes(a.idx)) u.tingli.learn.push(a.idx); u.tingli.log[a.idx] = { t:now, c:1, next:nextDate(now,1) }; }
+            if (u.tingli.log[a.idx].c >= PERIOD.length && !u.tingli.done.includes(a.idx)) u.tingli.done.push(a.idx);
+            u.tingli.dailyLog[today].review++;
         }
     });
     let starReward = batchAnswers.reduce((sum, a) => {
@@ -2442,17 +2483,17 @@ function checkFillAnswers() {
         let u = safeUser(getUser());
         let idx = currentArticle.id;
         u.listeningTotal = (u.listeningTotal || 0) + 1;
-        if (!u.listeningLog) u.listeningLog = {};
-        if (u.listeningLog[idx]) { u.listeningLog[idx].count += 1; u.listeningLog[idx].lastTime = Date.now(); }
-        else { u.listeningLog[idx] = { count: 1, lastTime: Date.now() }; }
+        if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
+        if (u.tingli.listeningLog[idx]) { u.tingli.listeningLog[idx].count += 1; u.tingli.listeningLog[idx].lastTime = Date.now(); }
+        else { u.tingli.listeningLog[idx] = { count: 1, lastTime: Date.now() }; }
         let now = Date.now();
-        if (u.log[idx]) { u.log[idx].c += 1; u.log[idx].next = nextDate(now, u.log[idx].c); }
-        else { if (!u.learn.includes(idx)) u.learn.push(idx); u.log[idx] = { t: now, c: 1, next: nextDate(now, 1) }; }
-        if (u.log[idx].c >= PERIOD.length && !u.done.includes(idx)) u.done.push(idx);
-        if (!u.dailyLog) u.dailyLog = {};
+        if (u.tingli.log[idx]) { u.tingli.log[idx].c += 1; u.tingli.log[idx].next = nextDate(now, u.tingli.log[idx].c); }
+        else { if (!u.tingli.learn.includes(idx)) u.tingli.learn.push(idx); u.tingli.log[idx] = { t: now, c: 1, next: nextDate(now, 1) }; }
+        if (u.tingli.log[idx].c >= PERIOD.length && !u.tingli.done.includes(idx)) u.tingli.done.push(idx);
+        if (!u.tingli.dailyLog) u.tingli.dailyLog = {};
         let today = todayKey();
-        if (!u.dailyLog[today]) u.dailyLog[today] = { learn: 0, review: 0 };
-        u.dailyLog[today].review++;
+        if (!u.tingli.dailyLog[today]) u.tingli.dailyLog[today] = { learn: 0, review: 0 };
+        u.tingli.dailyLog[today].review++;
         u.stars = (u.stars || 0) + 3;
         setUser(u);
         renderAll();
