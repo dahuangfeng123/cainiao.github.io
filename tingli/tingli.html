@@ -2574,7 +2574,7 @@ async function submitBatchPronunciation() {
         merged.set(s, offset);
         offset += s.length;
     }
-    let wavBlob = audioSamplesToWav(merged, sampleRate);
+    let wavBlob = encodeWAV(merged, sampleRate);
     let formData = new FormData();
     formData.append('audio', wavBlob, 'recording.wav');
     formData.append('target', article.text);
