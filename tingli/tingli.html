@@ -1400,23 +1400,40 @@ function renderBatchQuestion() {
     let batchFill = document.getElementById('batch-mode-fillblank');
     let batchPron = document.getElementById('batch-mode-pronunciation');
     
+    // 控制底部按钮显示
+    let batchRevealBtn = document.getElementById('batch-reveal-btn');
+    let batchSubmitBtn = document.getElementById('batch-submit-btn');
+    let batchSkipBtn = document.getElementById('batch-skip-btn');
+    
     if (currentMode === 'fillblank') {
         batchAudioCtrl.style.display = 'block';
         batchDictation.style.display = 'none';
         batchFill.style.display = 'block';
         batchPron.style.display = 'none';
         initBatchFillblankMode();
+        batchRevealBtn.style.display = 'none';
+        batchSubmitBtn.style.display = 'inline-flex';
+        batchSubmitBtn.textContent = '✅ 提交并下一题';
+        batchSkipBtn.style.display = 'inline-flex';
     } else if (currentMode === 'pronunciation') {
         batchAudioCtrl.style.display = 'none';
         batchDictation.style.display = 'none';
         batchFill.style.display = 'none';
         batchPron.style.display = 'block';
         initBatchPronunciationMode();
+        batchRevealBtn.style.display = 'none';
+        batchSubmitBtn.style.display = 'none'; // 拼读模式评分后自动提交
+        batchSkipBtn.style.display = 'inline-flex';
+        batchSkipBtn.textContent = '⏭️ 跳过';
     } else {
         batchAudioCtrl.style.display = 'block';
         batchDictation.style.display = 'block';
         batchFill.style.display = 'none';
         batchPron.style.display = 'none';
+        batchRevealBtn.style.display = 'none';
+        batchSubmitBtn.style.display = 'inline-flex';
+        batchSubmitBtn.textContent = '✅ 提交并下一题';
+        batchSkipBtn.style.display = 'inline-flex';
     }
     
     // 拼读模式不自动朗读，用户点击"听标准发音"按钮播放
@@ -1666,12 +1683,45 @@ function renderBatchAnswerCanvas(text, words) {
 
 function submitBatchAnswer() {
     if (batchIndex >= batchArticles.length) return;
-    let article = batchArticles[batchIndex];
-    let input = document.getElementById('batch-answer').value.trim();
-    let score = input ? calcSimilarity(input, article.text, article.words) : 0;
-    let pct = Math.round(score * 100);
-    let correct = pct >= 60;
-    batchAnswers.push({ idx:article.id, article, input, correct, simScore:pct });
+    if (currentMode === 'fillblank') {
+        // 填空模式
+        checkBatchFillAnswers();
+        let article = batchArticles[batchIndex];
+        let inputs = document.querySelectorAll('#batch-fill-text .fill-input');
+        let correct = 0;
+        let total = inputs.length;
+        inputs.forEach(input => {
+            let answer = input.dataset.answer.toLowerCase();
+            let userAnswer = input.value.trim().toLowerCase();
+            if (userAnswer === answer) correct++;
+        });
+        let pct = total > 0 ? Math.round(correct / total * 100) : 0;
+        batchAnswers.push({ 
+            idx: article.id, 
+            article, 
+            input: '', 
+            correct: pct >= 60, 
+            simScore: pct,
+            mode: 'fillblank',
+            fillCorrect: correct,
+            fillTotal: total
+        });
+    } else {
+        // 听写模式
+        let article = batchArticles[batchIndex];
+        let input = document.getElementById('batch-answer').value.trim();
+        let score = input ? calcSimilarity(input, article.text, article.words) : 0;
+        let pct = Math.round(score * 100);
+        let correct = pct >= 60;
+        batchAnswers.push({ 
+            idx: article.id, 
+            article, 
+            input, 
+            correct, 
+            simScore: pct,
+            mode: 'dictation'
+        });
+    }
     if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     speechSynthesis.cancel();
     batchPlaying = false;
@@ -1683,7 +1733,15 @@ function submitBatchAnswer() {
 function skipBatchAnswer() {
     if (batchIndex >= batchArticles.length) return;
     let article = batchArticles[batchIndex];
-    batchAnswers.push({ idx:article.id, article, input:'', correct:false, simScore:0, skipped:true });
+    batchAnswers.push({ 
+        idx: article.id, 
+        article, 
+        input: '', 
+        correct: false, 
+        simScore: 0, 
+        skipped: true,
+        mode: currentMode
+    });
     if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     speechSynthesis.cancel();
     batchPlaying = false;
@@ -1742,14 +1800,24 @@ function showBatchResult(correctCount, starReward) {
         let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
         let statusIcon = a.correct ? '✅' : (a.skipped ? '⏭️' : '❌');
         let wordList = (a.article.words || '').split(',').map(w => w.trim()).filter(Boolean);
+        let modeLabel = a.mode === 'pronunciation' ? '🗣️ 拼读' : (a.mode === 'fillblank' ? '✏️ 填空' : '🎧 听写');
+        
+        let extraInfo = '';
+        if (a.mode === 'pronunciation') {
+            extraInfo = `<div style="font-size:12px;color:var(--text3);margin-top:6px;">流利度: ${a.fluency || 0}% | 音素准确率: ${a.phone_accuracy || 0}%</div>`;
+        } else if (a.mode === 'fillblank') {
+            extraInfo = `<div style="font-size:12px;color:var(--text3);margin-top:6px;">填空正确: ${a.fillCorrect || 0}/${a.fillTotal || 0}</div>`;
+        }
+        
         html += `<div style="border:1px solid #e0e0e0;border-radius:10px;padding:12px;margin-bottom:10px;background:${a.correct?'#f0faf4':'#fff5f5'};">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <span style="font-weight:600;font-size:14px;">${statusIcon} ${i+1}. ${a.article.title}</span>
+                <span style="font-weight:600;font-size:14px;">${statusIcon} ${i+1}. ${a.article.title} <span style="font-size:12px;font-weight:normal;color:var(--text3);">${modeLabel}</span></span>
                 <span style="font-weight:700;font-size:18px;color:${pctColor};">${pct}%</span>
             </div>
             <div style="font-size:12px;color:var(--text3);margin-bottom:6px;">关联词：${wordList.length > 0 ? wordList.map(w => `<span style="background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:4px;margin:0 2px;">${w}</span>`).join('') : '无'}</div>
             <div style="font-size:13px;color:var(--text2);margin-bottom:4px;white-space:pre-wrap;line-height:1.6;background:#f9f9f9;padding:8px;border-radius:6px;">${a.article.text}</div>
             ${a.input ? `<div style="font-size:13px;color:#555;margin-top:6px;white-space:pre-wrap;line-height:1.6;background:#fff8e1;padding:8px;border-radius:6px;border:1px dashed #ffc107;">📝 ${a.input}</div>` : '<div style="font-size:12px;color:#999;margin-top:6px;">未作答</div>'}
+            ${extraInfo}
             <div style="margin-top:8px;text-align:right;">
                 <button class="btn btn-blue" style="font-size:12px;padding:4px 12px;" onclick="playResultAudio(${i})">🔊 播放</button>
             </div>
@@ -2589,18 +2657,64 @@ async function submitBatchPronunciation() {
             return;
         }
         let data = await res.json();
-        let pct = Math.round(data.phone_accuracy || 0);
-        let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
+        let fluency = data.fluency || 0;
+        let phoneAccuracy = data.phone_accuracy || 0;
+        let pauseRatio = data.pause_ratio || 0;
+        let duration = data.duration || 0;
+        let heard = data.heard || '';
+        let fluencyClass = fluency >= 80 ? 'high' : fluency >= 60 ? 'mid' : 'low';
+        let accClass = phoneAccuracy >= 80 ? 'high' : phoneAccuracy >= 60 ? 'mid' : 'low';
+        let resultsHtml = '';
+        if (data.results && data.results.length > 0) {
+            resultsHtml = '<div style="margin-top:8px;font-size:13px;color:var(--text2);">' + data.results.map(r => {
+                let icon = r.correct ? '✅' : '❌';
+                return icon + ' /' + r.phone + '/';
+            }).join(' ') + '</div>';
+        }
         resultsEl.innerHTML = `
-            <h3>📊 发音评分</h3>
-            <div class="pron-score" style="color:${pctColor};">${pct}%</div>
-            <div class="pron-detail">流利度 ${Math.round(data.fluency || 0)}%</div>
-            <div style="margin-top:12px;font-size:13px;color:var(--text2);text-align:left;">
-                <div style="margin-bottom:6px;">🎯 音素准确度：${pct}%</div>
-                <div style="color:var(--text3);font-size:12px;">目标：${data.target || ''}</div>
-                <div style="color:var(--text3);font-size:12px;">识别：${data.heard || ''}</div>
+            <h3>📊 打分结果</h3>
+            <div class="pron-result-grid">
+                <div class="pron-result-item">
+                    <div class="pron-result-val ${fluencyClass}">${fluency.toFixed(1)}</div>
+                    <div class="pron-result-label">流利度</div>
+                </div>
+                <div class="pron-result-item">
+                    <div class="pron-result-val ${accClass}">${phoneAccuracy.toFixed(1)}%</div>
+                    <div class="pron-result-label">音素准确率</div>
+                </div>
+                <div class="pron-result-item">
+                    <div class="pron-result-val">${(pauseRatio * 100).toFixed(1)}%</div>
+                    <div class="pron-result-label">停顿比</div>
+                </div>
+                <div class="pron-result-item">
+                    <div class="pron-result-val">${duration.toFixed(1)}s</div>
+                    <div class="pron-result-label">时长</div>
+                </div>
             </div>
+            <div class="pron-heard">
+                <strong>识别结果：</strong>${heard || '(未识别到内容)'}
+            </div>
+            ${resultsHtml}
         `;
+        // 保存答案并进入下一题
+        batchAnswers.push({ 
+            idx: article.id, 
+            article: article, 
+            input: data.heard || '', 
+            correct: pct >= 60, 
+            simScore: pct,
+            mode: 'pronunciation',
+            fluency: Math.round(data.fluency || 0),
+            phone_accuracy: pct,
+            pause_ratio: data.pause_ratio || 0,
+            duration: data.duration || 0,
+            heard: data.heard || ''
+        });
+        // 延迟3秒后进入下一题，让用户看到评分结果
+        setTimeout(() => {
+            batchIndex++;
+            renderBatchQuestion();
+        }, 3000);
     } catch (err) {
         resultsEl.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">评分失败，请重试</div>';
     }
