@@ -1621,10 +1621,7 @@ function hideBatchAnswer() {
 }
 
 function showBatchRevealBtn() {
-    // 只在听写模式下显示查看原文按钮，填空模式不显示
-    if (currentMode === 'dictation') {
-        document.getElementById('batch-reveal-btn').style.display = 'inline-flex';
-    }
+    // 批量考试模式下都不显示查看原文按钮
 }
 
 function renderBatchAnswerCanvas(text, words) {
