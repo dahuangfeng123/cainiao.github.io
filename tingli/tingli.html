@@ -1785,11 +1785,9 @@ function finishBatch() {
         }
     });
     let starReward = batchAnswers.reduce((sum, a) => {
-        if (!a.correct) return sum;
-        if (a.mode === 'pronunciation') return sum + 5;
-        if (a.mode === 'fillblank') return sum + 10;
-        if (a.mode === 'dictation') return sum + 20;
-        return sum + 5;
+        let baseScore = a.mode === 'pronunciation' ? 5 : (a.mode === 'fillblank' ? 10 : 20);
+        if (a.correct) return sum + baseScore;
+        return sum - 5;
     }, 0);
     u.stars = (u.stars || 0) + starReward;
     setUser(u);
