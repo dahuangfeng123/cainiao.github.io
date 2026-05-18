@@ -1097,7 +1097,10 @@ function openListenModal(articleId) {
     let oldBtn = document.getElementById('show-answer-btn');
     if (oldBtn) oldBtn.remove();
     document.getElementById('listen-modal').classList.add('active');
-    setTimeout(() => togglePlay(), 300);
+    // 拼读模式不自动朗读，用户自己点击听标准发音
+    if (currentMode !== 'pronunciation') {
+        setTimeout(() => togglePlay(), 300);
+    }
 }
 
 function closeListenModal() {
