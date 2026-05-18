@@ -1,4 +1,4 @@
-# scorer/acoustic.py
+﻿# scorer/acoustic.py
 import numpy as np
 from scipy import spatial
 from config import SPEECHBRAIN_MODEL
@@ -65,7 +65,7 @@ def phone_similarity(phone1, phone2):
     if sum1 == 0 or sum2 == 0:
         return 0.0
 
-    similarity = 1 - spatial.distance.cosine(feat1, feat2)
+    similarity = float(1 - spatial.distance.cosine(feat1, feat2))
     return max(0.0, similarity)
 
 def align_phones(target_phones, heard_phones):
