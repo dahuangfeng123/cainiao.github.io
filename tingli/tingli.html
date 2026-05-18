@@ -2700,15 +2700,15 @@ async function submitBatchPronunciation() {
         batchAnswers.push({ 
             idx: article.id, 
             article: article, 
-            input: data.heard || '', 
-            correct: pct >= 60, 
-            simScore: pct,
+            input: heard, 
+            correct: phoneAccuracy >= 60, 
+            simScore: phoneAccuracy,
             mode: 'pronunciation',
-            fluency: Math.round(data.fluency || 0),
-            phone_accuracy: pct,
-            pause_ratio: data.pause_ratio || 0,
-            duration: data.duration || 0,
-            heard: data.heard || ''
+            fluency: Math.round(fluency),
+            phone_accuracy: phoneAccuracy,
+            pause_ratio: pauseRatio,
+            duration: duration,
+            heard: heard
         });
         // 延迟3秒后进入下一题，让用户看到评分结果
         setTimeout(() => {
