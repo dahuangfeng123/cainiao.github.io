@@ -3,17 +3,27 @@ import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
 import tempfile
+import asyncio
 import librosa
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from scorer.asr      import transcribe
+from scorer.asr      import transcribe, _executor as asr_executor
 from scorer.phoneme  import word_to_phones, fluency_score, compare_phones
 from scorer.acoustic import score_word
 from scorer.tts      import generate_reference
 
-app = FastAPI(title="Pronunciation Scorer")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("[Server] Starting up...")
+    yield
+    print("[Server] Shutting down...")
+    asr_executor.shutdown(wait=True)
+    print("[Server] Cleanup complete")
+
+app = FastAPI(title="Pronunciation Scorer", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,8 +54,8 @@ async def score(
         y, sr    = librosa.load(audio_path, sr=None)
         duration = round(len(y) / sr, 3)
 
-        # faster-whisper 识别 + 词级时间戳
-        asr_result = transcribe(audio_path)
+        # faster-whisper 识别 + 词级时间戳（在线程池中运行）
+        asr_result = await transcribe(audio_path)
         heard_text = asr_result["text"]
         words      = asr_result["words"]
 
@@ -58,10 +68,10 @@ async def score(
             heard_word   = first_word["word"]
             probability  = first_word["probability"]
             word_correct = heard_word.lower() == target.lower()
-            
+
             # 获取识别单词的音素
             heard_phones = word_to_phones(heard_word)
-            
+
             # 使用音素对齐进行声学打分
             acoustic = score_word(target_phones, heard_phones, probability)
         else:
@@ -111,7 +121,7 @@ async def score_sentence(
         duration = round(len(y) / sr, 3)
 
         # faster-whisper 识别
-        asr_result = transcribe(audio_path)
+        asr_result = await transcribe(audio_path)
         heard_text = asr_result["text"]
         words      = asr_result["words"]
 
@@ -121,20 +131,18 @@ async def score_sentence(
         # 单词级匹配
         target_words = [w.strip().lower() for w in target.split() if w.strip()]
         heard_words = [w["word"].lower() for w in words]
-        
+
         # 计算单词准确率
         word_matches = 0
         for target_word in target_words:
             if target_word in heard_words:
                 word_matches += 1
-        
+
         word_accuracy = round(word_matches / len(target_words) * 100, 1) if target_words else 0.0
 
         # 音素级分析（取前几个词）
         phone_results = []
-        total_correct = 0
-        total_phones = 0
-        
+
         for i, w in enumerate(words[:5]):  # 分析前5个词
             heard_word = w["word"]
             heard_phones = word_to_phones(heard_word)
