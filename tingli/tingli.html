@@ -2648,12 +2648,12 @@ async function submitBatchPronunciation() {
     formData.append('target', article.text);
     let resultsEl = document.getElementById('batch-pron-results');
     resultsEl.style.display = 'block';
-    resultsEl.innerHTML = '<div style="text-align:center;padding:20px;">⏳ 评分中...</div>';
+    resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:var(--text3);">⏳ 评分中...</div>';
     try {
         let res = await fetch(SCORE_URL, { method: 'POST', body: formData });
         if (!res.ok) {
             toast('评分请求失败：' + res.status, 'error');
-            resultsEl.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">评分失败，请重试</div>';
+            resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分失败，请重试</div>';
             return;
         }
         let data = await res.json();
@@ -2716,7 +2716,8 @@ async function submitBatchPronunciation() {
             renderBatchQuestion();
         }, 3000);
     } catch (err) {
-        resultsEl.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">评分失败，请重试</div>';
+        toast('评分请求出错：' + err.message, 'error');
+        resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分出错，请检查服务是否启动</div>';
     }
 }
 
