@@ -17,7 +17,7 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from scorer.asr import transcribe, _executor as asr_executor
+from scorer.asr import transcribe, _executor as asr_executor, _get_model as asr_load_model
 from scorer.phoneme import word_to_phones, fluency_score, compare_phones
 from scorer.acoustic import score_word
 
@@ -170,6 +170,7 @@ async def lifespan(app: FastAPI):
     print("[Server] Starting up...")
     get_kokoro()
     check_edge_tts()
+    asr_load_model()
     print(f"Kokoro TTS: {'✅' if _kokoro_available else '❌'}")
     print(f"Edge TTS:   {'✅' if _edge_tts_available else '❌'}")
     print("[Server] Ready!")
