@@ -1481,7 +1481,7 @@ async function toggleBatchPlay() {
             batchPlaying = true;
             batchLoading = false;
             updateBatchPlayUI();
-            batchAudio.onended = () => { batchPlaying = false; batchAudioFinished = true; stopBatchProgressTimer(); updateBatchPlayUI(); showBatchRevealBtn(); };
+            batchAudio.onended = () => { batchPlaying = false; batchAudioFinished = true; stopBatchProgressTimer(); updateBatchPlayUI(); };
             batchAudio.onerror = () => { batchPlaying = false; batchLoading = false; stopBatchProgressTimer(); updateBatchPlayUI(); toast('音频播放失败','error'); };
             batchAudio.onloadedmetadata = () => { updateBatchDuration(); startBatchProgressTimer(); };
         } else { batchLoading = false; playLocalBatchTTS(article.text); }
@@ -1498,7 +1498,7 @@ function playLocalBatchTTS(text) {
     batchPlaying = true;
     batchAudioFinished = false;
     updateBatchPlayUI();
-    utter.onend = () => { batchPlaying = false; batchAudioFinished = true; updateBatchPlayUI(); showBatchRevealBtn(); };
+    utter.onend = () => { batchPlaying = false; batchAudioFinished = true; updateBatchPlayUI(); };
 }
 
 function replayBatchAudio() {
@@ -1618,10 +1618,6 @@ function hideBatchAnswer() {
         document.getElementById('batch-answer-reveal').style.display = 'none';
         document.getElementById('batch-score-bar').style.display = 'none';
     }
-}
-
-function showBatchRevealBtn() {
-    // 批量考试模式下都不显示查看原文按钮
 }
 
 function renderBatchAnswerCanvas(text, words) {
