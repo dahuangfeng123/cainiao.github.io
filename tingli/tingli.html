@@ -447,7 +447,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
     </div>
 
     <div class="modal-actions">
-      <button class="btn btn-orange" id="batch-reveal-btn" onclick="revealBatchAnswer()" style="display:none;">👁️ 查看答案</button>
+      <button class="btn btn-orange" id="batch-reveal-btn" onclick="revealBatchAnswer()" style="display:none;">👁️ 查看原文</button>
       <button class="btn btn-green" id="batch-submit-btn" onclick="submitBatchAnswer()">✅ 提交并下一题</button>
       <button class="btn btn-gray" id="batch-skip-btn" onclick="skipBatchAnswer()">跳过</button>
     </div>
@@ -1593,7 +1593,10 @@ function hideBatchAnswer() {
 }
 
 function showBatchRevealBtn() {
-    document.getElementById('batch-reveal-btn').style.display = 'inline-flex';
+    // 只在听写模式下显示查看原文按钮，填空模式不显示
+    if (currentMode === 'dictation') {
+        document.getElementById('batch-reveal-btn').style.display = 'inline-flex';
+    }
 }
 
 function renderBatchAnswerCanvas(text, words) {
