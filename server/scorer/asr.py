@@ -26,6 +26,9 @@ def _transcribe_sync(audio_path: str) -> dict:
         audio_path,
         language="en",
         word_timestamps=True,
+        beam_size=1,
+        condition_on_previous_text=False,
+        temperature=0,
     )
 
     words = []
