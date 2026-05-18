@@ -848,11 +848,16 @@ async function previewVoice() {
     previewLoading = true;
     btn.textContent = '⏳ 加载中...';
     btn.style.opacity = '0.6';
+    btn.style.pointerEvents = 'none';
     
     try {
         const res = await fetch(TTS_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text, voice, speed, model }) });
         if (!res.ok) {
             toast('试听失败：模型不可用', 'error');
+            btn.textContent = '🔊 试听当前设置';
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+            previewLoading = false;
             return;
         }
         const blob = await res.blob();
@@ -862,19 +867,21 @@ async function previewVoice() {
         previewAudio.onended = () => {
             btn.textContent = '🔊 试听当前设置';
             btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
             previewLoading = false;
         };
         previewAudio.onerror = () => {
             toast('试听播放失败', 'error');
             btn.textContent = '🔊 试听当前设置';
             btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
             previewLoading = false;
         };
     } catch {
         toast('试听请求失败', 'error');
         btn.textContent = '🔊 试听当前设置';
         btn.style.opacity = '1';
-    } finally {
+        btn.style.pointerEvents = 'auto';
         previewLoading = false;
     }
 }
