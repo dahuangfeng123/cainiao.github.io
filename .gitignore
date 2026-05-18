@@ -11,4 +11,4 @@ __pycache__/
 .cache/
 data/audio/
 temp/
-speechbrain-asr/
+speechbrain-asr/server/wav2vec2.ckpt
