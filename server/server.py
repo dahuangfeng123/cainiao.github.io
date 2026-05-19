@@ -14,7 +14,7 @@ import librosa
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.responses import JSONResponse, FileResponse, Response
+from fastapi.responses import JSONResponse, FileResponse, Response, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from scorer.asr import transcribe, _executor as asr_executor, _get_model as asr_load_model
@@ -264,6 +264,92 @@ async def tts(request_body: dict):
                     "Access-Control-Allow-Origin": "*",
                     "X-Generation-Time": f"{elapsed:.2f}",
                     "X-Cache": "MISS",
+                },
+            )
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/tts/stream")
+async def tts_stream(request_body: dict):
+    text = request_body.get("text", "")
+    model = request_body.get("model", "kokoro")
+    voice = request_body.get("voice", "af_sarah")
+    speed = float(request_body.get("speed", 1.0))
+
+    cache_id = audio_cache_id(text, voice, speed, model)
+    cached = get_cached_audio(cache_id, model)
+    if cached:
+        print(f"[Cache HIT] streaming {cache_id}")
+        def iter_file():
+            with open(cached, "rb") as f:
+                chunk = f.read(4096)
+                while chunk:
+                    yield chunk
+                    chunk = f.read(4096)
+        mimetype = "audio/mpeg" if model == "edge" else "audio/wav"
+        return StreamingResponse(
+            iter_file(),
+            media_type=mimetype,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "X-Cache": "HIT",
+                "Transfer-Encoding": "chunked",
+            },
+        )
+
+    if model == "edge":
+        if not _edge_tts_available:
+            return JSONResponse({"error": "Edge TTS not available"}, status_code=503)
+        try:
+            import edge_tts
+            rate_str = f"+{int((speed - 1.0) * 100)}%" if speed >= 1.0 else f"{int((speed - 1.0) * 100)}%"
+            communicate = edge_tts.Communicate(text, voice, rate=rate_str)
+            
+            async def stream_audio():
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        yield chunk["data"]
+            
+            print(f"[Edge TTS] streaming started")
+            return StreamingResponse(
+                stream_audio(),
+                media_type="audio/mpeg",
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "X-Cache": "MISS",
+                    "Transfer-Encoding": "chunked",
+                },
+            )
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+    else:
+        if not _kokoro_available:
+            return JSONResponse({"error": "Kokoro TTS not available"}, status_code=503)
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, kokoro_tts, text, voice, speed)
+            if result is None:
+                return JSONResponse({"error": "Kokoro model not loaded"}, status_code=503)
+            audio_data, mimetype = result
+            
+            def iter_audio():
+                for i in range(0, len(audio_data), 4096):
+                    yield audio_data[i:i+4096]
+            
+            cache_path = audio_cache_path(cache_id, model)
+            with open(cache_path, "wb") as f:
+                f.write(audio_data)
+            
+            elapsed = time.time() - start
+            print(f"[Kokoro TTS] generated in {elapsed:.2f}s, streaming")
+            return StreamingResponse(
+                iter_audio(),
+                media_type=mimetype,
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "X-Cache": "MISS",
+                    "Transfer-Encoding": "chunked",
                 },
             )
         except Exception as e:

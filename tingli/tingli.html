@@ -912,14 +912,17 @@ async function ttsFetch(text) {
     let voice = document.getElementById('tts-voice').value || 'af_sarah';
     let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
     try {
-        const res = await fetch(TTS_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text, voice, speed, model }) });
+        const res = await fetch(TTS_URL + '/stream', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text, voice, speed, model }) });
         if (!res.ok) {
             console.error('TTS error:', res.status);
             return null;
         }
         const blob = await res.blob();
         return URL.createObjectURL(blob);
-    } catch { return null; }
+    } catch (e) { 
+        console.error('TTS fetch error:', e);
+        return null; 
+    }
 }
 
 function playLocalTTS(text) {
