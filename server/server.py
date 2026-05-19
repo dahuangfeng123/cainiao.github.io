@@ -11,6 +11,7 @@ import io
 import hashlib
 import threading
 import librosa
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, UploadFile, File, Form
@@ -87,6 +88,88 @@ def kokoro_tts(text, voice, speed):
     samples, sample_rate = kokoro.create(text, voice=voice, speed=speed, lang="en-us")
     buf = io.BytesIO()
     sf.write(buf, samples, sample_rate, format="WAV", subtype="PCM_16")
+    buf.seek(0)
+    return buf.read(), "audio/wav"
+
+
+import re
+def split_text(text, max_chars=150):
+    """将长文本分割成短片段，每段最多max_chars个字符"""
+    sentences = re.split(r'([.!?]+[\s]+)', text)
+    chunks = []
+    current = ""
+    
+    for part in sentences:
+        if len(current) + len(part) <= max_chars:
+            current += part
+        else:
+            if current.strip():
+                chunks.append(current.strip())
+            current = part
+    
+    if current.strip():
+        chunks.append(current.strip())
+    
+    if not chunks:
+        chunks = [text[:max_chars]]
+    
+    return chunks
+
+
+def kokoro_tts_batch(text, voice, speed, max_workers=4):
+    """并行生成多个文本片段的TTS"""
+    kokoro = get_kokoro()
+    if kokoro is None:
+        return None
+    
+    chunks = split_text(text, max_chars=150)
+    print(f"[Kokoro Batch] splitting into {len(chunks)} chunks")
+    
+    if len(chunks) == 1:
+        samples, sample_rate = kokoro.create(chunks[0], voice=voice, speed=speed, lang="en-us")
+        buf = io.BytesIO()
+        import soundfile as sf
+        sf.write(buf, samples, sample_rate, format="WAV", subtype="PCM_16")
+        buf.seek(0)
+        return buf.read(), "audio/wav"
+    
+    results = []
+    errors = []
+    
+    def generate_chunk(chunk_text):
+        try:
+            samples, sample_rate = kokoro.create(chunk_text, voice=voice, speed=speed, lang="en-us")
+            return samples, sample_rate
+        except Exception as e:
+            print(f"[Kokoro Batch] Error generating chunk: {e}")
+            return None
+    
+    try:
+        with ThreadPoolExecutor(max_workers=min(max_workers, len(chunks))) as executor:
+            futures = list(executor.map(generate_chunk, chunks))
+        
+        for r in futures:
+            if r is None:
+                return None
+            results.append(r)
+    except Exception as e:
+        print(f"[Kokoro Batch] ThreadPoolExecutor error: {e}")
+        return None
+    
+    if not results:
+        return None
+    
+    import soundfile as sf
+    import numpy as np
+    
+    all_samples = []
+    sample_rate = results[0][1]
+    for samples, sr in results:
+        all_samples.append(samples)
+    
+    combined = np.concatenate(all_samples)
+    buf = io.BytesIO()
+    sf.write(buf, combined, sample_rate, format="WAV", subtype="PCM_16")
     buf.seek(0)
     return buf.read(), "audio/wav"
 
@@ -246,7 +329,7 @@ async def tts(request_body: dict):
             )
         try:
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(None, kokoro_tts, text, voice, speed)
+            result = await loop.run_in_executor(None, kokoro_tts_batch, text, voice, speed)
             if result is None:
                 return JSONResponse(
                     {"error": "Kokoro model not loaded"}, status_code=503
