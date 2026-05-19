@@ -96,24 +96,41 @@ def kokoro_tts(text, voice, speed):
 
 import re
 def split_text(text, max_chars=150):
-    """将长文本分割成短片段，每段最多max_chars个字符"""
-    sentences = re.split(r'([.!?]+[\s]+)', text)
+    """将长文本分割成短片段，每段最多max_chars个字符。
+    
+    关键：先按换行符拆分，确保每个chunk不含换行符。
+    Kokoro内部按换行切分输入并期望音素化行数一致，
+    如果chunk内嵌换行会导致 "input/output lines must be equal" 错误。
+    """
+    # 先按换行符切分，保证每个chunk是单行
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    
     chunks = []
-    current = ""
-    
-    for part in sentences:
-        if len(current) + len(part) <= max_chars:
-            current += part
-        else:
-            if current.strip():
-                chunks.append(current.strip())
-            current = part
-    
-    if current.strip():
-        chunks.append(current.strip())
+    for line in lines:
+        # 对每行再按句子边界切分
+        sentences = re.split(r'([.!?]+[\s]+)', line)
+        current = ""
+        for part in sentences:
+            if len(current) + len(part) <= max_chars:
+                current += part
+            else:
+                if current.strip():
+                    chunks.append(current.strip())
+                # 如果单个part超过max_chars，强制截断
+                if len(part) > max_chars:
+                    for i in range(0, len(part), max_chars):
+                        chunk = part[i:i+max_chars].strip()
+                        if chunk:
+                            chunks.append(chunk)
+                    current = ""
+                else:
+                    current = part
+        
+        if current.strip():
+            chunks.append(current.strip())
     
     if not chunks:
-        chunks = [text[:max_chars]]
+        chunks = [text[:max_chars].replace('\n', ' ')]
     
     return chunks
 
@@ -136,7 +153,7 @@ def kokoro_tts_batch(text, voice, speed, max_workers=4):
         return buf.read(), "audio/wav"
     
     results = []
-    errors = []
+    failed_chunks = []
     
     def generate_chunk(chunk_text):
         try:
@@ -144,16 +161,36 @@ def kokoro_tts_batch(text, voice, speed, max_workers=4):
             return samples, sample_rate
         except Exception as e:
             print(f"[Kokoro Batch] Error generating chunk: {e}")
+            print(f"[Kokoro Batch] Failed chunk text: {repr(chunk_text[:100])}")
             return None
     
     try:
         with ThreadPoolExecutor(max_workers=min(max_workers, len(chunks))) as executor:
             futures = list(executor.map(generate_chunk, chunks))
         
-        for r in futures:
+        for i, r in enumerate(futures):
             if r is None:
-                return None
-            results.append(r)
+                # 单个chunk失败时，尝试对该chunk逐行再试一次
+                chunk_text = chunks[i]
+                sub_lines = [l.strip() for l in chunk_text.split('\n') if l.strip()]
+                if len(sub_lines) > 1:
+                    print(f"[Kokoro Batch] Retrying chunk {i} as {len(sub_lines)} sub-lines")
+                    for line in sub_lines:
+                        try:
+                            retry_result = kokoro.create(line, voice=voice, speed=speed, lang="en-us")
+                            results.append(retry_result)
+                        except Exception as e2:
+                            print(f"[Kokoro Batch] Sub-line also failed: {e2}")
+                            failed_chunks.append(line)
+                else:
+                    # 单行也失败，用静音占位（0.3秒），避免整体崩溃
+                    print(f"[Kokoro Batch] Single line chunk failed, inserting silence placeholder")
+                    import numpy as np
+                    silence_samples = np.zeros(int(results[0][1] * 0.3)) if results else np.zeros(7200)
+                    silence_sr = results[0][1] if results else 24000
+                    results.append((silence_samples, silence_sr))
+            else:
+                results.append(r)
     except Exception as e:
         print(f"[Kokoro Batch] ThreadPoolExecutor error: {e}")
         return None
