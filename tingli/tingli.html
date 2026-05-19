@@ -530,601 +530,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 const TTS_URL = 'http://localhost:5003/tts';
 const SCORE_URL = 'http://localhost:5003/score';
 
-// ========== 通用工具类 ==========
-
-class AudioPlayer {
-  constructor(prefix, opts = {}) {
-    this.prefix = prefix;
-    this.audio = null;
-    this.isPlaying = false;
-    this.isLoading = false;
-    this.isFinished = false;
-    this._timer = null;
-    this._onPlay = opts.onPlay || (() => {});
-    this._onPause = opts.onPause || (() => {});
-    this._onEnd = opts.onEnd || (() => {});
-    this._onError = opts.onError || (() => {});
-  }
-
-  get _btn() { return document.getElementById(`${this.prefix}play-btn`); }
-  get _status() { return document.getElementById(`${this.prefix}audio-status`); }
-  get _progress() { return document.getElementById(`${this.prefix}audio-progress`); }
-  get _current() { return document.getElementById(`${this.prefix}audio-current`); }
-  get _duration() { return document.getElementById(`${this.prefix}audio-duration`); }
-  get _progressBar() { return document.getElementById(`${this.prefix}audio-progress-bar`); }
-  get _volumeSlider() { return document.getElementById(`${this.prefix}volume-slider`); }
-
-  async play(fetchFn, text) {
-    if (this.isLoading) return;
-    if (this.isPlaying) { this.pause(); return; }
-    if (this.audio && this.audio.paused && !this.isFinished) {
-      this.audio.play(); this.isPlaying = true; this._startTimer(); this._updateUI(); return;
-    }
-    this.isFinished = false;
-    this._resetProgress();
-    this.isLoading = true;
-    this._updateUI();
-    try {
-      let url = await fetchFn(text);
-      if (url) {
-        this.audio = new Audio(url);
-        this.audio.volume = this._getVolume();
-        this.audio.play();
-        this.isPlaying = true;
-        this.isLoading = false;
-        this._updateUI();
-        this.audio.onended = () => { this.isPlaying = false; this.isFinished = true; this._stopTimer(); this._updateUI(); this._onEnd(); };
-        this.audio.onerror = () => { this.isPlaying = false; this._stopTimer(); this._updateUI(); this._onError(); };
-        this.audio.onloadedmetadata = () => { this._updateDuration(); this._startTimer(); };
-      } else { this.isLoading = false; this._onError(); }
-    } catch { this.isLoading = false; this._onError(); }
-  }
-
-  replay(fetchFn, text) {
-    if (this.audio) { this.audio.pause(); this.audio = null; }
-    this.isPlaying = false; this.isFinished = false; this.isLoading = false;
-    this._stopTimer(); this._resetProgress(); this._updateUI();
-    setTimeout(() => this.play(fetchFn, text), 100);
-  }
-
-  pause() {
-    if (this.audio) this.audio.pause();
-    this.isPlaying = false;
-    this._stopTimer();
-    this._updateUI();
-  }
-
-  seek(e) {
-    if (!this.audio || !isFinite(this.audio.duration)) return;
-    let rect = this._progressBar.getBoundingClientRect();
-    let pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    this.audio.currentTime = pct * this.audio.duration;
-    this._updateProgress();
-  }
-
-  setVolume(val) {
-    if (this._volumeSlider) this._volumeSlider.value = val;
-    if (this.audio) this.audio.volume = val / 100;
-  }
-
-  _getVolume() {
-    let slider = document.getElementById(`${this.prefix}volume`);
-    return (slider ? parseInt(slider.value) : 80) / 100;
-  }
-
-  _formatTime(sec) {
-    if (!sec || !isFinite(sec)) return '0:00';
-    let m = Math.floor(sec / 60);
-    let s = Math.floor(sec % 60);
-    return m + ':' + String(s).padStart(2, '0');
-  }
-
-  _resetProgress() {
-    this._stopTimer();
-    if (this._progress) this._progress.style.width = '0%';
-    if (this._current) this._current.textContent = '0:00';
-    if (this._duration) this._duration.textContent = '0:00';
-  }
-
-  _updateDuration() {
-    if (this.audio && isFinite(this.audio.duration) && this._duration) {
-      this._duration.textContent = this._formatTime(this.audio.duration);
-    }
-  }
-
-  _updateProgress() {
-    if (!this.audio || !this._progress || !this._current) return;
-    let cur = this.audio.currentTime || 0;
-    let dur = this.audio.duration || 1;
-    if (!isFinite(dur) || dur <= 0) return;
-    this._progress.style.width = (cur / dur * 100) + '%';
-    this._current.textContent = this._formatTime(cur);
-  }
-
-  _startTimer() {
-    this._stopTimer();
-    this._timer = setInterval(() => this._updateProgress(), 200);
-  }
-
-  _stopTimer() {
-    if (this._timer) { clearInterval(this._timer); this._timer = null; }
-  }
-
-  _updateUI() {
-    if (!this._btn || !this._status) return;
-    if (this.isLoading) {
-      this._btn.textContent = '⏳'; this._btn.style.background = 'linear-gradient(135deg,#ffa726,#fb8c00)'; this._btn.style.pointerEvents = 'none';
-      this._status.textContent = '⏳ 音频加载中...'; this._status.className = 'audio-status loading';
-    } else if (this.isPlaying) {
-      this._btn.textContent = '⏸'; this._btn.style.background = 'linear-gradient(135deg,#e53935,#ef5350)'; this._btn.style.pointerEvents = 'auto';
-      this._status.textContent = '🔊 正在播放...'; this._status.className = 'audio-status playing';
-    } else {
-      this._btn.textContent = '▶'; this._btn.style.background = 'linear-gradient(135deg,var(--primary),var(--primary-light))'; this._btn.style.pointerEvents = 'auto';
-      this._status.textContent = '点击播放按钮开始'; this._status.className = 'audio-status';
-    }
-  }
-}
-
-class PronunciationPlayer {
-  constructor(prefix, opts = {}) {
-    this.prefix = prefix;
-    this.textEl = opts.textEl;
-    this.btnEl = opts.btnEl;
-    this.volumeEl = opts.volumeEl;
-    this.timestamps = [];
-    this.audioContext = null;
-    this.audioBuffer = null;
-    this.audioBufferSource = null;
-    this.startTime = 0;
-    this.pausedTime = 0;
-    this.loading = false;
-    this.paused = false;
-    this._ttsFetch = opts.ttsFetch || fetchTtsWithTimestamp;
-    this._getTtsSettings = opts.getTtsSettings || (() => ({ model: 'kokoro', voice: 'af_sarah', speed: 1.0 }));
-  }
-
-  async play(text) {
-    if (this.loading) return;
-    let btn = document.getElementById(this.btnEl);
-    if (this.audioBufferSource && !this.paused) {
-      this._pausePlayback();
-      this.paused = true;
-      if (btn) btn.innerHTML = '▶️ 继续播放';
-      this._clearActiveSentence();
-      return;
-    }
-    if (this.audioBuffer && this.paused) {
-      this._resumePlayback(btn);
-      this.paused = false;
-      return;
-    }
-    let { model, voice, speed } = this._getTtsSettings();
-    this.loading = true;
-    this.paused = false;
-    if (btn) { btn.innerHTML = '⏳ 正在生成发音...'; btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none'; }
-    try {
-      let data = await this._ttsFetch(text, model, voice, speed);
-      this.loading = false;
-      if (!data) {
-        if (btn) { btn.innerHTML = '🔊 听标准发音'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
-        return;
-      }
-      this.timestamps = data.timestamps;
-      this._renderText(text, this.timestamps);
-      let audioUrl = this._base64ToAudio(data.audio, data.mimetype);
-      this._loadAndPlay(audioUrl, btn);
-    } catch (err) {
-      this.loading = false;
-      this.paused = false;
-      if (btn) { btn.innerHTML = '🔊 听标准发音'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
-      toast('生成失败', 'error');
-    }
-  }
-
-  cleanup() {
-    this._stopHighlight();
-    if (this.audioBufferSource) { try { this.audioBufferSource.stop(); } catch(e) {} this.audioBufferSource = null; }
-    if (this.audioContext) { this.audioContext.close(); this.audioContext = null; }
-    this.audioBuffer = null;
-    this.timestamps = [];
-    this.loading = false;
-    this.paused = false;
-  }
-
-  _renderText(text, timestamps) {
-    let container = document.getElementById(this.textEl);
-    if (!container) return;
-    let cls = this.prefix ? `${this.prefix}sentence-item` : 'sentence-item';
-    if (timestamps && timestamps.length > 0) {
-      container.innerHTML = timestamps.map((item, index) =>
-        `<span class="${cls}" data-index="${index}">${escapeHtml(item.text)}</span>`
-      ).join('');
-    } else {
-      container.textContent = text;
-    }
-    let style = document.createElement('style');
-    style.textContent = `.${cls}.active { color: #1D9E75; font-weight: 600; }`;
-    document.head.appendChild(style);
-  }
-
-  _clearActiveSentence() {
-    let cls = this.prefix ? `${this.prefix}sentence-item` : 'sentence-item';
-    document.querySelectorAll(`.${cls}`).forEach(el => el.classList.remove('active'));
-  }
-
-  _setActiveSentence(index) {
-    this._clearActiveSentence();
-    let cls = this.prefix ? `${this.prefix}sentence-item` : 'sentence-item';
-    let el = document.querySelector(`.${cls}[data-index="${index}"]`);
-    if (el) { el.classList.add('active'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-  }
-
-  _base64ToAudio(base64Data, mimetype) {
-    let byteString = atob(base64Data);
-    let arrayBuffer = new ArrayBuffer(byteString.length);
-    let uint8Array = new Uint8Array(arrayBuffer);
-    for (let i = 0; i < byteString.length; i++) uint8Array[i] = byteString.charCodeAt(i);
-    let blob = new Blob([arrayBuffer], { type: mimetype });
-    return URL.createObjectURL(blob);
-  }
-
-  _loadAndPlay(audioUrl, btn) {
-    if (this.audioContext) { this.audioContext.close(); this.audioContext = null; }
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    fetch(audioUrl)
-      .then(r => r.arrayBuffer())
-      .then(ab => this.audioContext.decodeAudioData(ab))
-      .then(buffer => { this.audioBuffer = buffer; this._startPlayback(btn); })
-      .catch(err => {
-        console.error('Failed to load audio:', err);
-        if (btn) { btn.innerHTML = '🔊 听标准发音'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
-        this.loading = false; this.paused = false;
-        toast('加载音频失败', 'error');
-      });
-  }
-
-  _startPlayback(btn) {
-    if (!this.audioContext || !this.audioBuffer) return;
-    this.audioBufferSource = this.audioContext.createBufferSource();
-    this.audioBufferSource.buffer = this.audioBuffer;
-    let gainNode = this.audioContext.createGain();
-    gainNode.gain.value = this._getVolume();
-    this.audioBufferSource.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
-    this.startTime = this.audioContext.currentTime - this.pausedTime;
-    this.audioBufferSource.start(0, this.pausedTime);
-    if (btn) { btn.innerHTML = '⏸️ 暂停播放'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
-    this._startHighlight();
-    this.audioBufferSource.onended = () => {
-      this.cleanup();
-      if (btn) btn.innerHTML = '🔊 听标准发音';
-    };
-  }
-
-  _pausePlayback() {
-    if (!this.audioBufferSource || !this.audioContext) return;
-    this.pausedTime = this.audioContext.currentTime - this.startTime;
-    this.audioBufferSource.stop();
-    this.audioBufferSource = null;
-    this._stopHighlight();
-  }
-
-  _resumePlayback(btn) {
-    if (!this.audioBuffer) return;
-    this.audioBufferSource = this.audioContext.createBufferSource();
-    this.audioBufferSource.buffer = this.audioBuffer;
-    let gainNode = this.audioContext.createGain();
-    gainNode.gain.value = this._getVolume();
-    this.audioBufferSource.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
-    this.startTime = this.audioContext.currentTime - this.pausedTime;
-    this.audioBufferSource.start(0, this.pausedTime);
-    if (btn) btn.innerHTML = '⏸️ 暂停播放';
-    this._startHighlight();
-    this.audioBufferSource.onended = () => {
-      this.cleanup();
-      if (btn) btn.innerHTML = '🔊 听标准发音';
-    };
-  }
-
-  _getVolume() {
-    let slider = document.getElementById(this.volumeEl);
-    return slider ? parseInt(slider.value) / 100 : 0.8;
-  }
-
-  _startHighlight() {
-    this._stopHighlight();
-    let update = () => {
-      if (!this.audioContext || this.paused) { requestAnimationFrame(update); return; }
-      let currentTime = this.audioContext.currentTime - this.startTime;
-      let activeIndex = this.timestamps.findIndex(t => currentTime >= t.start && currentTime < t.end);
-      if (activeIndex >= 0) this._setActiveSentence(activeIndex);
-      requestAnimationFrame(update);
-    };
-    requestAnimationFrame(update);
-  }
-
-  _stopHighlight() {}
-}
-
-class RecordingManager {
-  constructor(prefix, opts = {}) {
-    this.prefix = prefix;
-    this.recordBtn = opts.recordBtn || 'record-btn';
-    this.playBtn = opts.playBtn || 'play-record-btn';
-    this.timerEl = opts.timerEl || 'record-timer';
-    this.resultsEl = opts.resultsEl || 'pron-results';
-    this.getTarget = opts.getTarget || (() => '');
-    this.onScore = opts.onScore || (() => {});
-    this.mediaStream = null;
-    this.audioCtx = null;
-    this.scriptNode = null;
-    this.samples = [];
-    this.recordedBlob = null;
-    this.recordedAudio = null;
-    this.isRecording = false;
-    this.isPlaying = false;
-    this.recordingTimer = null;
-    this.recordingDuration = 0;
-  }
-
-  async toggle() {
-    if (this.isRecording) this.stop();
-    else await this.start();
-  }
-
-  async start() {
-    try {
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      let source = this.audioCtx.createMediaStreamSource(this.mediaStream);
-      this.scriptNode = this.audioCtx.createScriptProcessor(4096, 1, 1);
-      this.samples = [];
-      this.scriptNode.onaudioprocess = (e) => {
-        if (this.isRecording) this.samples.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-      };
-      source.connect(this.scriptNode);
-      this.scriptNode.connect(this.audioCtx.destination);
-      this.isRecording = true;
-      this.recordingDuration = 0;
-      let btn = document.getElementById(this.recordBtn);
-      if (btn) { btn.classList.add('recording'); btn.querySelector('.record-text').textContent = '点击停止'; }
-      let timer = document.getElementById(this.timerEl);
-      if (timer) { timer.style.display = 'block'; timer.textContent = '0.0s'; }
-      this.recordingTimer = setInterval(() => {
-        this.recordingDuration += 0.1;
-        if (timer) timer.textContent = this.recordingDuration.toFixed(1) + 's';
-      }, 100);
-    } catch (err) {
-      toast('无法访问麦克风：' + err.message, 'error');
-    }
-  }
-
-  stop() {
-    if (!this.isRecording) return;
-    this.isRecording = false;
-    if (this.recordingTimer) { clearInterval(this.recordingTimer); this.recordingTimer = null; }
-    if (this.scriptNode) { this.scriptNode.disconnect(); this.scriptNode = null; }
-    if (this.mediaStream) { this.mediaStream.getTracks().forEach(t => t.stop()); this.mediaStream = null; }
-    let btn = document.getElementById(this.recordBtn);
-    if (btn) { btn.classList.remove('recording'); btn.querySelector('.record-text').textContent = '点击录音'; }
-    let timer = document.getElementById(this.timerEl);
-    if (timer) timer.style.display = 'none';
-    if (this.samples.length > 0) {
-      let sampleRate = this.audioCtx ? this.audioCtx.sampleRate : 16000;
-      if (this.audioCtx) { this.audioCtx.close(); this.audioCtx = null; }
-      let merged = new Float32Array(this.samples.reduce((a, b) => a + b.length, 0));
-      let offset = 0;
-      for (let s of this.samples) { merged.set(s, offset); offset += s.length; }
-      this.recordedBlob = encodeWAV(merged, sampleRate);
-      this.samples = [];
-      this._showPlayBtn();
-      this.onScore(this.recordedBlob);
-    }
-  }
-
-  cleanup() {
-    this.isRecording = false;
-    if (this.recordingTimer) { clearInterval(this.recordingTimer); this.recordingTimer = null; }
-    if (this.scriptNode) { this.scriptNode.disconnect(); this.scriptNode = null; }
-    if (this.mediaStream) { this.mediaStream.getTracks().forEach(t => t.stop()); this.mediaStream = null; }
-    if (this.audioCtx) { this.audioCtx.close(); this.audioCtx = null; }
-    this.samples = [];
-    this._hidePlayBtn();
-  }
-
-  togglePlay() {
-    let btn = document.getElementById(this.playBtn);
-    if (!this.recordedBlob) return;
-    if (this.isPlaying && this.recordedAudio) {
-      this.recordedAudio.pause();
-      this.isPlaying = false;
-      if (btn) { btn.querySelector('.record-icon').textContent = '▶️'; btn.querySelector('.record-text').textContent = '播放录音'; }
-      return;
-    }
-    if (this.recordedAudio && !this.isPlaying) {
-      this.recordedAudio.play();
-      this.isPlaying = true;
-      if (btn) { btn.querySelector('.record-icon').textContent = '⏸️'; btn.querySelector('.record-text').textContent = '暂停录音'; }
-      return;
-    }
-    let audioUrl = URL.createObjectURL(this.recordedBlob);
-    this.recordedAudio = new Audio(audioUrl);
-    this.recordedAudio.volume = this._getVolume();
-    this.recordedAudio.onplay = () => {
-      this.isPlaying = true;
-      if (btn) { btn.querySelector('.record-icon').textContent = '⏸️'; btn.querySelector('.record-text').textContent = '暂停录音'; }
-    };
-    this.recordedAudio.onpause = () => {
-      this.isPlaying = false;
-      if (btn) { btn.querySelector('.record-icon').textContent = '▶️'; btn.querySelector('.record-text').textContent = '继续播放'; }
-    };
-    this.recordedAudio.onended = () => {
-      this.isPlaying = false;
-      if (btn) { btn.querySelector('.record-icon').textContent = '▶️'; btn.querySelector('.record-text').textContent = '播放录音'; }
-      this.recordedAudio = null;
-    };
-    this.recordedAudio.onerror = () => {
-      this.isPlaying = false;
-      if (btn) { btn.querySelector('.record-icon').textContent = '▶️'; btn.querySelector('.record-text').textContent = '播放录音'; }
-      this.recordedAudio = null;
-      toast('播放录音失败', 'error');
-    };
-    this.recordedAudio.play();
-  }
-
-  _showPlayBtn() { document.getElementById(this.playBtn).style.display = 'flex'; }
-  _hidePlayBtn() {
-    document.getElementById(this.playBtn).style.display = 'none';
-    if (this.recordedAudio) { this.recordedAudio.pause(); this.recordedAudio = null; }
-    this.isPlaying = false;
-  }
-
-  _getVolume() {
-    let slider = document.getElementById(this.prefix + 'volume');
-    return slider ? parseInt(slider.value) / 100 : 0.8;
-  }
-}
-
-class FillblankManager {
-  constructor(containerEl, resultsEl) {
-    this.containerEl = containerEl;
-    this.resultsEl = resultsEl;
-  }
-
-  init(article) {
-    let text = article.text;
-    let words = article.words || '';
-    let wordList = words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
-    let wordSet = new Set(wordList);
-    let lines = text.split('\n');
-    let html = '';
-    let blankIndex = 0;
-    for (let line of lines) {
-      let tokens = line.split(/(\s+)/);
-      for (let token of tokens) {
-        if (!token.trim()) { html += token; continue; }
-        let match = token.match(/^([^\w]*)(\w+)([^\w]*)$/);
-        if (match) {
-          let [, prefix, word, suffix] = match;
-          if (wordSet.has(word.toLowerCase())) {
-            let w = word.length;
-            let inputW = Math.max(w * 12, 60);
-            html += prefix + `<input type="text" class="fill-input" data-answer="${word}" data-index="${blankIndex}" autocomplete="off" style="width:${inputW}px;" placeholder="${'_'.repeat(w)}">` + suffix;
-            blankIndex++;
-          } else {
-            html += token;
-          }
-        } else {
-          html += token;
-        }
-      }
-      html += '\n';
-    }
-    document.getElementById(this.containerEl).innerHTML = html.trim();
-    document.getElementById(this.resultsEl).style.display = 'none';
-    document.querySelectorAll(`#${this.containerEl} .fill-input`).forEach(input => {
-      input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          let inputs = document.querySelectorAll(`#${this.containerEl} .fill-input`);
-          let idx = parseInt(this.dataset.index);
-          if (idx < inputs.length - 1) inputs[idx + 1].focus();
-        }
-      });
-    });
-  }
-
-  check() {
-    let inputs = document.querySelectorAll(`#${this.containerEl} .fill-input`);
-    let correct = 0;
-    let total = inputs.length;
-    inputs.forEach(input => {
-      let answer = input.dataset.answer.toLowerCase();
-      let userAnswer = input.value.trim().toLowerCase();
-      input.disabled = false;
-      if (userAnswer === answer) {
-        input.classList.add('correct');
-        input.classList.remove('wrong');
-        correct++;
-      } else {
-        input.classList.add('wrong');
-        input.classList.remove('correct');
-      }
-    });
-    let pct = total > 0 ? Math.round(correct / total * 100) : 0;
-    let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
-    let resultsEl = document.getElementById(this.resultsEl);
-    resultsEl.style.display = 'block';
-    let wrongWords = [];
-    inputs.forEach(input => { if (input.classList.contains('wrong')) wrongWords.push(input.dataset.answer); });
-    let wrongHtml = wrongWords.length > 0
-      ? `<div style="margin-top:8px;font-size:13px;color:#ef5350;">❌ 错误单词：${wrongWords.map(w => `<span style="background:#ffebee;padding:2px 8px;border-radius:4px;margin:0 2px;">${w}</span>`).join('')}</div>`
-      : '<div style="margin-top:8px;font-size:13px;color:#43a047;">🎉 全部正确！</div>';
-    resultsEl.innerHTML = `
-      <h3>📊 填空结果</h3>
-      <div class="fill-score" style="color:${pctColor};">${pct}%</div>
-      <div class="fill-detail">正确 ${correct}/${total}</div>
-      ${wrongHtml}
-    `;
-    return { correct, total, pct, inputs };
-  }
-
-  reset() {
-    document.querySelectorAll(`#${this.containerEl} .fill-input`).forEach(input => {
-      input.value = '';
-      input.disabled = false;
-      input.classList.remove('correct', 'wrong');
-    });
-    document.getElementById(this.resultsEl).style.display = 'none';
-  }
-}
-
-function escapeHtml(text) {
-  let div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-function encodeWAV(samples, sampleRate) {
-  let buffer = new ArrayBuffer(44 + samples.length * 2);
-  let view = new DataView(buffer);
-  function writeStr(v, o, s) { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
-  writeStr(view, 0, 'RIFF');
-  view.setUint32(4, 36 + samples.length * 2, true);
-  writeStr(view, 8, 'WAVE');
-  writeStr(view, 12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeStr(view, 36, 'data');
-  view.setUint32(40, samples.length * 2, true);
-  let off = 44;
-  for (let i = 0; i < samples.length; i++) {
-    let s = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    off += 2;
-  }
-  return new Blob([buffer], { type: 'audio/wav' });
-}
-
-function fetchTtsWithTimestamp(text, model, voice, speed) {
-  return fetch('http://localhost:5003/tts/timestamp', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, model, voice, speed })
-  }).then(res => res.json()).catch(err => {
-    console.error('TTS fetch error:', err);
-    return null;
-  });
-}
-
-// ========== 应用代码 ==========
-
 const DEFAULT_ARTICLES = [
   { id:1, title:"The Seasons", words:"spring,summer,autumn,winter,season,year", category:"自然",
     text:"Spring is green,\nSummer is bright,\nAutumn is gold,\nWinter is white.\nFour seasons make a year,\nEach one dear and near." },
@@ -1240,19 +645,22 @@ const PERIOD = [0, 1, 2, 4, 7, 15, 30];
 
 let user = "A";
 let currentArticle = null;
+let currentAudio = null;
+let isPlaying = false;
+let isLoading = false;
 let answerRevealed = false;
 let audioFinished = false;
 let selectedCategory = '';
 
-let singleAudioPlayer = null;
-
 let batchArticles = [];
 let batchIndex = 0;
 let batchAnswers = [];
+let batchAudio = null;
 let batchPlaying = false;
 let batchLoading = false;
 let batchRevealed = false;
 let batchAudioFinished = false;
+let _batchProgressTimer = null;
 
 function getUser() { try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; } }
 function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
@@ -1552,47 +960,158 @@ async function ttsFetch(text) {
     }
 }
 
+function playLocalTTS(text) {
+    speechSynthesis.cancel();
+    let utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'en-US';
+    utter.rate = parseInt(document.getElementById('tts-speed').value) / 100;
+    utter.volume = parseInt(document.getElementById('volume-slider').value) / 100;
+    speechSynthesis.speak(utter);
+    isPlaying = true;
+    audioFinished = false;
+    updatePlayUI();
+    utter.onend = () => { isPlaying = false; audioFinished = true; updatePlayUI(); };
+    utter.onerror = () => { isPlaying = false; updatePlayUI(); };
+}
+
 async function togglePlay() {
-  if (!currentArticle) return;
-  if (!singleAudioPlayer) {
-    singleAudioPlayer = new AudioPlayer('audio-', {
-      onEnd: () => { audioFinished = true; if (currentArticle && currentMode === 'dictation') addShowAnswerButton(); },
-      onError: () => toast('音频播放失败', 'error')
-    });
-  }
-  if (answerRevealed) {
-    answerRevealed = false;
-    document.getElementById('answer-reveal').style.display = 'none';
-    document.getElementById('score-bar').style.display = 'none';
-  }
-  await singleAudioPlayer.play(ttsFetch, currentArticle.text);
+    if (!currentArticle) return;
+    if (isLoading) return;
+    if (isPlaying) {
+        if (currentAudio) currentAudio.pause();
+        speechSynthesis.cancel();
+        isPlaying = false;
+        stopProgressTimer();
+        updatePlayUI();
+        return;
+    }
+    // 恢复暂停的音频
+    if (currentAudio && currentAudio.paused && !audioFinished) {
+        currentAudio.play();
+        isPlaying = true;
+        startProgressTimer();
+        updatePlayUI();
+        return;
+    }
+    // 播放时隐藏答案
+    if (answerRevealed) {
+        answerRevealed = false;
+        document.getElementById('answer-reveal').style.display = 'none';
+        document.getElementById('score-bar').style.display = 'none';
+    }
+    let vol = parseInt(document.getElementById('volume-slider').value) / 100;
+    isLoading = true;
+    audioFinished = false;
+    // 移除查看答案按钮
+    let oldBtn = document.getElementById('show-answer-btn');
+    if (oldBtn) oldBtn.remove();
+    resetProgress();
+    updatePlayUI();
+    try {
+        let url = await ttsFetch(currentArticle.text);
+        if (url) {
+            currentAudio = new Audio(url);
+            currentAudio.volume = vol;
+            currentAudio.play();
+            isPlaying = true;
+            isLoading = false;
+            updatePlayUI();
+            currentAudio.onended = () => { isPlaying = false; audioFinished = true; stopProgressTimer(); updatePlayUI(); };
+            currentAudio.onerror = () => { isPlaying = false; stopProgressTimer(); updatePlayUI(); toast('音频播放失败','error'); };
+            currentAudio.onloadedmetadata = () => { updateDuration(); startProgressTimer(); };
+        } else { isLoading = false; playLocalTTS(currentArticle.text); }
+    } catch { isLoading = false; playLocalTTS(currentArticle.text); }
 }
 
 function replayAudio() {
-  if (!currentArticle) return;
-  if (answerRevealed) {
-    answerRevealed = false;
-    document.getElementById('answer-reveal').style.display = 'none';
-    document.getElementById('score-bar').style.display = 'none';
-  }
-  if (singleAudioPlayer) singleAudioPlayer.replay(ttsFetch, currentArticle.text);
+    if (!currentArticle || isLoading) return;
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    speechSynthesis.cancel();
+    isPlaying = false;
+    isLoading = false;
+    stopProgressTimer();
+    updatePlayUI();
+    // 隐藏答案
+    if (answerRevealed) {
+        answerRevealed = false;
+        document.getElementById('answer-reveal').style.display = 'none';
+        document.getElementById('score-bar').style.display = 'none';
+    }
+    setTimeout(() => togglePlay(), 100);
 }
 
 function changeVolume(val) {
-  document.getElementById('volume-val').textContent = val + '%';
-  if (singleAudioPlayer) singleAudioPlayer.setVolume(parseInt(val));
+    document.getElementById('volume-val').textContent = val + '%';
+    if (currentAudio) currentAudio.volume = val / 100;
+}
+
+// ========== 进度条 ==========
+let _progressTimer = null;
+
+function formatTime(sec) {
+    if (!sec || !isFinite(sec)) return '0:00';
+    let m = Math.floor(sec / 60);
+    let s = Math.floor(sec % 60);
+    return m + ':' + String(s).padStart(2, '0');
 }
 
 function resetProgress() {
-  if (singleAudioPlayer) singleAudioPlayer._resetProgress();
+    stopProgressTimer();
+    document.getElementById('audio-progress').style.width = '0%';
+    document.getElementById('audio-current').textContent = '0:00';
+    document.getElementById('audio-duration').textContent = '0:00';
+}
+
+function updateDuration() {
+    if (currentAudio && isFinite(currentAudio.duration)) {
+        document.getElementById('audio-duration').textContent = formatTime(currentAudio.duration);
+    }
+}
+
+function updateProgress() {
+    if (!currentAudio) return;
+    let cur = currentAudio.currentTime || 0;
+    let dur = currentAudio.duration || 1;
+    if (!isFinite(dur) || dur <= 0) return;
+    let pct = (cur / dur) * 100;
+    document.getElementById('audio-progress').style.width = pct + '%';
+    document.getElementById('audio-current').textContent = formatTime(cur);
+}
+
+function startProgressTimer() {
+    stopProgressTimer();
+    _progressTimer = setInterval(updateProgress, 200);
+}
+
+function stopProgressTimer() {
+    if (_progressTimer) { clearInterval(_progressTimer); _progressTimer = null; }
 }
 
 function seekAudio(e) {
-  if (singleAudioPlayer) singleAudioPlayer.seek(e);
+    if (!currentAudio || !isFinite(currentAudio.duration)) return;
+    let bar = document.getElementById('audio-progress-bar');
+    let rect = bar.getBoundingClientRect();
+    let pct = (e.clientX - rect.left) / rect.width;
+    pct = Math.max(0, Math.min(1, pct));
+    currentAudio.currentTime = pct * currentAudio.duration;
+    updateProgress();
 }
 
 function updatePlayUI() {
-  if (singleAudioPlayer) singleAudioPlayer._updateUI();
+    let btn = document.getElementById('play-btn');
+    let status = document.getElementById('audio-status');
+    if (isLoading) {
+        btn.textContent = '⏳'; btn.style.background = 'linear-gradient(135deg,#ffa726,#fb8c00)'; btn.style.pointerEvents = 'none';
+        status.textContent = '⏳ 音频加载中...'; status.className = 'audio-status loading';
+    } else if (isPlaying) {
+        btn.textContent = '⏸'; btn.style.background = 'linear-gradient(135deg,#e53935,#ef5350)'; btn.style.pointerEvents = 'auto';
+        status.textContent = '🔊 正在播放...'; status.className = 'audio-status playing';
+    } else {
+        btn.textContent = '▶'; btn.style.background = 'linear-gradient(135deg,var(--primary),var(--primary-light))'; btn.style.pointerEvents = 'auto';
+        status.textContent = '点击播放按钮开始'; status.className = 'audio-status';
+        // 音频自然播放完成后才添加查看答案按钮（仅听写模式）
+        if (audioFinished && currentArticle && currentMode === 'dictation') addShowAnswerButton();
+    }
 }
 
 function addShowAnswerButton() {
@@ -1611,10 +1130,11 @@ function openListenModal(articleId) {
     if (!currentArticle) return;
     answerRevealed = false;
     audioFinished = false;
-    if (singleAudioPlayer) { singleAudioPlayer.pause(); singleAudioPlayer = null; }
-    if (pronPlayer) pronPlayer.cleanup();
-    if (singleRecorder) singleRecorder.cleanup();
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if (pronAudio) { pronAudio.pause(); pronAudio = null; }
+    if (isRecording) stopRecordingCleanup();
     speechSynthesis.cancel();
+    isPlaying = false;
     // 使用保存的单词模式（不重复保存）
     let u = safeUser(getUser());
     switchMode(u.tingli.wordMode || 'fillblank', true);
@@ -1627,22 +1147,41 @@ function openListenModal(articleId) {
     document.getElementById('answer-reveal').style.display = 'none';
     document.getElementById('score-bar').style.display = 'none';
     document.getElementById('complete-btn').style.display = 'none';
+    // 移除已存在的查看答案按钮
     let oldBtn = document.getElementById('show-answer-btn');
     if (oldBtn) oldBtn.remove();
     document.getElementById('listen-modal').classList.add('active');
+    // 拼读模式不自动朗读，用户自己点击听标准发音
     if (currentMode !== 'pronunciation') {
         setTimeout(() => togglePlay(), 300);
     }
 }
 
 function closeListenModal() {
-    if (singleAudioPlayer) { singleAudioPlayer.pause(); singleAudioPlayer = null; }
-    if (pronPlayer) pronPlayer.cleanup();
-    if (singleRecorder) singleRecorder.cleanup();
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if (pronAudio) { pronAudio.pause(); pronAudio = null; }
+    if (recordedAudio) { recordedAudio.pause(); recordedAudio = null; }
+    cleanupWebAudio();
+    if (isRecording) stopRecordingCleanup();
     speechSynthesis.cancel();
+    isPlaying = false;
+    isLoading = false;
+    pronLoading = false;
+    pronPaused = false;
+    pronAudioPausedTime = 0;
+    isPlayingRecording = false;
     currentArticle = null;
+    recordedAudioBlob = null;
+    
+    hidePlayRecordingBtn();
+    
     let btn = document.querySelector('.pron-ref-btn');
-    if (btn) { btn.innerHTML = '🔊 听标准发音'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+    if (btn) {
+        btn.innerHTML = '🔊 听标准发音';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+    }
+    
     document.getElementById('listen-modal').classList.remove('active');
 }
 
@@ -1767,8 +1306,10 @@ function renderAnswerCanvas(text, words) {
 
 function completeListening() {
     if (!currentArticle) return;
-    if (singleAudioPlayer) singleAudioPlayer.pause();
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     speechSynthesis.cancel();
+    isPlaying = false;
+    isLoading = false;
     let u = safeUser(getUser());
     let idx = currentArticle.id;
     u.listeningTotal = (u.listeningTotal || 0) + 1;
@@ -2181,11 +1722,6 @@ function startQuickListen(count) {
     renderBatchQuestion();
 }
 
-let batchAudioPlayer = null;
-let batchPronPlayer = null;
-let batchRecorder = null;
-let batchFillblank = null;
-
 function renderBatchQuestion() {
     if (batchIndex >= batchArticles.length) { finishBatch(); return; }
     let article = batchArticles[batchIndex];
@@ -2203,17 +1739,21 @@ function renderBatchQuestion() {
     document.getElementById('batch-reveal-btn').style.display = 'none';
     document.getElementById('batch-fill-results').style.display = 'none';
     document.getElementById('batch-hint').textContent = '💡 可多次播放，输入后点击提交';
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     speechSynthesis.cancel();
     batchPlaying = false;
     batchLoading = false;
-    if (batchAudioPlayer) batchAudioPlayer.pause();
+    stopBatchProgressTimer();
+    resetBatchProgress();
     updateBatchPlayUI();
     
+    // 根据当前模式初始化批量听力弹窗
     let batchAudioCtrl = document.getElementById('batch-audio-controls');
     let batchDictation = document.getElementById('batch-mode-dictation');
     let batchFill = document.getElementById('batch-mode-fillblank');
     let batchPron = document.getElementById('batch-mode-pronunciation');
     
+    // 控制底部按钮显示
     let batchRevealBtn = document.getElementById('batch-reveal-btn');
     let batchSubmitBtn = document.getElementById('batch-submit-btn');
     let batchSkipBtn = document.getElementById('batch-skip-btn');
@@ -2235,6 +1775,7 @@ function renderBatchQuestion() {
         batchPron.style.display = 'block';
         initBatchPronunciationMode();
         batchRevealBtn.style.display = 'none';
+        // 隐藏提交按钮，初始时跳过按钮单独显示
         batchSubmitBtn.style.display = 'none'; 
         batchSkipBtn.style.display = 'inline-flex';
         batchSkipBtn.textContent = '⏭️ 跳过';
@@ -2249,6 +1790,7 @@ function renderBatchQuestion() {
         batchSkipBtn.style.display = 'inline-flex';
     }
     
+    // 拼读模式不自动朗读，用户点击"听标准发音"按钮播放
     if (currentMode !== 'pronunciation') {
         setTimeout(() => toggleBatchPlay(), 300);
     }
@@ -2256,48 +1798,152 @@ function renderBatchQuestion() {
 
 async function toggleBatchPlay() {
     if (batchIndex >= batchArticles.length) return;
-    if (!batchAudioPlayer) {
-      batchAudioPlayer = new AudioPlayer('batch-audio-', {
-        onEnd: () => { batchAudioFinished = true; },
-        onError: () => toast('音频播放失败', 'error')
-      });
+    if (batchLoading) return;
+    let article = batchArticles[batchIndex];
+    if (batchPlaying) {
+        if (batchAudio) batchAudio.pause();
+        speechSynthesis.cancel();
+        batchPlaying = false;
+        stopBatchProgressTimer();
+        updateBatchPlayUI();
+        return;
     }
+    // 恢复暂停的音频
+    if (batchAudio && batchAudio.paused && !batchAudioFinished) {
+        batchAudio.play();
+        batchPlaying = true;
+        startBatchProgressTimer();
+        updateBatchPlayUI();
+        return;
+    }
+    // 播放时隐藏答案
     if (batchRevealed) {
         batchRevealed = false;
         document.getElementById('batch-answer-reveal').style.display = 'none';
         document.getElementById('batch-score-bar').style.display = 'none';
     }
     document.getElementById('batch-reveal-btn').style.display = 'none';
-    await batchAudioPlayer.play(ttsFetch, batchArticles[batchIndex].text);
+    let vol = parseInt(document.getElementById('batch-volume').value) / 100;
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    resetBatchProgress();
+    batchLoading = true;
+    batchAudioFinished = false;
+    updateBatchPlayUI();
+    try {
+        let url = await ttsFetch(article.text);
+        if (url) {
+            batchAudio = new Audio(url);
+            batchAudio.volume = vol;
+            batchAudio.play();
+            batchPlaying = true;
+            batchLoading = false;
+            updateBatchPlayUI();
+            batchAudio.onended = () => { batchPlaying = false; batchAudioFinished = true; stopBatchProgressTimer(); updateBatchPlayUI(); };
+            batchAudio.onerror = () => { batchPlaying = false; batchLoading = false; stopBatchProgressTimer(); updateBatchPlayUI(); toast('音频播放失败','error'); };
+            batchAudio.onloadedmetadata = () => { updateBatchDuration(); startBatchProgressTimer(); };
+        } else { batchLoading = false; playLocalBatchTTS(article.text); }
+    } catch { batchLoading = false; playLocalBatchTTS(article.text); }
+}
+
+function playLocalBatchTTS(text) {
+    speechSynthesis.cancel();
+    let utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'en-US';
+    utter.rate = parseInt(document.getElementById('tts-speed').value) / 100;
+    utter.volume = parseInt(document.getElementById('batch-volume').value) / 100;
+    speechSynthesis.speak(utter);
+    batchPlaying = true;
+    batchAudioFinished = false;
+    updateBatchPlayUI();
+    utter.onend = () => { batchPlaying = false; batchAudioFinished = true; updateBatchPlayUI(); };
 }
 
 function replayBatchAudio() {
-    if (batchAudioPlayer) batchAudioPlayer.replay(ttsFetch, batchArticles[batchIndex].text);
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    speechSynthesis.cancel();
+    batchPlaying = false;
+    batchAudioFinished = false;
+    stopBatchProgressTimer();
+    resetBatchProgress();
+    updateBatchPlayUI();
+    if (batchRevealed) {
+        batchRevealed = false;
+        document.getElementById('batch-answer-reveal').style.display = 'none';
+        document.getElementById('batch-score-bar').style.display = 'none';
+    }
+    document.getElementById('batch-reveal-btn').style.display = 'none';
+    setTimeout(() => toggleBatchPlay(), 100);
 }
 
 function changeBatchVolume(val) {
     document.getElementById('batch-volume-val').textContent = val + '%';
-    if (batchAudioPlayer) batchAudioPlayer.setVolume(parseInt(val));
+    if (batchAudio) batchAudio.volume = val / 100;
 }
 
 function updateBatchPlayUI() {
-    if (batchAudioPlayer) batchAudioPlayer._updateUI();
+    let btn = document.getElementById('batch-play-btn');
+    let status = document.getElementById('batch-audio-status');
+    if (batchLoading) {
+        btn.textContent = '⏳'; btn.style.background = 'linear-gradient(135deg,#ffa726,#fb8c00)'; btn.style.pointerEvents = 'none';
+        status.textContent = '⏳ 音频加载中...'; status.className = 'audio-status loading';
+    } else if (batchPlaying) {
+        btn.textContent = '⏸'; btn.style.background = 'linear-gradient(135deg,#e53935,#ef5350)'; btn.style.pointerEvents = 'auto';
+        status.textContent = '🔊 正在播放...'; status.className = 'audio-status playing';
+    } else {
+        btn.textContent = '▶'; btn.style.background = 'linear-gradient(135deg,var(--primary),var(--primary-light))'; btn.style.pointerEvents = 'auto';
+        status.textContent = '点击播放按钮听短文'; status.className = 'audio-status';
+    }
 }
 
 function resetBatchProgress() {
-    if (batchAudioPlayer) batchAudioPlayer._resetProgress();
+    stopBatchProgressTimer();
+    document.getElementById('batch-audio-progress').style.width = '0%';
+    document.getElementById('batch-audio-current').textContent = '0:00';
+    document.getElementById('batch-audio-duration').textContent = '0:00';
+}
+
+function updateBatchDuration() {
+    if (batchAudio && isFinite(batchAudio.duration)) {
+        document.getElementById('batch-audio-duration').textContent = formatTime(batchAudio.duration);
+    }
+}
+
+function updateBatchProgress() {
+    if (!batchAudio) return;
+    let cur = batchAudio.currentTime || 0;
+    let dur = batchAudio.duration || 1;
+    if (!isFinite(dur) || dur <= 0) return;
+    let pct = (cur / dur) * 100;
+    document.getElementById('batch-audio-progress').style.width = pct + '%';
+    document.getElementById('batch-audio-current').textContent = formatTime(cur);
+}
+
+function startBatchProgressTimer() {
+    stopBatchProgressTimer();
+    _batchProgressTimer = setInterval(updateBatchProgress, 200);
+}
+
+function stopBatchProgressTimer() {
+    if (_batchProgressTimer) { clearInterval(_batchProgressTimer); _batchProgressTimer = null; }
 }
 
 function seekBatchAudio(e) {
-    if (batchAudioPlayer) batchAudioPlayer.seek(e);
+    if (!batchAudio || !isFinite(batchAudio.duration)) return;
+    let bar = document.getElementById('batch-audio-progress-bar');
+    let rect = bar.getBoundingClientRect();
+    let pct = (e.clientX - rect.left) / rect.width;
+    pct = Math.max(0, Math.min(1, pct));
+    batchAudio.currentTime = pct * batchAudio.duration;
+    updateBatchProgress();
 }
 
 function revealBatchAnswer() {
     if (batchIndex >= batchArticles.length) return;
     let article = batchArticles[batchIndex];
-    if (batchAudioPlayer) batchAudioPlayer.pause();
+    if (batchAudio) batchAudio.pause();
     speechSynthesis.cancel();
     batchPlaying = false;
+    stopBatchProgressTimer();
     updateBatchPlayUI();
     batchRevealed = true;
 
@@ -2385,9 +2031,11 @@ function renderBatchAnswerCanvas(text, words) {
 function submitBatchAnswer() {
     if (batchIndex >= batchArticles.length) return;
     if (currentMode === 'pronunciation') {
-        if (batchAudioPlayer) batchAudioPlayer.pause();
+        // 拼读模式 - 已经在评分时保存了答案，直接进入下一题
+        if (batchAudio) { batchAudio.pause(); batchAudio = null; }
         speechSynthesis.cancel();
         batchPlaying = false;
+        stopBatchProgressTimer();
         batchIndex++;
         renderBatchQuestion();
         return;
@@ -2442,9 +2090,10 @@ function submitBatchAnswer() {
             mode: 'dictation'
         });
     }
-    if (batchAudioPlayer) batchAudioPlayer.pause();
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     speechSynthesis.cancel();
     batchPlaying = false;
+    stopBatchProgressTimer();
     batchIndex++;
     renderBatchQuestion();
 }
@@ -2461,17 +2110,19 @@ function skipBatchAnswer() {
         skipped: true,
         mode: currentMode
     });
-    if (batchAudioPlayer) batchAudioPlayer.pause();
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     speechSynthesis.cancel();
     batchPlaying = false;
+    stopBatchProgressTimer();
     batchIndex++;
     renderBatchQuestion();
 }
 
 function finishBatch() {
-    if (batchAudioPlayer) batchAudioPlayer.pause();
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     speechSynthesis.cancel();
     batchPlaying = false;
+    stopBatchProgressTimer();
     let u = safeUser(getUser());
     let correctCount = batchAnswers.filter(a => a.correct).length;
     let now = Date.now();
@@ -2503,75 +2154,24 @@ function finishBatch() {
 }
 
 function closeBatchModal() {
-    if (batchAudioPlayer) batchAudioPlayer.pause();
-    if (batchPronPlayer) batchPronPlayer.cleanup();
-    if (batchRecorder) batchRecorder.cleanup();
+    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    cleanupBatchPronAudio();
+    hideBatchPlayRecordingBtn();
     speechSynthesis.cancel();
     batchPlaying = false;
     batchLoading = false;
+    batchPronLoading = false;
+    batchPronPaused = false;
+    
     let btn = document.getElementById('batch-pron-btn');
-    if (btn) { btn.innerHTML = '🔊 听标准发音'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+    if (btn) {
+        btn.innerHTML = '🔊 听标准发音';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+    }
+    
     document.getElementById('batch-modal').classList.remove('active');
 }
-
-function initBatchPronunciationMode() {
-    if (batchIndex >= batchArticles.length) return;
-    let article = batchArticles[batchIndex];
-    if (!batchPronPlayer) {
-      batchPronPlayer = new PronunciationPlayer('batch-', {
-        textEl: 'batch-pron-target-text',
-        btnEl: 'batch-pron-btn',
-        volumeEl: 'batch-volume'
-      });
-    }
-    batchPronPlayer.cleanup();
-    batchPronPlayer._renderText(article.text, null);
-    document.getElementById('batch-pron-results').style.display = 'none';
-    if (!batchRecorder) {
-      batchRecorder = new RecordingManager('batch-', {
-        recordBtn: 'batch-record-btn',
-        playBtn: 'batch-play-record-btn',
-        timerEl: 'batch-record-timer',
-        resultsEl: 'batch-pron-results',
-        getTarget: () => batchIndex < batchArticles.length ? batchArticles[batchIndex].text : '',
-        onScore: (blob) => submitBatchPronunciation(blob)
-      });
-    }
-    let btn = document.getElementById('batch-record-btn');
-    btn.classList.remove('recording');
-    btn.querySelector('.record-text').textContent = '点击录音';
-    document.getElementById('batch-record-timer').style.display = 'none';
-    batchRecorder._hidePlayBtn();
-}
-
-function playBatchPronReference() {
-    if (batchIndex >= batchArticles.length) return;
-    if (!batchPronPlayer) {
-      batchPronPlayer = new PronunciationPlayer('batch-', {
-        textEl: 'batch-pron-target-text',
-        btnEl: 'batch-pron-btn',
-        volumeEl: 'batch-volume'
-      });
-    }
-    batchPronPlayer.btnEl = 'batch-pron-btn';
-    batchPronPlayer.play(batchArticles[batchIndex].text);
-}
-
-function initBatchFillblankMode() {
-    if (batchIndex >= batchArticles.length) return;
-    if (!batchFillblank) batchFillblank = new FillblankManager('batch-fill-text', 'batch-fill-results');
-    batchFillblank.init(batchArticles[batchIndex]);
-}
-
-function checkBatchFillAnswers() {
-    if (!batchFillblank) return;
-    return batchFillblank.check();
-}
-
-function toggleBatchRecording() { if (batchRecorder) batchRecorder.toggle(); }
-function togglePlayBatchRecording() { if (batchRecorder) batchRecorder.togglePlay(); }
-function showBatchPlayRecordingBtn() { if (batchRecorder) batchRecorder._showPlayBtn(); }
-function hideBatchPlayRecordingBtn() { if (batchRecorder) batchRecorder._hidePlayBtn(); }
 
 let _resultAudio = null;
 
@@ -2852,19 +2452,19 @@ function toast(msg, type='info') {
 }
 
 let currentMode = 'dictation';
-let pronPlayer = null;
-let singleRecorder = null;
-let singleFillblank = null;
+let pronAudio = null;
 
 function switchMode(mode, fromStorage = false) {
     currentMode = mode;
     document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('on', t.dataset.mode === mode));
     
+    // 更新单篇听力弹窗模式
     let audioCtrl = document.getElementById('listen-audio-controls');
     let dictation = document.getElementById('mode-dictation');
     let pron = document.getElementById('mode-pronunciation');
     let fill = document.getElementById('mode-fillblank');
     
+    // 更新批量听力弹窗模式
     let batchAudioCtrl = document.getElementById('batch-audio-controls');
     let batchDictation = document.getElementById('batch-mode-dictation');
     let batchFill = document.getElementById('batch-mode-fillblank');
@@ -2875,22 +2475,28 @@ function switchMode(mode, fromStorage = false) {
         dictation.style.display = 'block';
         pron.style.display = 'none';
         fill.style.display = 'none';
+        
         batchAudioCtrl.style.display = 'block';
         batchDictation.style.display = 'block';
         batchFill.style.display = 'none';
         batchPron.style.display = 'none';
     } else if (mode === 'pronunciation') {
-        if (singleAudioPlayer) singleAudioPlayer.pause();
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         speechSynthesis.cancel();
+        isPlaying = false;
+        stopProgressTimer();
+        updatePlayUI();
         audioCtrl.style.display = 'none';
         dictation.style.display = 'none';
         pron.style.display = 'block';
         fill.style.display = 'none';
         initPronunciationMode();
         
-        if (batchAudioPlayer) batchAudioPlayer.pause();
+        // 批量弹窗也支持拼读模式
+        if (batchAudio) { batchAudio.pause(); batchAudio = null; }
         speechSynthesis.cancel();
         batchPlaying = false;
+        stopBatchProgressTimer();
         updateBatchPlayUI();
         batchAudioCtrl.style.display = 'none';
         batchDictation.style.display = 'none';
@@ -2910,10 +2516,12 @@ function switchMode(mode, fromStorage = false) {
         batchPron.style.display = 'none';
         initBatchFillblankMode();
     }
+    // 切换模式时移除听写模式的查看答案按钮
     if (mode !== 'dictation') {
         let oldBtn = document.getElementById('show-answer-btn');
         if (oldBtn) oldBtn.remove();
     }
+    // 用户手动切换模式时保存到 localStorage
     if (!fromStorage) {
         let u = safeUser(getUser());
         u.tingli.wordMode = mode;
@@ -2923,84 +2531,467 @@ function switchMode(mode, fromStorage = false) {
 
 function initPronunciationMode() {
     if (!currentArticle) return;
-    if (!pronPlayer) {
-      pronPlayer = new PronunciationPlayer('', {
-        textEl: 'pron-target-text',
-        btnEl: '',
-        volumeEl: 'volume-slider'
-      });
-    }
-    pronPlayer.cleanup();
-    pronPlayer._renderText(currentArticle.text, null);
+    document.getElementById('pron-target-text').textContent = currentArticle.text;
     document.getElementById('pron-results').style.display = 'none';
-    if (!singleRecorder) {
-      singleRecorder = new RecordingManager('', {
-        recordBtn: 'record-btn',
-        playBtn: 'play-record-btn',
-        timerEl: 'record-timer',
-        resultsEl: 'pron-results',
-        getTarget: () => currentArticle ? currentArticle.text : '',
-        onScore: (blob) => sendScoreRequest(blob)
-      });
-    }
+    if (isRecording) stopRecordingCleanup();
     let btn = document.getElementById('record-btn');
     btn.classList.remove('recording');
     btn.querySelector('.record-text').textContent = '点击录音';
     document.getElementById('record-timer').style.display = 'none';
 }
 
+let pronLoading = false;
+let pronPaused = false;
+
 function playPronReference() {
     if (!currentArticle) return;
-    if (!pronPlayer) {
-      pronPlayer = new PronunciationPlayer('', {
-        textEl: 'pron-target-text',
-        btnEl: '',
-        volumeEl: 'volume-slider'
-      });
+    
+    let btn = document.querySelector('.pron-ref-btn');
+    
+    if (pronLoading) return;
+    
+    if (pronAudioBufferSource && !pronPaused) {
+        pauseAudioPlayback();
+        pronPaused = true;
+        btn.innerHTML = '▶️ 继续播放';
+        clearActiveSentence();
+        return;
     }
-    pronPlayer.btnEl = '';
-    pronPlayer.play(currentArticle.text);
+    
+    if (pronAudioBuffer && pronPaused) {
+        resumeAudioPlayback(btn);
+        pronPaused = false;
+        return;
+    }
+    
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+    
+    pronLoading = true;
+    pronPaused = false;
+    btn.innerHTML = '⏳ 正在生成发音...';
+    btn.style.opacity = '0.6';
+    btn.style.pointerEvents = 'none';
+    
+    fetchTtsWithTimestamp(currentArticle.text, model, voice, speed).then(data => {
+        pronLoading = false;
+        
+        if (!data) {
+            btn.innerHTML = '🔊 听标准发音';
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+            return;
+        }
+        
+        pronTimestamps = data.timestamps;
+        renderPronunciationText(currentArticle.text, pronTimestamps);
+        
+        let audioData = base64ToAudio(data.audio, data.mimetype);
+        loadAndPlayAudioWithWebAudio(audioData, btn);
+    }).catch(err => {
+        pronLoading = false;
+        pronPaused = false;
+        btn.innerHTML = '🔊 听标准发音';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        toast('生成失败', 'error');
+    });
 }
 
-function initFillblankMode() {
-    if (!currentArticle) return;
-    if (!singleFillblank) singleFillblank = new FillblankManager('fill-text', 'fill-results');
-    singleFillblank.init(currentArticle);
+let pronTimestamps = [];
+let highlightTimer = null;
+let pronAudioContext = null;
+let pronAudioSource = null;
+let pronAudioBuffer = null;
+let pronAudioBufferSource = null;
+let pronAudioStartTime = 0;
+let pronAudioPausedTime = 0;
+
+function loadAndPlayAudioWithWebAudio(audioUrl, btn) {
+    if (pronAudioContext) {
+        pronAudioContext.close();
+        pronAudioContext = null;
+    }
+    
+    pronAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    fetch(audioUrl)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => pronAudioContext.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+            pronAudioBuffer = audioBuffer;
+            startAudioPlayback(btn);
+        })
+        .catch(error => {
+            console.error('Failed to load audio:', error);
+            btn.innerHTML = '🔊 听标准发音';
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+            pronLoading = false;
+            pronPaused = false;
+            toast('加载音频失败', 'error');
+        });
 }
 
-function checkFillAnswers() {
-    if (!singleFillblank) return;
-    let result = singleFillblank.check();
-    if (result.pct >= 60 && currentArticle) {
-        let u = safeUser(getUser());
-        let idx = currentArticle.id;
-        u.listeningTotal = (u.listeningTotal || 0) + 1;
-        if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
-        if (u.tingli.listeningLog[idx]) { u.tingli.listeningLog[idx].count += 1; u.tingli.listeningLog[idx].lastTime = Date.now(); }
-        else { u.tingli.listeningLog[idx] = { count: 1, lastTime: Date.now() }; }
-        let now = Date.now();
-        if (u.tingli.log[idx]) { u.tingli.log[idx].c += 1; u.tingli.log[idx].next = nextDate(now, u.tingli.log[idx].c); }
-        else { if (!u.tingli.learn.includes(idx)) u.tingli.learn.push(idx); u.tingli.log[idx] = { t: now, c: 1, next: nextDate(now, 1) }; }
-        if (u.tingli.log[idx].c >= PERIOD.length && !u.tingli.done.includes(idx)) u.tingli.done.push(idx);
-        if (!u.tingli.dailyLog) u.tingli.dailyLog = {};
-        let today = todayKey();
-        if (!u.tingli.dailyLog[today]) u.tingli.dailyLog[today] = { learn: 0, review: 0 };
-        u.tingli.dailyLog[today].review++;
-        u.stars = (u.stars || 0) + 3;
-        setUser(u);
-        renderAll();
+function startAudioPlayback(btn) {
+    if (!pronAudioContext || !pronAudioBuffer) return;
+    
+    pronAudioBufferSource = pronAudioContext.createBufferSource();
+    pronAudioBufferSource.buffer = pronAudioBuffer;
+    
+    let gainNode = pronAudioContext.createGain();
+    gainNode.gain.value = parseInt(document.getElementById('volume-slider').value) / 100;
+    pronAudioBufferSource.connect(gainNode);
+    gainNode.connect(pronAudioContext.destination);
+    
+    pronAudioStartTime = pronAudioContext.currentTime - pronAudioPausedTime;
+    pronAudioBufferSource.start(0, pronAudioPausedTime);
+    
+    btn.innerHTML = '⏸️ 暂停播放';
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+    
+    startWebAudioHighlight();
+    
+    pronAudioBufferSource.onended = () => {
+        cleanupWebAudio();
+        pronPaused = false;
+        pronAudioPausedTime = 0;
+        btn.innerHTML = '🔊 听标准发音';
+        clearActiveSentence();
+    };
+}
+
+function pauseAudioPlayback() {
+    if (!pronAudioBufferSource || !pronAudioContext) return;
+    
+    pronAudioPausedTime = pronAudioContext.currentTime - pronAudioStartTime;
+    pronAudioBufferSource.stop();
+    pronAudioBufferSource = null;
+    stopWebAudioHighlight();
+}
+
+function resumeAudioPlayback(btn) {
+    if (!pronAudioBuffer) return;
+    
+    pronAudioBufferSource = pronAudioContext.createBufferSource();
+    pronAudioBufferSource.buffer = pronAudioBuffer;
+    
+    let gainNode = pronAudioContext.createGain();
+    gainNode.gain.value = parseInt(document.getElementById('volume-slider').value) / 100;
+    pronAudioBufferSource.connect(gainNode);
+    gainNode.connect(pronAudioContext.destination);
+    
+    pronAudioStartTime = pronAudioContext.currentTime - pronAudioPausedTime;
+    pronAudioBufferSource.start(0, pronAudioPausedTime);
+    
+    btn.innerHTML = '⏸️ 暂停播放';
+    startWebAudioHighlight();
+    
+    pronAudioBufferSource.onended = () => {
+        cleanupWebAudio();
+        pronPaused = false;
+        pronAudioPausedTime = 0;
+        btn.innerHTML = '🔊 听标准发音';
+        clearActiveSentence();
+    };
+}
+
+function cleanupWebAudio() {
+    stopWebAudioHighlight();
+    if (pronAudioBufferSource) {
+        try { pronAudioBufferSource.stop(); } catch(e) {}
+        pronAudioBufferSource = null;
+    }
+    if (pronAudioContext) {
+        pronAudioContext.close();
+        pronAudioContext = null;
+    }
+    pronAudioBuffer = null;
+}
+
+function startWebAudioHighlight() {
+    stopWebAudioHighlight();
+    
+    function updateHighlight() {
+        if (!pronAudioContext || pronPaused) {
+            requestAnimationFrame(updateHighlight);
+            return;
+        }
+        
+        let currentTime = pronAudioContext.currentTime - pronAudioStartTime;
+        let activeIndex = pronTimestamps.findIndex(t => 
+            currentTime >= t.start && currentTime < t.end
+        );
+        
+        if (activeIndex >= 0) {
+            setActiveSentence(activeIndex);
+        }
+        
+        requestAnimationFrame(updateHighlight);
+    }
+    
+    requestAnimationFrame(updateHighlight);
+}
+
+function stopWebAudioHighlight() {
+    // requestAnimationFrame 会自动停止
+}
+
+function fetchTtsWithTimestamp(text, model, voice, speed) {
+    return fetch('http://localhost:5003/tts/timestamp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, model, voice, speed })
+    }).then(res => res.json()).catch(err => {
+        console.error('TTS fetch error:', err);
+        return null;
+    });
+}
+
+function base64ToAudio(base64Data, mimetype) {
+    let byteString = atob(base64Data);
+    let arrayBuffer = new ArrayBuffer(byteString.length);
+    let uint8Array = new Uint8Array(arrayBuffer);
+    for (let i = 0; i < byteString.length; i++) {
+        uint8Array[i] = byteString.charCodeAt(i);
+    }
+    let blob = new Blob([arrayBuffer], { type: mimetype });
+    return URL.createObjectURL(blob);
+}
+
+function renderPronunciationText(text, timestamps) {
+    let container = document.getElementById('pron-target-text');
+    if (!container) return;
+    
+    container.innerHTML = timestamps.map((item, index) => 
+        `<span class="sentence-item" data-index="${index}">${escapeHtml(item.text)}</span>`
+    ).join('');
+    
+    let style = document.createElement('style');
+    style.textContent = `
+        .sentence-item.active {
+            color: #1D9E75;
+            font-weight: 600;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function clearActiveSentence() {
+    document.querySelectorAll('.sentence-item').forEach(el => {
+        el.classList.remove('active');
+    });
+}
+
+function setActiveSentence(index) {
+    clearActiveSentence();
+    let el = document.querySelector(`.sentence-item[data-index="${index}"]`);
+    if (el) {
+        el.classList.add('active');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
 
-function resetFillInputs() {
-    if (singleFillblank) singleFillblank.reset();
+function startHighlightTimer() {
+    stopHighlightTimer();
+    highlightTimer = setInterval(() => {
+        if (!pronAudio || pronPaused) return;
+        
+        let currentTime = pronAudio.currentTime;
+        let activeIndex = pronTimestamps.findIndex(t => 
+            currentTime >= t.start && currentTime < t.end
+        );
+        
+        if (activeIndex >= 0) {
+            setActiveSentence(activeIndex);
+        }
+    }, 100);
 }
 
-function toggleRecording() { if (singleRecorder) singleRecorder.toggle(); }
-function togglePlayRecording() { if (singleRecorder) singleRecorder.togglePlay(); }
-function showPlayRecordingBtn() { if (singleRecorder) singleRecorder._showPlayBtn(); }
-function hidePlayRecordingBtn() { if (singleRecorder) singleRecorder._hidePlayBtn(); }
-function sendScoreRequest(wavBlob) {
+function stopHighlightTimer() {
+    if (highlightTimer) {
+        clearInterval(highlightTimer);
+        highlightTimer = null;
+    }
+}
+
+function escapeHtml(text) {
+    let div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+let mediaStream = null;
+let audioCtx = null;
+let scriptNode = null;
+let recordedSamples = [];
+let isRecording = false;
+let recordingTimer = null;
+let recordingDuration = 0;
+
+async function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        await startRecording();
+    }
+}
+
+async function startRecording() {
+    try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let source = audioCtx.createMediaStreamSource(mediaStream);
+        scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
+        recordedSamples = [];
+        scriptNode.onaudioprocess = function(e) {
+            if (isRecording) {
+                let data = e.inputBuffer.getChannelData(0);
+                recordedSamples.push(new Float32Array(data));
+            }
+        };
+        source.connect(scriptNode);
+        scriptNode.connect(audioCtx.destination);
+        isRecording = true;
+        recordingDuration = 0;
+        let btn = document.getElementById('record-btn');
+        btn.classList.add('recording');
+        btn.querySelector('.record-text').textContent = '点击停止';
+        document.getElementById('record-timer').style.display = 'block';
+        document.getElementById('record-timer').textContent = '0.0s';
+        recordingTimer = setInterval(() => {
+            recordingDuration += 0.1;
+            document.getElementById('record-timer').textContent = recordingDuration.toFixed(1) + 's';
+        }, 100);
+    } catch (err) {
+        toast('无法访问麦克风：' + err.message, 'error');
+    }
+}
+
+let recordedAudioBlob = null;
+let recordedAudio = null;
+let isPlayingRecording = false;
+
+function stopRecording() {
+    isRecording = false;
+    if (recordingTimer) { clearInterval(recordingTimer); recordingTimer = null; }
+    let btn = document.getElementById('record-btn');
+    btn.classList.remove('recording');
+    btn.querySelector('.record-text').textContent = '点击录音';
+    document.getElementById('record-timer').style.display = 'none';
+    if (scriptNode) { scriptNode.disconnect(); scriptNode = null; }
+    if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+    let sampleRate = audioCtx ? audioCtx.sampleRate : 16000;
+    if (audioCtx) { audioCtx.close(); audioCtx = null; }
+    if (recordedSamples.length > 0) {
+        let totalLen = recordedSamples.reduce((acc, buf) => acc + buf.length, 0);
+        let merged = new Float32Array(totalLen);
+        let offset = 0;
+        for (let buf of recordedSamples) { merged.set(buf, offset); offset += buf.length; }
+        recordedAudioBlob = encodeWAV(merged, sampleRate);
+        sendScoreRequest(recordedAudioBlob);
+        showPlayRecordingBtn();
+    }
+}
+
+function showPlayRecordingBtn() {
+    document.getElementById('play-record-btn').style.display = 'flex';
+}
+
+function hidePlayRecordingBtn() {
+    document.getElementById('play-record-btn').style.display = 'none';
+    if (recordedAudio) {
+        recordedAudio.pause();
+        recordedAudio = null;
+    }
+    isPlayingRecording = false;
+}
+
+function togglePlayRecording() {
+    let btn = document.getElementById('play-record-btn');
+    
+    if (!recordedAudioBlob) return;
+    
+    if (isPlayingRecording && recordedAudio) {
+        recordedAudio.pause();
+        isPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '播放录音';
+        return;
+    }
+    
+    if (recordedAudio && !isPlayingRecording) {
+        recordedAudio.play();
+        isPlayingRecording = true;
+        btn.querySelector('.record-icon').textContent = '⏸️';
+        btn.querySelector('.record-text').textContent = '暂停录音';
+        return;
+    }
+    
+    let audioUrl = URL.createObjectURL(recordedAudioBlob);
+    recordedAudio = new Audio(audioUrl);
+    recordedAudio.volume = parseInt(document.getElementById('volume-slider').value) / 100;
+    
+    recordedAudio.onplay = () => {
+        isPlayingRecording = true;
+        btn.querySelector('.record-icon').textContent = '⏸️';
+        btn.querySelector('.record-text').textContent = '暂停录音';
+    };
+    
+    recordedAudio.onpause = () => {
+        isPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '继续播放';
+    };
+    
+    recordedAudio.onended = () => {
+        isPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '播放录音';
+        recordedAudio = null;
+    };
+    
+    recordedAudio.play();
+}
+
+function stopRecordingCleanup() {
+    isRecording = false;
+    if (recordingTimer) { clearInterval(recordingTimer); recordingTimer = null; }
+    if (scriptNode) { scriptNode.disconnect(); scriptNode = null; }
+    if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+    if (audioCtx) { audioCtx.close(); audioCtx = null; }
+    recordedSamples = [];
+}
+
+function encodeWAV(samples, sampleRate) {
+    let buffer = new ArrayBuffer(44 + samples.length * 2);
+    let view = new DataView(buffer);
+    function writeStr(v, o, s) { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    writeStr(view, 0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeStr(view, 8, 'WAVE');
+    writeStr(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(view, 36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+    let off = 44;
+    for (let i = 0; i < samples.length; i++) {
+        let s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        off += 2;
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+}
+
+async function sendScoreRequest(wavBlob) {
     if (!currentArticle) return;
     let resultsEl = document.getElementById('pron-results');
     resultsEl.style.display = 'block';
@@ -3008,16 +2999,19 @@ function sendScoreRequest(wavBlob) {
     let formData = new FormData();
     formData.append('audio', wavBlob, 'recording.wav');
     formData.append('target', currentArticle.text);
-    fetch(SCORE_URL, { method: 'POST', body: formData })
-      .then(res => {
-        if (!res.ok) throw new Error('评分请求失败：' + res.status);
-        return res.json();
-      })
-      .then(result => displayPronResults(result))
-      .catch(err => {
-        toast(err.message, 'error');
+    try {
+        let res = await fetch(SCORE_URL, { method: 'POST', body: formData });
+        if (!res.ok) {
+            toast('评分请求失败：' + res.status, 'error');
+            resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分失败，请重试</div>';
+            return;
+        }
+        let result = await res.json();
+        displayPronResults(result);
+    } catch (err) {
+        toast('评分请求出错：' + err.message, 'error');
         resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分出错，请检查服务是否启动</div>';
-      });
+    }
 }
 
 function displayPronResults(result) {
@@ -3062,6 +3056,686 @@ function displayPronResults(result) {
         </div>
         ${resultsHtml}
     `;
+}
+
+function initFillblankMode() {
+    if (!currentArticle) return;
+    let text = currentArticle.text;
+    let words = currentArticle.words || '';
+    let wordList = words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    let wordSet = new Set(wordList);
+    let lines = text.split('\n');
+    let html = '';
+    let blankIndex = 0;
+    for (let line of lines) {
+        let tokens = line.split(/(\s+)/);
+        for (let token of tokens) {
+            if (!token.trim()) { html += token; continue; }
+            let match = token.match(/^([^\w]*)(\w+)([^\w]*)$/);
+            if (match) {
+                let [, prefix, word, suffix] = match;
+                if (wordSet.has(word.toLowerCase())) {
+                    let w = word.length;
+                    let inputW = Math.max(w * 12, 60);
+                    html += prefix + `<input type="text" class="fill-input" data-answer="${word}" data-index="${blankIndex}" autocomplete="off" style="width:${inputW}px;" placeholder="${'_'.repeat(w)}">` + suffix;
+                    blankIndex++;
+                } else {
+                    html += token;
+                }
+            } else {
+                html += token;
+            }
+        }
+        html += '\n';
+    }
+    document.getElementById('fill-text').innerHTML = html.trim();
+    document.getElementById('fill-results').style.display = 'none';
+    document.querySelectorAll('#fill-text .fill-input').forEach(input => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                let inputs = document.querySelectorAll('#fill-text .fill-input');
+                let idx = parseInt(this.dataset.index);
+                if (idx < inputs.length - 1) inputs[idx + 1].focus();
+            }
+        });
+    });
+}
+
+function checkFillAnswers() {
+    let inputs = document.querySelectorAll('#fill-text .fill-input');
+    let correct = 0;
+    let total = inputs.length;
+    inputs.forEach(input => {
+        let answer = input.dataset.answer.toLowerCase();
+        let userAnswer = input.value.trim().toLowerCase();
+        input.disabled = false;
+        if (userAnswer === answer) {
+            input.classList.add('correct');
+            input.classList.remove('wrong');
+            correct++;
+        } else {
+            input.classList.add('wrong');
+            input.classList.remove('correct');
+        }
+    });
+    let pct = total > 0 ? Math.round(correct / total * 100) : 0;
+    let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
+    let resultsEl = document.getElementById('fill-results');
+    resultsEl.style.display = 'block';
+    let wrongWords = [];
+    inputs.forEach(input => {
+        if (input.classList.contains('wrong')) {
+            wrongWords.push(input.dataset.answer);
+        }
+    });
+    let wrongHtml = wrongWords.length > 0 ? `<div style="margin-top:8px;font-size:13px;color:#ef5350;">❌ 错误单词：${wrongWords.map(w => `<span style="background:#ffebee;padding:2px 8px;border-radius:4px;margin:0 2px;">${w}</span>`).join('')}</div>` : '<div style="margin-top:8px;font-size:13px;color:#43a047;">🎉 全部正确！</div>';
+    resultsEl.innerHTML = `
+        <h3>📊 填空结果</h3>
+        <div class="fill-score" style="color:${pctColor};">${pct}%</div>
+        <div class="fill-detail">正确 ${correct}/${total}</div>
+        ${wrongHtml}
+    `;
+    if (pct >= 60 && currentArticle) {
+        let u = safeUser(getUser());
+        let idx = currentArticle.id;
+        u.listeningTotal = (u.listeningTotal || 0) + 1;
+        if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
+        if (u.tingli.listeningLog[idx]) { u.tingli.listeningLog[idx].count += 1; u.tingli.listeningLog[idx].lastTime = Date.now(); }
+        else { u.tingli.listeningLog[idx] = { count: 1, lastTime: Date.now() }; }
+        let now = Date.now();
+        if (u.tingli.log[idx]) { u.tingli.log[idx].c += 1; u.tingli.log[idx].next = nextDate(now, u.tingli.log[idx].c); }
+        else { if (!u.tingli.learn.includes(idx)) u.tingli.learn.push(idx); u.tingli.log[idx] = { t: now, c: 1, next: nextDate(now, 1) }; }
+        if (u.tingli.log[idx].c >= PERIOD.length && !u.tingli.done.includes(idx)) u.tingli.done.push(idx);
+        if (!u.tingli.dailyLog) u.tingli.dailyLog = {};
+        let today = todayKey();
+        if (!u.tingli.dailyLog[today]) u.tingli.dailyLog[today] = { learn: 0, review: 0 };
+        u.tingli.dailyLog[today].review++;
+        u.stars = (u.stars || 0) + 3;
+        setUser(u);
+        renderAll();
+    }
+}
+
+function resetFillInputs() {
+    document.querySelectorAll('#fill-text .fill-input').forEach(input => {
+        input.value = '';
+        input.disabled = false;
+        input.classList.remove('correct', 'wrong');
+    });
+    document.getElementById('fill-results').style.display = 'none';
+}
+
+// 批量填空模式函数
+function initBatchFillblankMode() {
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    let text = article.text;
+    let words = article.words || '';
+    let wordList = words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    let wordSet = new Set(wordList);
+    let lines = text.split('\n');
+    let html = '';
+    let blankIndex = 0;
+    for (let line of lines) {
+        let tokens = line.split(/(\s+)/);
+        for (let token of tokens) {
+            if (!token.trim()) { html += token; continue; }
+            let match = token.match(/^([^\w]*)(\w+)([^\w]*)$/);
+            if (match) {
+                let [, prefix, word, suffix] = match;
+                if (wordSet.has(word.toLowerCase())) {
+                    let w = word.length;
+                    let inputW = Math.max(w * 12, 60);
+                    html += prefix + `<input type="text" class="fill-input" data-answer="${word}" data-index="${blankIndex}" autocomplete="off" style="width:${inputW}px;" placeholder="${'_'.repeat(w)}">` + suffix;
+                    blankIndex++;
+                } else {
+                    html += token;
+                }
+            } else {
+                html += token;
+            }
+        }
+        html += '\n';
+    }
+    document.getElementById('batch-fill-text').innerHTML = html.trim();
+    document.getElementById('batch-fill-results').style.display = 'none';
+    document.querySelectorAll('#batch-fill-text .fill-input').forEach(input => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                let inputs = document.querySelectorAll('#batch-fill-text .fill-input');
+                let idx = parseInt(this.dataset.index);
+                if (idx < inputs.length - 1) inputs[idx + 1].focus();
+            }
+        });
+    });
+}
+
+function checkBatchFillAnswers() {
+    let inputs = document.querySelectorAll('#batch-fill-text .fill-input');
+    let correct = 0;
+    let total = inputs.length;
+    inputs.forEach(input => {
+        let answer = input.dataset.answer.toLowerCase();
+        let userAnswer = input.value.trim().toLowerCase();
+        input.disabled = false;
+        if (userAnswer === answer) {
+            input.classList.add('correct');
+            input.classList.remove('wrong');
+            correct++;
+        } else {
+            input.classList.add('wrong');
+            input.classList.remove('correct');
+        }
+    });
+    let pct = total > 0 ? Math.round(correct / total * 100) : 0;
+    let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
+    let resultsEl = document.getElementById('batch-fill-results');
+    resultsEl.style.display = 'block';
+    let wrongWords = [];
+    inputs.forEach(input => {
+        if (input.classList.contains('wrong')) {
+            wrongWords.push(input.dataset.answer);
+        }
+    });
+    let wrongHtml = wrongWords.length > 0 ? `<div style="margin-top:8px;font-size:13px;color:#ef5350;">❌ 错误单词：${wrongWords.map(w => `<span style="background:#ffebee;padding:2px 8px;border-radius:4px;margin:0 2px;">${w}</span>`).join('')}</div>` : '<div style="margin-top:8px;font-size:13px;color:#43a047;">🎉 全部正确！</div>';
+    resultsEl.innerHTML = `
+        <h3>📊 填空结果</h3>
+        <div class="fill-score" style="color:${pctColor};">${pct}%</div>
+        <div class="fill-detail">正确 ${correct}/${total}</div>
+        ${wrongHtml}
+    `;
+}
+
+function resetBatchFillInputs() {
+    document.querySelectorAll('#batch-fill-text .fill-input').forEach(input => {
+        input.value = '';
+        input.disabled = false;
+        input.classList.remove('correct', 'wrong');
+    });
+    document.getElementById('batch-fill-results').style.display = 'none';
+}
+
+// 批量拼读模式函数
+let batchPronAudio = null;
+let batchPronTimestamps = [];
+let batchPronAudioContext = null;
+let batchPronAudioBuffer = null;
+let batchPronAudioBufferSource = null;
+let batchPronAudioStartTime = 0;
+let batchPronAudioPausedTime = 0;
+let batchPronLoading = false;
+let batchPronPaused = false;
+let batchHighlightTimer = null;
+
+function initBatchPronunciationMode() {
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    batchRecordedSamples = [];
+    batchRecordedAudioBlob = null;
+    batchRecordedAudio = null;
+    batchIsPlayingRecording = false;
+    renderBatchPronunciationText(article.text, null);
+    document.getElementById('batch-pron-results').style.display = 'none';
+    let btn = document.getElementById('batch-record-btn');
+    btn.classList.remove('recording');
+    btn.querySelector('.record-text').textContent = '点击录音';
+    document.getElementById('batch-record-timer').style.display = 'none';
+    hideBatchPlayRecordingBtn();
+}
+
+function playBatchPronReference() {
+    if (batchIndex >= batchArticles.length) return;
+    
+    let btn = document.getElementById('batch-pron-btn');
+    
+    if (batchPronLoading) return;
+    
+    if (batchPronAudioBufferSource && !batchPronPaused) {
+        pauseBatchPronPlayback();
+        batchPronPaused = true;
+        btn.innerHTML = '▶️ 继续播放';
+        clearBatchActiveSentence();
+        return;
+    }
+    
+    if (batchPronAudioBuffer && batchPronPaused) {
+        resumeBatchPronPlayback(btn);
+        batchPronPaused = false;
+        return;
+    }
+    
+    let article = batchArticles[batchIndex];
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+    
+    batchPronLoading = true;
+    batchPronPaused = false;
+    btn.innerHTML = '⏳ 正在生成发音...';
+    btn.style.opacity = '0.6';
+    btn.style.pointerEvents = 'none';
+    
+    fetchTtsWithTimestamp(article.text, model, voice, speed).then(data => {
+        batchPronLoading = false;
+        
+        if (!data) {
+            btn.innerHTML = '🔊 听标准发音';
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+            return;
+        }
+        
+        batchPronTimestamps = data.timestamps;
+        renderBatchPronunciationText(article.text, batchPronTimestamps);
+        
+        let audioData = base64ToAudio(data.audio, data.mimetype);
+        loadAndPlayBatchPronAudio(audioData, btn);
+    }).catch(err => {
+        batchPronLoading = false;
+        batchPronPaused = false;
+        btn.innerHTML = '🔊 听标准发音';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        toast('生成失败', 'error');
+    });
+}
+
+function renderBatchPronunciationText(text, timestamps) {
+    let container = document.getElementById('batch-pron-target-text');
+    if (!container) return;
+    
+    if (timestamps && timestamps.length > 0) {
+        container.innerHTML = timestamps.map((item, index) => 
+            `<span class="batch-sentence-item" data-index="${index}">${escapeHtml(item.text)}</span>`
+        ).join('');
+    } else {
+        container.textContent = text;
+    }
+    
+    let style = document.createElement('style');
+    style.textContent = `
+        .batch-sentence-item.active {
+            color: #1D9E75;
+            font-weight: 600;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function clearBatchActiveSentence() {
+    document.querySelectorAll('.batch-sentence-item').forEach(el => {
+        el.classList.remove('active');
+    });
+}
+
+function setBatchActiveSentence(index) {
+    clearBatchActiveSentence();
+    let el = document.querySelector(`.batch-sentence-item[data-index="${index}"]`);
+    if (el) {
+        el.classList.add('active');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function loadAndPlayBatchPronAudio(audioUrl, btn) {
+    if (batchPronAudioContext) {
+        batchPronAudioContext.close();
+        batchPronAudioContext = null;
+    }
+    
+    batchPronAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    fetch(audioUrl)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => batchPronAudioContext.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+            batchPronAudioBuffer = audioBuffer;
+            startBatchPronPlayback(btn);
+        })
+        .catch(error => {
+            console.error('Failed to load audio:', error);
+            btn.innerHTML = '🔊 听标准发音';
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+            batchPronLoading = false;
+            batchPronPaused = false;
+            toast('加载音频失败', 'error');
+        });
+}
+
+function startBatchPronPlayback(btn) {
+    if (!batchPronAudioContext || !batchPronAudioBuffer) return;
+    
+    batchPronAudioBufferSource = batchPronAudioContext.createBufferSource();
+    batchPronAudioBufferSource.buffer = batchPronAudioBuffer;
+    
+    let gainNode = batchPronAudioContext.createGain();
+    gainNode.gain.value = parseInt(document.getElementById('batch-volume').value) / 100;
+    batchPronAudioBufferSource.connect(gainNode);
+    gainNode.connect(batchPronAudioContext.destination);
+    
+    batchPronAudioStartTime = batchPronAudioContext.currentTime - batchPronAudioPausedTime;
+    batchPronAudioBufferSource.start(0, batchPronAudioPausedTime);
+    
+    btn.innerHTML = '⏸️ 暂停播放';
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+    
+    startBatchPronHighlight();
+    
+    batchPronAudioBufferSource.onended = () => {
+        cleanupBatchPronAudio();
+        batchPronPaused = false;
+        batchPronAudioPausedTime = 0;
+        btn.innerHTML = '🔊 听标准发音';
+        clearBatchActiveSentence();
+    };
+}
+
+function pauseBatchPronPlayback() {
+    if (!batchPronAudioBufferSource || !batchPronAudioContext) return;
+    
+    batchPronAudioPausedTime = batchPronAudioContext.currentTime - batchPronAudioStartTime;
+    batchPronAudioBufferSource.stop();
+    batchPronAudioBufferSource = null;
+    stopBatchPronHighlight();
+}
+
+function resumeBatchPronPlayback(btn) {
+    if (!batchPronAudioBuffer) return;
+    
+    batchPronAudioBufferSource = batchPronAudioContext.createBufferSource();
+    batchPronAudioBufferSource.buffer = batchPronAudioBuffer;
+    
+    let gainNode = batchPronAudioContext.createGain();
+    gainNode.gain.value = parseInt(document.getElementById('batch-volume').value) / 100;
+    batchPronAudioBufferSource.connect(gainNode);
+    gainNode.connect(batchPronAudioContext.destination);
+    
+    batchPronAudioStartTime = batchPronAudioContext.currentTime - batchPronAudioPausedTime;
+    batchPronAudioBufferSource.start(0, batchPronAudioPausedTime);
+    
+    btn.innerHTML = '⏸️ 暂停播放';
+    startBatchPronHighlight();
+    
+    batchPronAudioBufferSource.onended = () => {
+        cleanupBatchPronAudio();
+        batchPronPaused = false;
+        batchPronAudioPausedTime = 0;
+        btn.innerHTML = '🔊 听标准发音';
+        clearBatchActiveSentence();
+    };
+}
+
+function cleanupBatchPronAudio() {
+    stopBatchPronHighlight();
+    if (batchPronAudioBufferSource) {
+        try { batchPronAudioBufferSource.stop(); } catch(e) {}
+        batchPronAudioBufferSource = null;
+    }
+    if (batchPronAudioContext) {
+        batchPronAudioContext.close();
+        batchPronAudioContext = null;
+    }
+    batchPronAudioBuffer = null;
+}
+
+function startBatchPronHighlight() {
+    stopBatchPronHighlight();
+    
+    function updateHighlight() {
+        if (!batchPronAudioContext || batchPronPaused) {
+            requestAnimationFrame(updateHighlight);
+            return;
+        }
+        
+        let currentTime = batchPronAudioContext.currentTime - batchPronAudioStartTime;
+        let activeIndex = batchPronTimestamps.findIndex(t => 
+            currentTime >= t.start && currentTime < t.end
+        );
+        
+        if (activeIndex >= 0) {
+            setBatchActiveSentence(activeIndex);
+        }
+        
+        requestAnimationFrame(updateHighlight);
+    }
+    
+    requestAnimationFrame(updateHighlight);
+}
+
+let batchMediaStream = null;
+let batchAudioCtx = null;
+let batchScriptNode = null;
+let batchRecordedSamples = [];
+let batchRecordedAudioBlob = null;
+let batchRecordedAudio = null;
+let batchIsPlayingRecording = false;
+let batchIsRecording = false;
+let batchRecordingTimer = null;
+let batchRecordingDuration = 0;
+
+function stopBatchPronHighlight() {
+    // requestAnimationFrame will stop automatically
+}
+
+function showBatchPlayRecordingBtn() {
+    document.getElementById('batch-play-record-btn').style.display = 'flex';
+}
+
+function hideBatchPlayRecordingBtn() {
+    document.getElementById('batch-play-record-btn').style.display = 'none';
+    if (batchRecordedAudio) {
+        batchRecordedAudio.pause();
+        batchRecordedAudio = null;
+    }
+    batchIsPlayingRecording = false;
+}
+
+function togglePlayBatchRecording() {
+    let btn = document.getElementById('batch-play-record-btn');
+    
+    if (!batchRecordedAudioBlob) return;
+    
+    if (batchIsPlayingRecording && batchRecordedAudio) {
+        batchRecordedAudio.pause();
+        batchIsPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '播放录音';
+        return;
+    }
+    
+    if (batchRecordedAudio && !batchIsPlayingRecording) {
+        batchRecordedAudio.play();
+        batchIsPlayingRecording = true;
+        btn.querySelector('.record-icon').textContent = '⏸️';
+        btn.querySelector('.record-text').textContent = '暂停录音';
+        return;
+    }
+    
+    let audioUrl = URL.createObjectURL(batchRecordedAudioBlob);
+    batchRecordedAudio = new Audio(audioUrl);
+    batchRecordedAudio.volume = parseInt(document.getElementById('batch-volume').value) / 100;
+    
+    batchRecordedAudio.onplay = () => {
+        batchIsPlayingRecording = true;
+        btn.querySelector('.record-icon').textContent = '⏸️';
+        btn.querySelector('.record-text').textContent = '暂停录音';
+    };
+    
+    batchRecordedAudio.onpause = () => {
+        batchIsPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '继续播放';
+    };
+    
+    batchRecordedAudio.onended = () => {
+        batchIsPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '播放录音';
+        batchRecordedAudio = null;
+    };
+    
+    batchRecordedAudio.onerror = () => {
+        batchIsPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '播放录音';
+        batchRecordedAudio = null;
+        toast('播放录音失败', 'error');
+    };
+    
+    batchRecordedAudio.play();
+}
+
+async function toggleBatchRecording() {
+    if (batchIsRecording) {
+        stopBatchRecording();
+    } else {
+        await startBatchRecording();
+    }
+}
+
+async function startBatchRecording() {
+    try {
+        batchMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        batchAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let source = batchAudioCtx.createMediaStreamSource(batchMediaStream);
+        batchScriptNode = batchAudioCtx.createScriptProcessor(4096, 1, 1);
+        batchRecordedSamples = [];
+        batchScriptNode.onaudioprocess = function(e) {
+            if (batchIsRecording) {
+                batchRecordedSamples.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+            }
+        };
+        source.connect(batchScriptNode);
+        batchScriptNode.connect(batchAudioCtx.destination);
+        batchIsRecording = true;
+        let btn = document.getElementById('batch-record-btn');
+        btn.classList.add('recording');
+        btn.querySelector('.record-text').textContent = '点击停止';
+        document.getElementById('batch-record-timer').style.display = 'block';
+        document.getElementById('batch-record-timer').textContent = '0.0s';
+        batchRecordingDuration = 0;
+        batchRecordingTimer = setInterval(() => {
+            batchRecordingDuration += 0.1;
+            document.getElementById('batch-record-timer').textContent = batchRecordingDuration.toFixed(1) + 's';
+        }, 100);
+    } catch (err) {
+        toast('无法访问麦克风：' + err.message, 'error');
+    }
+}
+
+function stopBatchRecording() {
+    if (!batchIsRecording) return;
+    batchIsRecording = false;
+    if (batchRecordingTimer) { clearInterval(batchRecordingTimer); batchRecordingTimer = null; }
+    if (batchScriptNode) { batchScriptNode.disconnect(); batchScriptNode = null; }
+    if (batchMediaStream) { batchMediaStream.getTracks().forEach(t => t.stop()); batchMediaStream = null; }
+    let btn = document.getElementById('batch-record-btn');
+    btn.classList.remove('recording');
+    btn.querySelector('.record-text').textContent = '点击录音';
+    document.getElementById('batch-record-timer').style.display = 'none';
+    if (batchRecordedSamples.length > 0) {
+        let sampleRate = batchAudioCtx ? batchAudioCtx.sampleRate : 16000;
+        if (batchAudioCtx) { batchAudioCtx.close(); batchAudioCtx = null; }
+        let merged = new Float32Array(batchRecordedSamples.reduce((a, b) => a + b.length, 0));
+        let offset = 0;
+        for (let s of batchRecordedSamples) {
+            merged.set(s, offset);
+            offset += s.length;
+        }
+        batchRecordedAudioBlob = encodeWAV(merged, sampleRate);
+        batchRecordedSamples = [];
+        showBatchPlayRecordingBtn();
+        submitBatchPronunciation(batchRecordedAudioBlob);
+    }
+}
+
+async function submitBatchPronunciation(wavBlob) {
+    if (!wavBlob) return;
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    let formData = new FormData();
+    formData.append('audio', wavBlob, 'recording.wav');
+    formData.append('target', article.text);
+    let resultsEl = document.getElementById('batch-pron-results');
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:var(--text3);">⏳ 评分中...</div>';
+    try {
+        let res = await fetch(SCORE_URL, { method: 'POST', body: formData });
+        if (!res.ok) {
+            toast('评分请求失败：' + res.status, 'error');
+            resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分失败，请重试</div>';
+            return;
+        }
+        let data = await res.json();
+        let fluency = data.fluency || 0;
+        let phoneAccuracy = data.phone_accuracy || 0;
+        let pauseRatio = data.pause_ratio || 0;
+        let duration = data.duration || 0;
+        let heard = data.heard || '';
+        let fluencyClass = fluency >= 80 ? 'high' : fluency >= 60 ? 'mid' : 'low';
+        let accClass = phoneAccuracy >= 80 ? 'high' : phoneAccuracy >= 60 ? 'mid' : 'low';
+        let resultsHtml = '';
+        if (data.results && data.results.length > 0) {
+            resultsHtml = '<div style="margin-top:8px;font-size:13px;color:var(--text2);">' + data.results.map(r => {
+                let icon = r.correct ? '✅' : '❌';
+                return icon + ' /' + r.phone + '/';
+            }).join(' ') + '</div>';
+        }
+        resultsEl.innerHTML = `
+            <h3>📊 打分结果</h3>
+            <div class="pron-result-grid">
+                <div class="pron-result-item">
+                    <div class="pron-result-val ${fluencyClass}">${fluency.toFixed(1)}</div>
+                    <div class="pron-result-label">流利度</div>
+                </div>
+                <div class="pron-result-item">
+                    <div class="pron-result-val ${accClass}">${phoneAccuracy.toFixed(1)}%</div>
+                    <div class="pron-result-label">音素准确率</div>
+                </div>
+                <div class="pron-result-item">
+                    <div class="pron-result-val">${(pauseRatio * 100).toFixed(1)}%</div>
+                    <div class="pron-result-label">停顿比</div>
+                </div>
+                <div class="pron-result-item">
+                    <div class="pron-result-val">${duration.toFixed(1)}s</div>
+                    <div class="pron-result-label">时长</div>
+                </div>
+            </div>
+            <div class="pron-heard">
+                <strong>识别结果：</strong>${heard || '(未识别到内容)'}
+            </div>
+            ${resultsHtml}
+        `;
+        // 保存答案并进入下一题
+        batchAnswers.push({ 
+            idx: article.id, 
+            article: article, 
+            input: heard, 
+            correct: phoneAccuracy >= 60, 
+            simScore: phoneAccuracy,
+            mode: 'pronunciation',
+            fluency: Math.round(fluency),
+            phone_accuracy: phoneAccuracy,
+            pause_ratio: pauseRatio,
+            duration: duration,
+            heard: heard
+        });
+        // 延迟1秒后显示下一题按钮（和跳过按钮并排）
+        setTimeout(() => {
+            let submitBtn = document.getElementById('batch-submit-btn');
+            if (submitBtn) {
+                submitBtn.style.display = 'inline-flex';
+                submitBtn.textContent = '➡️ 下一题';
+            }
+        }, 1000);
+    } catch (err) {
+        toast('评分请求出错：' + err.message, 'error');
+        resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分出错，请检查服务是否启动</div>';
+    }
 }
 
 window.onload = async function() { await initArticles(); renderAll(); loadSettings(); };
