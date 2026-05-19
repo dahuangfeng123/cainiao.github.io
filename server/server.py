@@ -53,6 +53,7 @@ def get_cached_audio(cache_id, model):
 # ========== Kokoro TTS ==========
 _kokoro = None
 _kokoro_lock = threading.Lock()
+_kokoro_gen_lock = threading.Lock()  # Kokoro ONNX推理锁，保证线程安全
 _kokoro_available = False
 
 
@@ -87,7 +88,8 @@ def kokoro_tts(text, voice, speed):
         return None
     import soundfile as sf
 
-    samples, sample_rate = kokoro.create(text, voice=voice, speed=speed, lang="en-us")
+    with _kokoro_gen_lock:
+        samples, sample_rate = kokoro.create(text, voice=voice, speed=speed, lang="en-us")
     buf = io.BytesIO()
     sf.write(buf, samples, sample_rate, format="WAV", subtype="PCM_16")
     buf.seek(0)
@@ -136,7 +138,11 @@ def split_text(text, max_chars=150):
 
 
 def kokoro_tts_batch(text, voice, speed, max_workers=4):
-    """并行生成多个文本片段的TTS"""
+    """逐段生成TTS音频并拼接。
+    
+    注意：Kokoro ONNX推理不是线程安全的，必须顺序调用，
+    多线程并行会导致部分chunk产出空/损坏音频。
+    """
     kokoro = get_kokoro()
     if kokoro is None:
         return None
@@ -145,68 +151,79 @@ def kokoro_tts_batch(text, voice, speed, max_workers=4):
     print(f"[Kokoro Batch] splitting into {len(chunks)} chunks")
     
     if len(chunks) == 1:
-        samples, sample_rate = kokoro.create(chunks[0], voice=voice, speed=speed, lang="en-us")
+        with _kokoro_gen_lock:
+            samples, sample_rate = kokoro.create(chunks[0], voice=voice, speed=speed, lang="en-us")
         buf = io.BytesIO()
         import soundfile as sf
         sf.write(buf, samples, sample_rate, format="WAV", subtype="PCM_16")
         buf.seek(0)
         return buf.read(), "audio/wav"
     
+    import numpy as np
+    import soundfile as sf
+    
     results = []
-    failed_chunks = []
+    sample_rate = 24000  # 默认采样率，会在第一个成功chunk时更新
     
-    def generate_chunk(chunk_text):
-        try:
-            samples, sample_rate = kokoro.create(chunk_text, voice=voice, speed=speed, lang="en-us")
-            return samples, sample_rate
-        except Exception as e:
-            print(f"[Kokoro Batch] Error generating chunk: {e}")
-            print(f"[Kokoro Batch] Failed chunk text: {repr(chunk_text[:100])}")
-            return None
-    
-    try:
-        with ThreadPoolExecutor(max_workers=min(max_workers, len(chunks))) as executor:
-            futures = list(executor.map(generate_chunk, chunks))
-        
-        for i, r in enumerate(futures):
-            if r is None:
-                # 单个chunk失败时，尝试对该chunk逐行再试一次
-                chunk_text = chunks[i]
-                sub_lines = [l.strip() for l in chunk_text.split('\n') if l.strip()]
-                if len(sub_lines) > 1:
-                    print(f"[Kokoro Batch] Retrying chunk {i} as {len(sub_lines)} sub-lines")
-                    for line in sub_lines:
-                        try:
-                            retry_result = kokoro.create(line, voice=voice, speed=speed, lang="en-us")
-                            results.append(retry_result)
-                        except Exception as e2:
-                            print(f"[Kokoro Batch] Sub-line also failed: {e2}")
-                            failed_chunks.append(line)
-                else:
-                    # 单行也失败，用静音占位（0.3秒），避免整体崩溃
-                    print(f"[Kokoro Batch] Single line chunk failed, inserting silence placeholder")
-                    import numpy as np
-                    silence_samples = np.zeros(int(results[0][1] * 0.3)) if results else np.zeros(7200)
-                    silence_sr = results[0][1] if results else 24000
-                    results.append((silence_samples, silence_sr))
-            else:
-                results.append(r)
-    except Exception as e:
-        print(f"[Kokoro Batch] ThreadPoolExecutor error: {e}")
-        return None
+    for i, chunk_text in enumerate(chunks):
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                with _kokoro_gen_lock:
+                    samples, sr = kokoro.create(chunk_text, voice=voice, speed=speed, lang="en-us")
+                
+                # 验证音频有效性：采样点数不能为零
+                if samples is None or len(samples) == 0:
+                    print(f"[Kokoro Batch] Chunk {i} produced empty audio, retrying ({attempt+1}/{max_retries})")
+                    continue
+                
+                if i == 0:
+                    sample_rate = sr
+                
+                # 验证音频时长与文本长度大致匹配（至少 0.1 秒/字符）
+                duration = len(samples) / sr
+                min_expected = len(chunk_text) * 0.03  # 英语音素大约 0.03-0.05 秒/字符
+                if duration < min_expected and len(chunk_text) > 5:
+                    print(f"[Kokoro Batch] Chunk {i} suspiciously short: {duration:.2f}s for {len(chunk_text)} chars, retrying ({attempt+1}/{max_retries})")
+                    continue
+                
+                results.append((samples, sr))
+                print(f"[Kokoro Batch] Chunk {i}/{len(chunks)}: {duration:.2f}s - {repr(chunk_text[:50])}")
+                break
+                
+            except Exception as e:
+                print(f"[Kokoro Batch] Error generating chunk {i} ({attempt+1}/{max_retries}): {e}")
+                if attempt == max_retries - 1:
+                    # 最终失败，用0.3秒静音占位
+                    silence_dur = 0.3
+                    silence_samples = np.zeros(int(sample_rate * silence_dur))
+                    results.append((silence_samples, sample_rate))
+                    print(f"[Kokoro Batch] Chunk {i} failed after retries, inserted {silence_dur}s silence")
     
     if not results:
         return None
     
-    import soundfile as sf
-    import numpy as np
-    
     all_samples = []
-    sample_rate = results[0][1]
     for samples, sr in results:
+        # 如果采样率不一致，需要重采样
+        if sr != sample_rate and len(samples) > 0:
+            print(f"[Kokoro Batch] Resampling chunk from {sr}Hz to {sample_rate}Hz")
+            # 简单的线性插值重采样
+            ratio = sample_rate / sr
+            new_len = int(len(samples) * ratio)
+            indices = np.linspace(0, len(samples) - 1, new_len)
+            samples = np.interp(indices, np.arange(len(samples)), samples)
         all_samples.append(samples)
     
-    combined = np.concatenate(all_samples)
+    # 在chunk之间插入50ms静音，模拟自然断句
+    silence_gap = np.zeros(int(sample_rate * 0.05))
+    padded = []
+    for j, s in enumerate(all_samples):
+        padded.append(s)
+        if j < len(all_samples) - 1:
+            padded.append(silence_gap)
+    
+    combined = np.concatenate(padded)
     buf = io.BytesIO()
     sf.write(buf, combined, sample_rate, format="WAV", subtype="PCM_16")
     buf.seek(0)
