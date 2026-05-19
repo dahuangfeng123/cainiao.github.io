@@ -1090,6 +1090,11 @@ def tingli():
     return FileResponse(os.path.join(BASE_DIR, "tingli", "tingli.html"))
 
 
+@app.get("/tingli2")
+def tingli2():
+    return FileResponse(os.path.join(BASE_DIR, "tingli", "tingli2.html"))
+
+
 @app.get("/words.json")
 def words_json():
     return FileResponse(os.path.join(BASE_DIR, "danci", "words.json"))
