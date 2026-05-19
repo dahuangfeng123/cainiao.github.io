@@ -10,6 +10,7 @@ import time
 import io
 import hashlib
 import threading
+import json
 import librosa
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -502,6 +503,164 @@ def cache_clear():
             os.remove(os.path.join(AUDIO_CACHE_DIR, f))
             removed += 1
     return {"removed": removed}
+
+
+generation_state = {
+    "running": False,
+    "paused": False,
+    "current": 0,
+    "total": 0,
+    "completed": 0,
+    "failed": 0,
+    "message": "",
+}
+generation_lock = threading.Lock()
+
+
+@app.get("/tts/generate/status")
+def get_generation_status():
+    return generation_state
+
+
+@app.post("/tts/generate/stop")
+def stop_generation():
+    global generation_state
+    with generation_lock:
+        generation_state["running"] = False
+        generation_state["paused"] = False
+        generation_state["message"] = "已停止"
+    return {"status": "stopped"}
+
+
+@app.post("/tts/generate/pause")
+def pause_generation():
+    global generation_state
+    with generation_lock:
+        generation_state["paused"] = True
+        generation_state["message"] = "已暂停"
+    return {"status": "paused"}
+
+
+@app.post("/tts/generate/resume")
+def resume_generation():
+    global generation_state
+    with generation_lock:
+        generation_state["paused"] = False
+        generation_state["message"] = "继续生成"
+    return {"status": "resumed"}
+
+
+@app.post("/tts/generate/batch")
+async def batch_generate_tts(request_body: dict):
+    global generation_state
+    
+    articles = request_body.get("articles", [])
+    voice = request_body.get("voice", "af_sarah")
+    speed = float(request_body.get("speed", 1.0))
+    model = request_body.get("model", "kokoro")
+    
+    if not articles:
+        return JSONResponse({"error": "No articles provided"}, status_code=400)
+    
+    with generation_lock:
+        if generation_state["running"]:
+            return JSONResponse({"error": "Generation already running"}, status_code=409)
+        
+        generation_state["running"] = True
+        generation_state["paused"] = False
+        generation_state["current"] = 0
+        generation_state["total"] = len(articles)
+        generation_state["completed"] = 0
+        generation_state["failed"] = 0
+        generation_state["message"] = "开始生成"
+    
+    async def generate_stream():
+        global generation_state
+        completed = 0
+        failed = 0
+        
+        for i, article in enumerate(articles):
+            while True:
+                with generation_lock:
+                    if not generation_state["running"]:
+                        yield f'data: {json.dumps({"status": "stopped", "completed": completed, "failed": failed, "total": len(articles), "message": "生成已停止"})}\n\n'
+                        return
+                    if not generation_state["paused"]:
+                        break
+                await asyncio.sleep(0.5)
+            
+            text = article.get("text", "")
+            title = article.get("title", f"Article {i+1}")
+            
+            with generation_lock:
+                generation_state["current"] = i + 1
+                generation_state["message"] = f"正在生成: {title}"
+            
+            cache_id = audio_cache_id(text, voice, speed, model)
+            cached_path = get_cached_audio(cache_id, model)
+            
+            if cached_path:
+                data = {"status": "cached", "index": i, "title": title, "completed": completed, "failed": failed, "total": len(articles), "message": f"{title} - 已缓存，跳过"}
+                yield f'data: {json.dumps(data)}\n\n'
+                completed += 1
+                with generation_lock:
+                    generation_state["completed"] = completed
+                continue
+            
+            try:
+                if model == "edge":
+                    import edge_tts
+                    rate_str = f"+{int((speed - 1.0) * 100)}%" if speed >= 1.0 else f"{int((speed - 1.0) * 100)}%"
+                    communicate = edge_tts.Communicate(text, voice, rate=rate_str)
+                    
+                    audio_bytes = b""
+                    async for chunk in communicate.stream():
+                        if chunk["type"] == "audio":
+                            audio_bytes += chunk["data"]
+                    
+                    cache_path = audio_cache_path(cache_id, model)
+                    with open(cache_path, "wb") as f:
+                        f.write(audio_bytes)
+                else:
+                    result = await asyncio.get_event_loop().run_in_executor(None, kokoro_tts, text, voice, speed)
+                    if result is None:
+                        raise Exception("Kokoro TTS failed")
+                    audio_bytes, _ = result
+                    cache_path = audio_cache_path(cache_id, model)
+                    with open(cache_path, "wb") as f:
+                        f.write(audio_bytes)
+                
+                completed += 1
+                with generation_lock:
+                    generation_state["completed"] = completed
+                
+                data = {"status": "success", "index": i, "title": title, "completed": completed, "failed": failed, "total": len(articles), "message": f"{title} - 生成成功"}
+                yield f'data: {json.dumps(data)}\n\n'
+                
+            except Exception as e:
+                failed += 1
+                with generation_lock:
+                    generation_state["failed"] = failed
+                
+                data = {"status": "error", "index": i, "title": title, "completed": completed, "failed": failed, "total": len(articles), "message": f"{title} - 生成失败: {str(e)}"}
+                yield f'data: {json.dumps(data)}\n\n'
+        
+        with generation_lock:
+            generation_state["running"] = False
+            generation_state["message"] = "生成完成"
+        
+        data = {"status": "finished", "completed": completed, "failed": failed, "total": len(articles), "message": f"生成完成！成功: {completed}, 失败: {failed}"}
+        yield f'data: {json.dumps(data)}\n\n'
+    
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 # ========== Scoring Routes ==========

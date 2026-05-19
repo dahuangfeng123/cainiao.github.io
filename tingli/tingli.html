@@ -290,6 +290,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
       <p style="color:var(--text3);font-size:13px;margin-bottom:12px;">重置当前用户的所有学习数据，包括听力记录</p>
       <button class="btn btn-red" onclick="resetData()">重置我的数据</button>
     </div>
+    <div class="card">
+      <h2>🎵 语音预生成</h2>
+      <p style="color:var(--text3);font-size:13px;margin-bottom:12px;">预先生成所有短文的语音文件，加快后续播放速度</p>
+      <div style="margin-bottom:12px;">
+        <button class="btn btn-green" id="generate-btn" onclick="startBatchGeneration()" style="width:100%;margin-bottom:8px;">🚀 开始预生成</button>
+        <div id="generate-controls" style="display:none;">
+          <button class="btn btn-yellow" id="pause-btn" onclick="togglePauseGeneration()" style="width:48%;margin-right:4%;">⏸️ 暂停</button>
+          <button class="btn btn-red" id="stop-btn" onclick="stopBatchGeneration()" style="width:48%;">⏹️ 停止</button>
+        </div>
+      </div>
+      <div id="generate-progress" style="display:none;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:13px;">进度</span>
+          <span style="font-size:13px;" id="progress-text">0/0</span>
+        </div>
+        <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;">
+          <div id="progress-bar" style="height:100%;background:linear-gradient(90deg, #4CAF50, #8BC34A);width:0%;transition:width 0.3s;"></div>
+        </div>
+        <div style="margin-top:8px;padding:8px;background:#f5f5f5;border-radius:8px;">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:4px;">生成日志：</div>
+          <div id="generate-log" style="font-size:12px;max-height:150px;overflow-y:auto;"></div>
+        </div>
+      </div>
+      <div id="generate-status" style="font-size:13px;color:var(--text3);margin-top:8px;"></div>
+    </div>
   </div>
 
 </div>
@@ -1420,6 +1445,165 @@ function resetData() {
     localStorage.removeItem("wuser" + user);
     toast('数据已重置', 'info');
     renderAll();
+}
+
+let generateEventSource = null;
+let isGenerating = false;
+let isPaused = false;
+
+function startBatchGeneration() {
+    if (isGenerating) return;
+    
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let model = document.getElementById('tts-model').value || 'kokoro';
+    
+    document.getElementById('generate-btn').style.display = 'none';
+    document.getElementById('generate-controls').style.display = 'flex';
+    document.getElementById('generate-progress').style.display = 'block';
+    document.getElementById('generate-log').innerHTML = '';
+    document.getElementById('progress-bar').style.width = '0%';
+    document.getElementById('progress-text').textContent = '0/0';
+    document.getElementById('generate-status').textContent = '';
+    
+    isGenerating = true;
+    isPaused = false;
+    
+    fetch(TTS_URL.replace('/tts', '/tts/generate/batch'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            articles: ARTICLES,
+            voice: voice,
+            speed: speed,
+            model: model
+        })
+    }).then(async response => {
+        if (!response.ok) {
+            throw new Error('Failed to start generation');
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        
+        while (isGenerating) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+                break;
+            }
+            
+            buffer += decoder.decode(value, { stream: true });
+            
+            while (buffer.includes('\n\n')) {
+                const index = buffer.indexOf('\n\n');
+                const chunk = buffer.substring(0, index);
+                buffer = buffer.substring(index + 2);
+                
+                if (chunk.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(chunk.substring(6));
+                        updateGenerationProgress(data);
+                    } catch (e) {
+                        console.error('Failed to parse SSE data:', e);
+                    }
+                }
+            }
+        }
+        
+        reader.releaseLock();
+        
+    }).catch(error => {
+        console.error('Error starting generation:', error);
+        isGenerating = false;
+        document.getElementById('generate-btn').style.display = 'block';
+        document.getElementById('generate-controls').style.display = 'none';
+        toast('启动失败: ' + error.message, 'error');
+    });
+}
+
+function updateGenerationProgress(data) {
+    let log = document.getElementById('generate-log');
+    let progressBar = document.getElementById('progress-bar');
+    let progressText = document.getElementById('progress-text');
+    let status = document.getElementById('generate-status');
+    
+    let progress = Math.round((data.completed + data.failed) / data.total * 100);
+    progressBar.style.width = progress + '%';
+    progressText.textContent = `${data.completed + data.failed}/${data.total}`;
+    
+    let timestamp = new Date().toLocaleTimeString();
+    let logEntry = document.createElement('div');
+    
+    switch(data.status) {
+        case 'cached':
+            logEntry.textContent = `[${timestamp}] ✅ ${data.message}`;
+            logEntry.style.color = '#4CAF50';
+            break;
+        case 'success':
+            logEntry.textContent = `[${timestamp}] ✅ ${data.message}`;
+            logEntry.style.color = '#4CAF50';
+            break;
+        case 'error':
+            logEntry.textContent = `[${timestamp}] ❌ ${data.message}`;
+            logEntry.style.color = '#f44336';
+            break;
+        case 'stopped':
+            logEntry.textContent = `[${timestamp}] ⏹️ ${data.message}`;
+            logEntry.style.color = '#ff9800';
+            break;
+        case 'finished':
+            logEntry.textContent = `[${timestamp}] 🎉 ${data.message}`;
+            logEntry.style.color = '#2196F3';
+            break;
+        default:
+            logEntry.textContent = `[${timestamp}] ${data.message}`;
+    }
+    
+    log.appendChild(logEntry);
+    log.scrollTop = log.scrollHeight;
+    
+    if (data.status === 'finished' || data.status === 'stopped') {
+        isGenerating = false;
+        generateEventSource.close();
+        document.getElementById('generate-btn').style.display = 'block';
+        document.getElementById('generate-controls').style.display = 'none';
+        status.textContent = `完成！成功: ${data.completed}, 失败: ${data.failed}`;
+        
+        if (data.status === 'finished') {
+            toast(`预生成完成！成功: ${data.completed}, 失败: ${data.failed}`, 'success');
+        }
+    }
+}
+
+function togglePauseGeneration() {
+    if (!isGenerating) return;
+    
+    if (isPaused) {
+        fetch(TTS_URL.replace('/tts', '/tts/generate/resume'), { method: 'POST' });
+        isPaused = false;
+        document.getElementById('pause-btn').textContent = '⏸️ 暂停';
+        document.getElementById('generate-status').textContent = '继续生成...';
+    } else {
+        fetch(TTS_URL.replace('/tts', '/tts/generate/pause'), { method: 'POST' });
+        isPaused = true;
+        document.getElementById('pause-btn').textContent = '▶️ 继续';
+        document.getElementById('generate-status').textContent = '已暂停，点击继续';
+    }
+}
+
+function stopBatchGeneration() {
+    if (!isGenerating) return;
+    
+    fetch(TTS_URL.replace('/tts', '/tts/generate/stop'), { method: 'POST' });
+    if (generateEventSource) {
+        generateEventSource.close();
+    }
+    isGenerating = false;
+    document.getElementById('generate-btn').style.display = 'block';
+    document.getElementById('generate-controls').style.display = 'none';
+    document.getElementById('generate-status').textContent = '已停止';
 }
 
 function startQuickListen(count) {
