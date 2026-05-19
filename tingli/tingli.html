@@ -2205,12 +2205,10 @@ function renderBatchQuestion() {
     document.getElementById('batch-reveal-btn').style.display = 'none';
     document.getElementById('batch-fill-results').style.display = 'none';
     document.getElementById('batch-hint').textContent = '💡 可多次播放，输入后点击提交';
-    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     speechSynthesis.cancel();
     batchPlaying = false;
     batchLoading = false;
-    stopBatchProgressTimer();
-    resetBatchProgress();
+    if (batchAudioPlayer) batchAudioPlayer.pause();
     updateBatchPlayUI();
     
     let batchAudioCtrl = document.getElementById('batch-audio-controls');
@@ -2390,11 +2388,9 @@ function renderBatchAnswerCanvas(text, words) {
 function submitBatchAnswer() {
     if (batchIndex >= batchArticles.length) return;
     if (currentMode === 'pronunciation') {
-        // 拼读模式 - 已经在评分时保存了答案，直接进入下一题
-        if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+        if (batchAudioPlayer) batchAudioPlayer.pause();
         speechSynthesis.cancel();
         batchPlaying = false;
-        stopBatchProgressTimer();
         batchIndex++;
         renderBatchQuestion();
         return;
@@ -2449,10 +2445,9 @@ function submitBatchAnswer() {
             mode: 'dictation'
         });
     }
-    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    if (batchAudioPlayer) batchAudioPlayer.pause();
     speechSynthesis.cancel();
     batchPlaying = false;
-    stopBatchProgressTimer();
     batchIndex++;
     renderBatchQuestion();
 }
@@ -2469,19 +2464,17 @@ function skipBatchAnswer() {
         skipped: true,
         mode: currentMode
     });
-    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    if (batchAudioPlayer) batchAudioPlayer.pause();
     speechSynthesis.cancel();
     batchPlaying = false;
-    stopBatchProgressTimer();
     batchIndex++;
     renderBatchQuestion();
 }
 
 function finishBatch() {
-    if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+    if (batchAudioPlayer) batchAudioPlayer.pause();
     speechSynthesis.cancel();
     batchPlaying = false;
-    stopBatchProgressTimer();
     let u = safeUser(getUser());
     let correctCount = batchAnswers.filter(a => a.correct).length;
     let now = Date.now();
