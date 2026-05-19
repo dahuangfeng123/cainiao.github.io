@@ -1154,7 +1154,16 @@ function closeListenModal() {
     speechSynthesis.cancel();
     isPlaying = false;
     isLoading = false;
+    pronLoading = false;
     currentArticle = null;
+    
+    let btn = document.querySelector('.pron-ref-btn');
+    if (btn) {
+        btn.innerHTML = '🔊 听标准发音';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+    }
+    
     document.getElementById('listen-modal').classList.remove('active');
 }
 
