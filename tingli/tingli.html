@@ -292,14 +292,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
     </div>
     <div class="card">
       <h2>🎵 语音预生成</h2>
-      <p style="color:var(--text3);font-size:13px;margin-bottom:12px;">预先生成所有短文的语音文件，加快后续播放速度</p>
-      <div style="margin-bottom:12px;">
-        <button class="btn btn-green" id="generate-btn" onclick="startBatchGeneration()" style="width:100%;margin-bottom:8px;">🚀 开始预生成</button>
-        <div id="generate-controls" style="display:none;">
-          <button class="btn btn-yellow" id="pause-btn" onclick="togglePauseGeneration()" style="width:48%;margin-right:4%;">⏸️ 暂停</button>
-          <button class="btn btn-red" id="stop-btn" onclick="stopBatchGeneration()" style="width:48%;">⏹️ 停止</button>
-        </div>
+      <p style="color:var(--text3);font-size:13px;margin-bottom:12px;">预先生成短文语音，播放时无需等待生成</p>
+      <div style="margin-bottom:12px;display:flex;gap:8px;">
+        <button class="btn btn-green" id="generate-btn" onclick="startBatchGeneration()" style="flex:1;">🚀 开始预生成</button>
+        <button class="btn btn-blue" id="regenerate-btn" onclick="regenerateAll()" style="flex:1;">🔄 重新生成</button>
       </div>
+      <div id="generate-summary" style="font-size:13px;color:var(--text3);margin-bottom:12px;"></div>
       <div id="generate-progress" style="display:none;">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
           <span style="font-size:13px;">进度</span>
@@ -1460,6 +1458,86 @@ function resetData() {
 let generateEventSource = null;
 let isGenerating = false;
 let isPaused = false;
+let TTS_CACHE_KEY = 'tts_cache';
+
+function getTtsCache() {
+    try {
+        let cache = localStorage.getItem(TTS_CACHE_KEY);
+        return cache ? JSON.parse(cache) : {};
+    } catch {
+        return {};
+    }
+}
+
+function setTtsCache(cache) {
+    try {
+        localStorage.setItem(TTS_CACHE_KEY, JSON.stringify(cache));
+    } catch (e) {
+        console.error('Failed to save TTS cache:', e);
+    }
+}
+
+function updateTtsCache(articleId, voice, speed, model, generated) {
+    let cache = getTtsCache();
+    cache[articleId] = {
+        voice: voice,
+        speed: speed,
+        model: model,
+        generated: generated,
+        timestamp: Date.now()
+    };
+    setTtsCache(cache);
+    updateGenerateSummary();
+}
+
+function updateGenerateSummary() {
+    let cache = getTtsCache();
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let model = document.getElementById('tts-model').value || 'kokoro';
+    
+    let total = ARTICLES.length;
+    let generated = 0;
+    let outdated = 0;
+    
+    for (let article of ARTICLES) {
+        let entry = cache[article.id];
+        if (entry && entry.generated) {
+            if (entry.voice === voice && entry.speed === speed && entry.model === model) {
+                generated++;
+            } else {
+                outdated++;
+            }
+        }
+    }
+    
+    let summary = document.getElementById('generate-summary');
+    if (generated === total) {
+        summary.innerHTML = `✅ 全部 <span style="color:#4CAF50;font-weight:bold;">${generated}</span> 篇已生成（当前设置）`;
+    } else if (generated + outdated === total) {
+        summary.innerHTML = `⚠️ <span style="color:#ff9800;">${outdated}</span> 篇设置已变更，需重新生成`;
+    } else {
+        summary.innerHTML = `📊 <span style="color:#4CAF50;">${generated}</span>/${total} 篇已生成，<span style="color:#999;">${total - generated - outdated}</span> 篇待生成`;
+    }
+}
+
+function getPendingArticles() {
+    let cache = getTtsCache();
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let model = document.getElementById('tts-model').value || 'kokoro';
+    
+    let pending = [];
+    for (let article of ARTICLES) {
+        let entry = cache[article.id];
+        if (!entry || !entry.generated) {
+            pending.push(article);
+        } else if (entry.voice !== voice || entry.speed !== speed || entry.model !== model) {
+            pending.push(article);
+        }
+    }
+    return pending;
+}
 
 function startBatchGeneration() {
     if (isGenerating) return;
@@ -1468,13 +1546,22 @@ function startBatchGeneration() {
     let speed = parseInt(document.getElementById('tts-speed').value) / 100;
     let model = document.getElementById('tts-model').value || 'kokoro';
     
+    let pending = getPendingArticles();
+    
+    if (pending.length === 0) {
+        toast('所有短文已生成，无需重复生成', 'info');
+        updateGenerateSummary();
+        return;
+    }
+    
     document.getElementById('generate-btn').style.display = 'none';
-    document.getElementById('generate-controls').style.display = 'flex';
+    document.getElementById('regenerate-btn').style.display = 'none';
     document.getElementById('generate-progress').style.display = 'block';
+    document.getElementById('generate-summary').style.display = 'none';
     document.getElementById('generate-log').innerHTML = '';
     document.getElementById('progress-bar').style.width = '0%';
-    document.getElementById('progress-text').textContent = '0/0';
-    document.getElementById('generate-status').textContent = '';
+    document.getElementById('progress-text').textContent = `0/${pending.length}`;
+    document.getElementById('generate-status').textContent = `共 ${pending.length} 篇待生成`;
     
     isGenerating = true;
     isPaused = false;
@@ -1483,7 +1570,7 @@ function startBatchGeneration() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            articles: ARTICLES,
+            articles: pending,
             voice: voice,
             speed: speed,
             model: model
@@ -1514,7 +1601,7 @@ function startBatchGeneration() {
                 if (chunk.startsWith('data: ')) {
                     try {
                         const data = JSON.parse(chunk.substring(6));
-                        updateGenerationProgress(data);
+                        updateGenerationProgress(data, pending, voice, speed, model);
                     } catch (e) {
                         console.error('Failed to parse SSE data:', e);
                     }
@@ -1528,43 +1615,60 @@ function startBatchGeneration() {
         console.error('Error starting generation:', error);
         isGenerating = false;
         document.getElementById('generate-btn').style.display = 'block';
-        document.getElementById('generate-controls').style.display = 'none';
+        document.getElementById('regenerate-btn').style.display = 'block';
+        document.getElementById('generate-summary').style.display = 'block';
         toast('启动失败: ' + error.message, 'error');
     });
 }
 
-function updateGenerationProgress(data) {
+function regenerateAll() {
+    let cache = getTtsCache();
+    for (let article of ARTICLES) {
+        updateTtsCache(article.id, '', 0, '', false);
+    }
+    setTtsCache({});
+    toast('已清除所有缓存，点击开始生成', 'info');
+    updateGenerateSummary();
+    startBatchGeneration();
+}
+
+function updateGenerationProgress(data, pending, voice, speed, model) {
     let log = document.getElementById('generate-log');
     let progressBar = document.getElementById('progress-bar');
     let progressText = document.getElementById('progress-text');
     let status = document.getElementById('generate-status');
     
-    let progress = Math.round((data.completed + data.failed) / data.total * 100);
+    let total = pending.length;
+    let current = data.completed + data.failed;
+    let progress = Math.round(current / total * 100);
     progressBar.style.width = progress + '%';
-    progressText.textContent = `${data.completed + data.failed}/${data.total}`;
+    progressText.textContent = `${current}/${total}`;
     
     let timestamp = new Date().toLocaleTimeString();
     let logEntry = document.createElement('div');
     
     switch(data.status) {
         case 'cached':
-            logEntry.textContent = `[${timestamp}] ✅ ${data.message}`;
+            logEntry.textContent = `[${timestamp}] ✅ ${data.title} - 已缓存`;
             logEntry.style.color = '#4CAF50';
             break;
         case 'success':
-            logEntry.textContent = `[${timestamp}] ✅ ${data.message}`;
+            logEntry.textContent = `[${timestamp}] ✅ ${data.title} - 生成成功`;
             logEntry.style.color = '#4CAF50';
+            if (data.index !== undefined && pending[data.index]) {
+                updateTtsCache(pending[data.index].id, voice, speed, model, true);
+            }
             break;
         case 'error':
-            logEntry.textContent = `[${timestamp}] ❌ ${data.message}`;
+            logEntry.textContent = `[${timestamp}] ❌ ${data.title} - 生成失败`;
             logEntry.style.color = '#f44336';
             break;
         case 'stopped':
-            logEntry.textContent = `[${timestamp}] ⏹️ ${data.message}`;
+            logEntry.textContent = `[${timestamp}] ⏹️ 生成已停止`;
             logEntry.style.color = '#ff9800';
             break;
         case 'finished':
-            logEntry.textContent = `[${timestamp}] 🎉 ${data.message}`;
+            logEntry.textContent = `[${timestamp}] 🎉 生成完成！成功: ${data.completed}, 失败: ${data.failed}`;
             logEntry.style.color = '#2196F3';
             break;
         default:
@@ -1576,44 +1680,16 @@ function updateGenerationProgress(data) {
     
     if (data.status === 'finished' || data.status === 'stopped') {
         isGenerating = false;
-        generateEventSource.close();
         document.getElementById('generate-btn').style.display = 'block';
-        document.getElementById('generate-controls').style.display = 'none';
+        document.getElementById('regenerate-btn').style.display = 'block';
+        document.getElementById('generate-summary').style.display = 'block';
+        updateGenerateSummary();
         status.textContent = `完成！成功: ${data.completed}, 失败: ${data.failed}`;
         
         if (data.status === 'finished') {
             toast(`预生成完成！成功: ${data.completed}, 失败: ${data.failed}`, 'success');
         }
     }
-}
-
-function togglePauseGeneration() {
-    if (!isGenerating) return;
-    
-    if (isPaused) {
-        fetch(TTS_URL.replace('/tts', '/tts/generate/resume'), { method: 'POST' });
-        isPaused = false;
-        document.getElementById('pause-btn').textContent = '⏸️ 暂停';
-        document.getElementById('generate-status').textContent = '继续生成...';
-    } else {
-        fetch(TTS_URL.replace('/tts', '/tts/generate/pause'), { method: 'POST' });
-        isPaused = true;
-        document.getElementById('pause-btn').textContent = '▶️ 继续';
-        document.getElementById('generate-status').textContent = '已暂停，点击继续';
-    }
-}
-
-function stopBatchGeneration() {
-    if (!isGenerating) return;
-    
-    fetch(TTS_URL.replace('/tts', '/tts/generate/stop'), { method: 'POST' });
-    if (generateEventSource) {
-        generateEventSource.close();
-    }
-    isGenerating = false;
-    document.getElementById('generate-btn').style.display = 'block';
-    document.getElementById('generate-controls').style.display = 'none';
-    document.getElementById('generate-status').textContent = '已停止';
 }
 
 function startQuickListen(count) {
@@ -2153,6 +2229,7 @@ function renderAll() {
     renderArticleList();
     renderManageList();
     renderMineStats();
+    updateGenerateSummary();
 }
 
 let editingArticleId = null;
