@@ -1,0 +1,2042 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>🎧 听力练习-双用户版</title>
+<style>
+:root{--primary:#1D9E75;--primary-light:#43a047;--bg:#f5f1eb;--card:#fff;--text:#333;--text2:#666;--text3:#999;--border:#e0e0e0;--danger:#e53935;--warning:#fb8c00;--info:#1e88e5;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+.header{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#1D9E75,#185FA5);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,0.15);}
+.header h1{font-size:18px;font-weight:600;}
+.header-right{display:flex;align-items:center;gap:12px;}
+.user-btn{background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:500;transition:all 0.2s;}
+.user-btn:hover{background:rgba(255,255,255,0.3);}
+.nav{display:flex;background:#fff;border-bottom:1px solid #eee;overflow-x:auto;-webkit-overflow-scrolling:touch;position:sticky;top:52px;z-index:99;}
+.nav a{flex:1;text-align:center;padding:10px 0;font-size:14px;color:var(--text2);text-decoration:none;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap;cursor:pointer;}
+.nav a.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:600;}
+.container{max-width:800px;margin:0 auto;padding:12px;}
+.page{display:none;}
+.page.active{display:block;}
+.card{background:var(--card);border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.card h2{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 18px;border:none;border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;}
+.btn:active{transform:scale(0.96);}
+.btn-green{background:linear-gradient(135deg,#43a047,#66bb6a);color:#fff;}
+.btn-blue{background:linear-gradient(135deg,#1e88e5,#42a5f5);color:#fff;}
+.btn-orange{background:linear-gradient(135deg,#fb8c00,#ffa726);color:#fff;}
+.btn-gray{background:#e0e0e0;color:#666;}
+.btn-red{background:linear-gradient(135deg,#e53935,#ef5350);color:#fff;}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.tag{display:inline-block;padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;border:1px solid #ddd;background:#f5f5f5;color:#666;transition:all 0.2s;margin:2px;}
+.tag.on{background:var(--primary);color:#fff;border-color:var(--primary);}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.stat-box{background:var(--bg);border-radius:10px;padding:12px;text-align:center;}
+.stat-box .val{font-size:22px;font-weight:700;color:var(--primary);}
+.stat-box .label{font-size:11px;color:var(--text3);margin-top:2px;}
+.article-item{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:10px;margin-bottom:8px;background:#fafafa;transition:background 0.2s;}
+.article-item:hover{background:#f0f0f0;}
+.article-info{flex:1;min-width:0;}
+.article-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.article-meta{font-size:12px;color:var(--text3);margin-top:2px;}
+.article-actions{display:flex;gap:8px;flex-shrink:0;}
+.review-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #f0f0f0;}
+.review-item:last-child{border-bottom:none;}
+.review-left .title{font-size:14px;font-weight:600;}
+.review-left .meta{font-size:12px;color:var(--text3);margin-top:2px;}
+.empty{text-align:center;padding:30px;color:var(--text3);font-size:14px;}
+.search-box{width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:12px;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;display:none;justify-content:center;align-items:center;}
+.modal-overlay.active{display:flex;}
+.modal{background:#fff;border-radius:20px;width:92%;max-width:600px;max-height:90vh;overflow-y:auto;padding:24px;position:relative;animation:modalIn 0.3s ease;}
+@keyframes modalIn{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+.modal-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:22px;cursor:pointer;color:#999;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content;}
+.modal-close:hover{background:#f0f0f0;}
+.modal h2{font-size:18px;margin-bottom:16px;}
+.ed-field{margin-bottom:16px;}
+.ed-label{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;}
+.ed-input{width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;transition:all 0.2s;background:#fafafa;}
+.ed-input:focus{outline:none;border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(29,158,117,0.15);}
+.ed-input::placeholder{color:#bbb;}
+.ed-textarea{width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:vertical;min-height:100px;transition:all 0.2s;background:#fafafa;line-height:1.6;}
+.ed-textarea:focus{outline:none;border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(29,158,117,0.15);}
+.ed-textarea::placeholder{color:#bbb;}
+.ed-hint{font-size:12px;color:var(--text3);margin-top:4px;padding-left:2px;}
+.ed-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+.audio-controls{background:var(--bg);border-radius:14px;padding:16px;margin-bottom:16px;}
+.audio-btns{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.audio-btn{width:44px;height:44px;border-radius:50%;border:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.audio-btn:active{transform:scale(0.92);}
+.audio-btn.play{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 3px 12px rgba(29,158,117,0.3);}
+.audio-btn.replay{background:#fff;color:#666;border:1px solid #ddd;}
+.audio-status{font-size:13px;color:var(--text3);flex:1;}
+.audio-status.playing{color:var(--primary);font-weight:500;}
+.audio-status.loading{color:#ffa726;font-weight:500;animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.volume-row{display:flex;align-items:center;gap:8px;}
+.volume-row label{font-size:12px;color:var(--text3);white-space:nowrap;}
+.volume-row input[type=range]{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:#ddd;border-radius:2px;outline:none;}
+.volume-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--primary);cursor:pointer;}
+.answer-area{margin-bottom:16px;}
+.answer-area textarea{width:100%;min-height:120px;padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px;line-height:1.8;resize:vertical;font-family:inherit;transition:border-color 0.2s;}
+.answer-area textarea:focus{outline:none;border-color:var(--primary);}
+.answer-hint{font-size:12px;color:var(--text3);margin-top:4px;}
+.answer-reveal{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;display:none;}
+.answer-reveal h3{font-size:14px;margin-bottom:8px;color:var(--primary);}
+.answer-reveal .full-text{font-size:14px;line-height:2;white-space:pre-wrap;color:var(--text);}
+.score-bar{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;margin-bottom:12px;}
+.score-bar .pct{font-size:28px;font-weight:700;}
+.score-bar .pct.high{color:#43a047;}
+.score-bar .pct.mid{color:#ffa726;}
+.score-bar .pct.low{color:#ef5350;}
+.score-bar .detail{font-size:13px;color:var(--text2);}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:24px;font-size:14px;font-weight:500;z-index:9999;animation:toastIn 0.3s ease;pointer-events:none;}
+.toast.success{background:#43a047;color:#fff;}
+.toast.warning{background:#fb8c00;color:#fff;}
+.toast.error{background:#e53935;color:#fff;}
+.toast.info{background:#1e88e5;color:#fff;}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+.mine-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px;}
+.mine-row:last-child{border-bottom:none;}
+.mine-row .label{color:var(--text2);}
+.mine-row .value{font-weight:600;}
+@media(max-width:480px){
+  .container{padding:8px;}
+  .card{padding:14px;border-radius:12px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .modal{width:96%;padding:16px;border-radius:14px;}
+}
+.mode-tabs{display:flex;gap:4px;margin:12px 0;background:linear-gradient(90deg, #e8f5e9, #fff3e0, #fce4ec);border-radius:12px;padding:6px 12px;}
+.mode-tab{flex:1;padding:8px 0;border:2px solid transparent;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:var(--text2);transition:all 0.2s;}
+.mode-tab.on{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(29,158,117,0.3);}
+.pron-target{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;}
+.pron-target h3{font-size:14px;margin-bottom:8px;color:var(--primary);}
+.pron-text{font-size:16px;line-height:1.8;color:var(--text);white-space:pre-wrap;}
+.pron-record{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;margin:20px 0;}
+.record-btn{width:80px;height:80px;border-radius:50%;border:3px solid var(--primary);background:#fff;font-size:28px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all 0.2s;box-shadow:0 4px 16px rgba(29,158,117,0.2);}
+.record-btn:active{transform:scale(0.95);}
+.record-btn.recording{border-color:#e53935;background:#ffebee;animation:recordPulse 1s infinite;}
+.play-record-btn{border-color:#1D9E75;background:#e8f5e9;color:#1D9E75;margin-left:12px;}
+@keyframes recordPulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,0.4);}50%{box-shadow:0 0 0 12px rgba(229,57,53,0);}}
+.record-icon{font-size:28px;}
+.record-text{font-size:11px;color:var(--text3);margin-top:2px;}
+.record-timer{font-size:24px;font-weight:700;color:#e53935;}
+.pron-ref-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2);background:#fff;cursor:pointer;margin-bottom:12px;transition:all 0.2s;}
+.pron-ref-btn:hover{border-color:var(--primary);color:var(--primary);}
+.pron-results{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;}
+.pron-results h3{font-size:14px;margin-bottom:12px;color:var(--primary);}
+.pron-result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
+.pron-result-item{background:#fff;border-radius:10px;padding:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.pron-result-val{font-size:22px;font-weight:700;color:var(--primary);}
+.pron-result-val.high{color:#43a047;}
+.pron-result-val.mid{color:#ffa726;}
+.pron-result-val.low{color:#ef5350;}
+.pron-result-label{font-size:11px;color:var(--text3);margin-top:2px;}
+.pron-heard{font-size:13px;color:var(--text2);padding:8px 12px;background:#fff;border-radius:8px;border-left:3px solid var(--primary);}
+.pron-heard strong{color:var(--primary);}
+.fill-text{font-size:16px;line-height:2.4;margin-bottom:16px;white-space:pre-wrap;background:var(--bg);border-radius:12px;padding:16px;}
+.fill-input{display:inline-block;width:90px;border:none;border-bottom:2px solid var(--border);padding:2px 4px;font-size:14px;text-align:center;font-family:inherit;outline:none;transition:border-color 0.2s,background 0.2s;background:transparent;vertical-align:baseline;}
+.fill-input:focus{border-bottom-color:var(--primary);}
+.fill-input.correct{border-bottom-color:#43a047;color:#43a047;background:#e8f5e9;}
+.fill-input.wrong{border-bottom-color:#ef5350;color:#ef5350;background:#ffebee;}
+.fill-results{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;}
+.fill-results h3{font-size:14px;margin-bottom:8px;color:var(--primary);}
+.fill-score{font-size:28px;font-weight:700;margin-bottom:8px;}
+.fill-detail{font-size:13px;color:var(--text2);}
+.sentence-item.active,.batch-sentence-item.active{color:#1D9E75;font-weight:600;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎧 听力练习</h1>
+  <div class="header-right">
+    <span style="font-size:13px;opacity:0.8;">⭐ <span id="header-stars">0</span></span>
+    <button class="user-btn" onclick="toggleUser()" id="user-btn">同学A</button>
+  </div>
+</div>
+
+<div class="nav" id="main-nav">
+  <a class="on" data-page="home">🏠 首页</a>
+  <a data-page="review">📖 待复习</a>
+  <a data-page="lib">📚 短文库</a>
+  <a data-page="manage">⚙️ 管理</a>
+  <a data-page="mine">👤 个人</a>
+</div>
+
+<div class="mode-tabs" id="mode-tabs">
+  <button class="mode-tab" data-mode="pronunciation" onclick="switchMode('pronunciation')">🗣️ 拼读</button>
+  <button class="mode-tab" data-mode="fillblank" onclick="switchMode('fillblank')">✏️ 填空</button>
+  <button class="mode-tab" data-mode="dictation" onclick="switchMode('dictation')">🎧 听写</button>
+</div>
+
+<div class="container">
+
+  <!-- 首页 -->
+  <div class="page active" id="page-home">
+    <div class="card">
+      <h2>📊 听力统计</h2>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="val" id="stat-total">0</div><div class="label">听力练习次数</div></div>
+        <div class="stat-box"><div class="val" id="stat-articles">0</div><div class="label">练习短文数</div></div>
+        <div class="stat-box"><div class="val" id="stat-learned">0</div><div class="label">已学习</div></div>
+        <div class="stat-box"><div class="val" id="stat-done">0</div><div class="label">已掌握</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📋 今日待复习</h2>
+      <div id="home-review-list"></div>
+    </div>
+    <div class="card">
+      <h2>🎯 快速开始</h2>
+      <p style="color:var(--text3);font-size:13px;margin-bottom:12px;">随机抽取短文进行听力练习</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-green" onclick="startQuickListen(3)">🎧 听3篇</button>
+        <button class="btn btn-blue" onclick="startQuickListen(5)">🎧 听5篇</button>
+        <button class="btn btn-orange" onclick="startQuickListen(10)">🎧 听10篇</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 待复习 -->
+  <div class="page" id="page-review">
+    <div class="card">
+      <h2>📖 今日待复习</h2>
+      <div id="review-list"></div>
+    </div>
+  </div>
+
+  <!-- 短文库 -->
+  <div class="page" id="page-lib">
+    <div class="card">
+      <h2>🔍 分类筛选</h2>
+      <div id="category-tags"></div>
+    </div>
+    <div class="card">
+      <h2>📚 英语短文库（<span id="article-count">0</span> 篇）</h2>
+      <input type="text" class="search-box" id="article-search" placeholder="搜索标题或单词..." oninput="renderArticleList()">
+      <div id="article-list"></div>
+    </div>
+  </div>
+
+  <!-- 短文管理 -->
+  <div class="page" id="page-manage">
+    <div class="card">
+      <h2>📝 短文管理（<span id="manage-count">0</span> 篇）</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button class="btn btn-green" onclick="openArticleEditor()">➕ 添加短文</button>
+        <button class="btn btn-blue" onclick="exportArticles('json')">📥 导出JSON</button>
+        <button class="btn btn-blue" onclick="exportArticles('csv')">📥 导出CSV</button>
+        <button class="btn btn-orange" onclick="document.getElementById('import-file').click()">📤 导入</button>
+        <input type="file" id="import-file" accept=".json,.csv" style="display:none" onchange="importArticles(event)">
+        <select id="import-mode" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+          <option value="append">追加导入</option>
+          <option value="replace">替换导入</option>
+        </select>
+      </div>
+      <div id="manage-list"></div>
+    </div>
+  </div>
+
+  <!-- 个人中心 -->
+  <div class="page" id="page-mine">
+    <div class="card">
+      <h2>📊 我的学习数据</h2>
+      <div class="mine-row"><span class="label">已学习</span><span class="value" id="my-total">0 篇</span></div>
+      <div class="mine-row"><span class="label">待复习</span><span class="value" id="my-wait">0 篇</span></div>
+      <div class="mine-row"><span class="label">已掌握</span><span class="value" id="my-done">0 篇</span></div>
+      <div class="mine-row"><span class="label">听力练习次数</span><span class="value" id="my-listen-total">0</span></div>
+      <div class="mine-row"><span class="label">听力练习短文数</span><span class="value" id="my-listen-articles">0</span></div>
+      <div class="mine-row"><span class="label">⭐ 星星</span><span class="value" style="color:#fbbc04;" id="my-stars">0</span></div>
+    </div>
+    <div class="card">
+      <h2>🔊 语音设置</h2>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:6px;">TTS 模型：</label>
+        <select id="tts-model" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#fff;" onchange="onModelChange()"></select>
+        <p style="color:var(--text3);font-size:12px;margin-top:6px;" id="tts-model-desc">选择语音合成引擎</p>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:6px;">TTS 声音：</label>
+        <select id="tts-voice" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#fff;" onchange="saveSettings()"></select>
+        <p style="color:var(--text3);font-size:12px;margin-top:6px;" id="tts-voice-desc"></p>
+      </div>
+      <div style="margin-bottom:8px;">
+        <label style="font-size:13px;color:var(--text2);">TTS 语速：</label>
+        <input type="range" id="tts-speed" min="50" max="150" value="85" style="vertical-align:middle;" oninput="updateSpeedDisplay(); saveSettings();">
+        <span id="tts-speed-val" style="font-size:12px;color:var(--text3);">0.85x</span>
+      </div>
+      <p style="color:var(--text3);font-size:13px;">较低语速适合听力初学者</p>
+      <div style="margin-top:12px;">
+        <button class="btn btn-blue" id="preview-btn" onclick="previewVoice()" style="width:100%;">🔊 试听当前设置</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>⚠️ 重置数据</h2>
+      <p style="color:var(--text3);font-size:13px;margin-bottom:12px;">重置当前用户的所有学习数据，包括听力记录</p>
+      <button class="btn btn-red" onclick="resetData()">重置我的数据</button>
+    </div>
+    <div class="card">
+      <h2>🎵 语音预生成</h2>
+      <p style="color:var(--text3);font-size:13px;margin-bottom:12px;">预先生成短文语音，播放时无需等待生成</p>
+      <div style="margin-bottom:12px;display:flex;gap:8px;">
+        <button class="btn btn-green" id="generate-btn" onclick="startBatchGeneration()" style="flex:1;">🚀 开始预生成</button>
+        <button class="btn btn-blue" id="regenerate-btn" onclick="regenerateAll()" style="flex:1;">🔄 重新生成</button>
+      </div>
+      <div id="generate-summary" style="font-size:13px;color:var(--text3);margin-bottom:12px;"></div>
+      <div id="generate-progress" style="display:none;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:13px;">进度</span>
+          <span style="font-size:13px;" id="progress-text">0/0</span>
+        </div>
+        <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;">
+          <div id="progress-bar" style="height:100%;background:linear-gradient(90deg, #4CAF50, #8BC34A);width:0%;transition:width 0.3s;"></div>
+        </div>
+        <div style="margin-top:8px;padding:8px;background:#f5f5f5;border-radius:8px;">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:4px;">生成日志：</div>
+          <div id="generate-log" style="font-size:12px;max-height:150px;overflow-y:auto;"></div>
+        </div>
+      </div>
+      <div id="generate-status" style="font-size:13px;color:var(--text3);margin-top:8px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 单篇听力弹窗 -->
+<div class="modal-overlay" id="listen-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeListenModal()">✕</button>
+    <h2 id="modal-title">🎧 听力练习</h2>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:12px;" id="modal-meta"></div>
+    <div class="audio-controls" id="listen-audio-controls">
+      <div class="audio-btns">
+        <button class="audio-btn play" id="play-btn">▶</button>
+        <button class="audio-btn replay" id="replay-btn">🔄</button>
+        <span class="audio-status" id="audio-status">点击播放按钮开始</span>
+      </div>
+      <div style="margin:8px 0 4px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--text3);width:36px;text-align:right;" id="audio-current">0:00</span>
+        <div style="flex:1;height:6px;background:#e0e0e0;border-radius:3px;cursor:pointer;position:relative;" id="audio-progress-bar">
+          <div style="height:100%;background:var(--primary);border-radius:3px;width:0%;transition:width 0.1s;" id="audio-progress"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text3);width:36px;" id="audio-duration">0:00</span>
+      </div>
+      <div class="volume-row">
+        <label>🔊</label>
+        <input type="range" id="volume-slider" min="0" max="100" value="80">
+        <span style="font-size:12px;color:var(--text3);width:32px;text-align:right;" id="volume-val">80%</span>
+      </div>
+    </div>
+    <div id="mode-dictation">
+      <div class="answer-area">
+        <textarea id="answer-input" placeholder="播放音频后，输入听到的英语短文全文..."></textarea>
+        <div class="answer-hint">💡 可多次播放，输入完成后点击"查看答案"核对</div>
+      </div>
+      <div class="answer-reveal" id="answer-reveal">
+        <h3>📝 原文</h3>
+        <div class="full-text" id="reveal-text"></div>
+        <canvas id="answer-canvas" style="display:none;max-width:100%;border-radius:8px;"></canvas>
+      </div>
+      <div class="score-bar" id="score-bar" style="display:none;">
+        <div class="pct" id="score-pct">0%</div>
+        <div class="detail" id="score-detail"></div>
+      </div>
+    </div>
+    <div id="mode-pronunciation" style="display:none;">
+      <div class="pron-target">
+        <h3>📖 朗读文本</h3>
+        <div class="pron-text" id="pron-target-text"></div>
+      </div>
+      <button class="pron-ref-btn" id="pron-ref-btn">🔊 听标准发音</button>
+      <div class="pron-record">
+        <button class="record-btn" id="record-btn">
+          <span class="record-icon">🎙️</span>
+          <span class="record-text">点击录音</span>
+        </button>
+        <button class="record-btn play-record-btn" id="play-record-btn" style="display:none;">
+          <span class="record-icon">▶️</span>
+          <span class="record-text">播放录音</span>
+        </button>
+        <div class="record-timer" id="record-timer" style="display:none;">0.0s</div>
+      </div>
+      <div class="pron-results" id="pron-results" style="display:none;"></div>
+    </div>
+    <div id="mode-fillblank" style="display:none;">
+      <div class="fill-text" id="fill-text"></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn btn-green" onclick="checkFillAnswers(singleFill)">✅ 检查答案</button>
+        <button class="btn btn-gray" onclick="resetFillInputs(singleFill)">🔄 重置</button>
+      </div>
+      <div class="fill-results" id="fill-results" style="display:none;"></div>
+    </div>
+    <div class="modal-actions" id="listen-actions">
+      <button class="btn btn-green" id="complete-btn" onclick="completeListening()" style="display:none;">✅ 完成听力复习</button>
+      <button class="btn btn-gray" onclick="closeListenModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批量听力弹窗 -->
+<div class="modal-overlay" id="batch-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeBatchModal()">✕</button>
+    <h2>🎧 听力考试 <span id="batch-progress" style="font-size:14px;color:var(--text3);font-weight:400;"></span></h2>
+    <div style="margin-bottom:12px;">
+      <div style="background:var(--bg);border-radius:8px;height:8px;overflow:hidden;">
+        <div id="batch-bar" style="height:100%;background:var(--primary);border-radius:8px;transition:width 0.3s;width:0%;"></div>
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:8px;" id="batch-meta"></div>
+    <div class="audio-controls" id="batch-audio-controls">
+      <div class="audio-btns">
+        <button class="audio-btn play" id="batch-play-btn">▶</button>
+        <button class="audio-btn replay" id="batch-replay-btn">🔄</button>
+        <span class="audio-status" id="batch-audio-status">点击播放按钮听短文</span>
+      </div>
+      <div style="margin:8px 0 4px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--text3);width:36px;text-align:right;" id="batch-audio-current">0:00</span>
+        <div style="flex:1;height:6px;background:#e0e0e0;border-radius:3px;cursor:pointer;position:relative;" id="batch-audio-progress-bar">
+          <div style="height:100%;background:var(--primary);border-radius:3px;width:0%;transition:width 0.1s;" id="batch-audio-progress"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text3);width:36px;" id="batch-audio-duration">0:00</span>
+      </div>
+      <div class="volume-row">
+        <label>🔊</label>
+        <input type="range" id="batch-volume" min="0" max="100" value="80">
+        <span style="font-size:12px;color:var(--text3);width:32px;text-align:right;" id="batch-volume-val">80%</span>
+      </div>
+    </div>
+    <div id="batch-mode-dictation">
+      <div class="answer-area">
+        <textarea id="batch-answer" placeholder="播放音频后，输入听到的英语短文全文..." style="min-height:100px;"></textarea>
+        <div class="answer-hint" id="batch-hint">💡 可多次播放，输入后点击提交</div>
+      </div>
+    </div>
+    <div id="batch-mode-fillblank" style="display:none;">
+      <div class="fill-text" id="batch-fill-text"></div>
+      <div class="fill-results" id="batch-fill-results" style="display:none;"></div>
+    </div>
+    <div id="batch-mode-pronunciation" style="display:none;">
+      <div class="pron-target">
+        <h3>📖 朗读文本</h3>
+        <div class="pron-text" id="batch-pron-target-text"></div>
+      </div>
+      <button class="pron-ref-btn" id="batch-pron-btn">🔊 听标准发音</button>
+      <div class="pron-record">
+        <button class="record-btn" id="batch-record-btn">
+          <span class="record-icon">🎙️</span>
+          <span class="record-text">点击录音</span>
+        </button>
+        <button class="record-btn play-record-btn" id="batch-play-record-btn" style="display:none;">
+          <span class="record-icon">▶️</span>
+          <span class="record-text">播放录音</span>
+        </button>
+        <div class="record-timer" id="batch-record-timer" style="display:none;">0.0s</div>
+      </div>
+      <div class="pron-results" id="batch-pron-results" style="display:none;"></div>
+    </div>
+    <div class="answer-reveal" id="batch-answer-reveal" style="display:none;">
+      <h3>📝 原文</h3>
+      <div class="full-text" id="batch-reveal-text"></div>
+      <canvas id="batch-answer-canvas" style="display:none;max-width:100%;border-radius:8px;"></canvas>
+    </div>
+    <div class="score-bar" id="batch-score-bar" style="display:none;">
+      <div class="pct" id="batch-score-pct">0%</div>
+      <div class="detail" id="batch-score-detail"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-orange" id="batch-reveal-btn" onclick="revealAnswer(batchAnswerCfg)" style="display:none;">👁️ 查看原文</button>
+      <button class="btn btn-green" id="batch-submit-btn" onclick="submitBatchAnswer()">✅ 提交并下一题</button>
+      <button class="btn btn-gray" id="batch-skip-btn" onclick="skipBatchAnswer()">跳过</button>
+    </div>
+  </div>
+</div>
+
+<!-- 考试结果弹窗 -->
+<div class="modal-overlay" id="result-modal">
+  <div class="modal" style="max-width:640px;">
+    <button class="modal-close" onclick="closeResultModal()">✕</button>
+    <h2>📊 考试结果 <span id="result-summary" style="font-size:14px;color:var(--text3);font-weight:400;"></span></h2>
+    <div id="result-list" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-blue" onclick="retakeBatch()" style="width:100%;">🔄 重考</button>
+    </div>
+  </div>
+</div>
+
+<!-- 短文编辑弹窗 -->
+<div class="modal-overlay" id="editor-modal">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeArticleEditor()">✕</button>
+    <h2 id="editor-title">📝 添加短文</h2>
+    <div class="ed-field">
+      <label class="ed-label">📖 标题</label>
+      <input type="text" id="ed-title" class="ed-input" placeholder="输入短文标题">
+    </div>
+    <div class="ed-field">
+      <label class="ed-label">🔤 关联单词（逗号分隔）</label>
+      <input type="text" id="ed-words" class="ed-input" placeholder="cat,dog,sleeping">
+      <div class="ed-hint">关联 danci 单词库中的单词，方便听力与单词联动</div>
+    </div>
+    <div class="ed-field">
+      <label class="ed-label">📂 分类</label>
+      <input type="text" id="ed-category" class="ed-input" placeholder="English">
+    </div>
+    <div class="ed-field">
+      <label class="ed-label">📝 英文文本</label>
+      <textarea id="ed-text" class="ed-textarea" rows="5" placeholder="输入英语短文..."></textarea>
+    </div>
+    <div class="ed-actions">
+      <button class="btn btn-green" onclick="saveArticleFromEditor()">💾 保存</button>
+      <button class="btn btn-gray" onclick="closeArticleEditor()">取消</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 常量 & 数据
+// ============================================================
+const TTS_URL = 'http://localhost:5003/tts';
+const SCORE_URL = 'http://localhost:5003/score';
+const PERIOD = [0, 1, 2, 4, 7, 15, 30];
+
+const DEFAULT_ARTICLES = [
+  {id:1,title:"The Seasons",words:"spring,summer,autumn,winter,season,year",category:"自然",text:"Spring is green,\nSummer is bright,\nAutumn is gold,\nWinter is white.\nFour seasons make a year,\nEach one dear and near."},
+  {id:2,title:"Twinkle Twinkle Little Star",words:"twinkle,star,wonder,world,diamond,sky",category:"经典",text:"Twinkle, twinkle, little star,\nHow I wonder what you are!\nUp above the world so high,\nLike a diamond in the sky.\nTwinkle, twinkle, little star,\nHow I wonder what you are!"},
+  {id:3,title:"The Rain",words:"rain,field,tree,umbrella,ship,sea",category:"自然",text:"The rain is raining all around,\nIt falls on field and tree,\nIt rains on the umbrellas here,\nAnd on the ships at sea."},
+  {id:4,title:"My Shadow",words:"shadow,use,like,heel,head,jump,bed",category:"生活",text:"I have a little shadow that goes in and out with me,\nAnd what can be the use of him is more than I can see.\nHe is very, very like me from the heels up to the head;\nAnd I see him jump before me, when I jump into my bed."},
+  {id:5,title:"At the Seaside",words:"seaside,sea,spade,dig,sandy,hole,empty,cup",category:"自然",text:"When I was down beside the sea,\nA wooden spade they gave to me\nTo dig the sandy shore.\nMy holes were empty like a cup,\nIn every hole the sea came up,\nTill it could come no more."},
+  {id:6,title:"The Owl and the Pussycat",words:"owl,pussycat,sea,boat,honey,money,note",category:"经典",text:"The Owl and the Pussycat went to sea\nIn a beautiful pea-green boat,\nThey took some honey, and plenty of money,\nWrapped up in a five-pound note."},
+  {id:7,title:"A Morning Song",words:"morning,broken,blackbird,spoken,bird,praise,springing,fresh,world",category:"生活",text:"Morning has broken,\nLike the first morning,\nBlackbird has spoken,\nLike the first bird.\nPraise for the singing,\nPraise for the morning,\nPraise for them springing\nFresh from the world."},
+  {id:8,title:"The Wind",words:"wind,leaves,trembling,passing,trees,bow",category:"自然",text:"Who has seen the wind?\nNeither I nor you:\nBut when the leaves hang trembling,\nThe wind is passing through.\nWho has seen the wind?\nNeither you nor I:\nBut when the trees bow down their heads,\nThe wind is passing by."},
+  {id:9,title:"Time",words:"unfathomable,sea,waves,years,ocean,woe,brackish,salt,tears,shoreless,flood,mortality",category:"经典",text:"Unfathomable Sea! whose waves are years,\nOcean of Time, whose waters of deep woe\nAre brackish with the salt of human tears!\nThou shoreless flood, which in thy ebb and flow\nClaspest the limits of mortality!"},
+  {id:10,title:"The Little Turtle",words:"turtle,box,swam,puddle,climbed,rocks,snapped,mosquito,flea,minnow",category:"生活",text:"There was a little turtle,\nHe lived in a box.\nHe swam in a puddle,\nHe climbed on the rocks.\nHe snapped at a mosquito,\nHe snapped at a flea,\nHe snapped at a minnow,\nAnd he snapped at me."},
+  {id:11,title:"Cat",words:"cat,sleeping,mat",category:"English",text:"The cat is sleeping on the mat."},
+  {id:12,title:"Sun",words:"sun,hot,bright",category:"English",text:"The sun is hot and bright."},
+  {id:13,title:"Blue Pen",words:"blue,pen,like",category:"English",text:"I like the blue pen."},
+  {id:14,title:"Dog",words:"dog,runs,fast",category:"English",text:"The dog runs very fast."},
+  {id:15,title:"Door",words:"door,close,please",category:"English",text:"Please close the door."},
+  {id:16,title:"Apple",words:"apple,red,sweet",category:"English",text:"The apple is red and sweet."},
+  {id:17,title:"Park",words:"park,go,let",category:"English",text:"Let's go to the park."},
+  {id:18,title:"Teacher",words:"teacher,reads,story",category:"English",text:"The teacher reads a story."},
+  {id:19,title:"Kitchen",words:"kitchen,mom",category:"English",text:"My mom is in the kitchen."},
+  {id:20,title:"Moon",words:"moon,comes,night",category:"English",text:"The moon comes out at night."},
+  {id:21,title:"Cat and Dog",words:"cat,dog,friends",category:"English",text:"The cat and the dog are friends."},
+  {id:22,title:"Sun and Moon",words:"sun,moon,hot,cold",category:"English",text:"The sun is hot and the moon is cold."},
+  {id:23,title:"Apple and Banana",words:"apple,banana,like",category:"English",text:"I like apples and bananas."},
+  {id:24,title:"Run and Jump",words:"run,jump,park",category:"English",text:"Let's run and jump in the park."},
+  {id:25,title:"Mom and Dad",words:"mom,dad,love",category:"English",text:"My mom and dad love me."},
+  {id:26,title:"Read and Write",words:"read,write,school",category:"English",text:"We read and write at school."},
+  {id:27,title:"Red and Blue",words:"red,blue,pen,desk",category:"English",text:"The red and blue pens are on the desk."},
+  {id:28,title:"Big and Small",words:"big,small,box,ball",category:"English",text:"The big box and the small ball are here."},
+  {id:29,title:"Sing and Dance",words:"sing,dance,well",category:"English",text:"She can sing and dance very well."},
+  {id:30,title:"Day and Night",words:"day,night,bright,dark",category:"English",text:"The day is bright and the night is dark."}
+];
+
+let ARTICLES = [];
+let db = null;
+const DB_NAME = 'MoringReadDB', DB_VERSION = 1, STORE_NAME = 'articles';
+
+// ============================================================
+// IndexedDB
+// ============================================================
+function openDB() {
+    return new Promise((resolve, reject) => {
+        let req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+            let d = e.target.result;
+            if (!d.objectStoreNames.contains(STORE_NAME)) {
+                let s = d.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                s.createIndex('category', 'category', { unique: false });
+                s.createIndex('words', 'words', { unique: false });
+            }
+        };
+        req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+        req.onerror = (e) => reject(e);
+    });
+}
+function getAllArticles() {
+    return new Promise((resolve, reject) => {
+        let tx = db.transaction(STORE_NAME, 'readonly');
+        let req = tx.objectStore(STORE_NAME).getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+function putArticle(a) {
+    return new Promise((resolve, reject) => {
+        let tx = db.transaction(STORE_NAME, 'readwrite');
+        let req = tx.objectStore(STORE_NAME).put(a);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+function deleteArticle(id) {
+    return new Promise((resolve, reject) => {
+        let tx = db.transaction(STORE_NAME, 'readwrite');
+        let req = tx.objectStore(STORE_NAME).delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+    });
+}
+function getNextId() { return ARTICLES.length > 0 ? Math.max(...ARTICLES.map(a => a.id)) + 1 : 1; }
+
+async function initArticles() {
+    await openDB();
+    let articles = await getAllArticles();
+    if (articles.length === 0) {
+        for (let a of DEFAULT_ARTICLES) await putArticle(a);
+        articles = DEFAULT_ARTICLES.slice();
+    }
+    ARTICLES = articles.sort((a, b) => a.id - b.id);
+}
+
+// ============================================================
+// 用户数据
+// ============================================================
+let user = "A";
+let currentArticle = null;
+let currentMode = 'dictation';
+let selectedCategory = '';
+let batchArticles = [];
+let batchIndex = 0;
+let batchAnswers = [];
+
+function getUser() { try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; } }
+function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
+function safeUser(u) {
+    let def = { tingli:{ learn:[], done:[], log:{}, dailyLog:{}, listeningLog:{}, voice:'af_sarah', ttsSpeed:85, ttsModel:'kokoro', wordMode:'fillblank' }, stars:0, listeningTotal:0 };
+    if (!u) return def;
+    let merged = { ...def, ...u };
+    if (!merged.tingli) { merged.tingli = def.tingli; } else { merged.tingli = { ...def.tingli, ...merged.tingli }; }
+    if (merged.learn && merged.learn.length) { merged.tingli.learn = [...merged.learn]; delete merged.learn; }
+    if (merged.done && merged.done.length) { merged.tingli.done = [...merged.done]; delete merged.done; }
+    if (merged.log && Object.keys(merged.log).length) { merged.tingli.log = { ...merged.log }; delete merged.log; }
+    if (merged.dailyLog && Object.keys(merged.dailyLog).length) { merged.tingli.dailyLog = { ...merged.dailyLog }; delete merged.dailyLog; }
+    if (merged.listeningLog && Object.keys(merged.listeningLog).length) { merged.tingli.listeningLog = { ...merged.listeningLog }; delete merged.listeningLog; }
+    if (u.voice) merged.tingli.voice = u.voice;
+    if (u.ttsSpeed) merged.tingli.ttsSpeed = u.ttsSpeed;
+    if (u.ttsModel) merged.tingli.ttsModel = u.ttsModel;
+    if (u.wordMode) merged.tingli.wordMode = u.wordMode;
+    return merged;
+}
+function todayKey() { let d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function nextDate(st, count) { if (count >= PERIOD.length) return null; let d = new Date(st); d.setDate(d.getDate() + PERIOD[count]); return d.getTime(); }
+
+function recordProgress(articleId, correct) {
+    let u = safeUser(getUser());
+    let now = Date.now();
+    let idx = articleId;
+    u.listeningTotal = (u.listeningTotal || 0) + 1;
+    if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
+    if (u.tingli.listeningLog[idx]) { u.tingli.listeningLog[idx].count += 1; u.tingli.listeningLog[idx].lastTime = now; }
+    else { u.tingli.listeningLog[idx] = { count:1, lastTime:now }; }
+    if (correct) {
+        if (u.tingli.log[idx]) { u.tingli.log[idx].c += 1; u.tingli.log[idx].next = nextDate(now, u.tingli.log[idx].c); }
+        else { if (!u.tingli.learn.includes(idx)) u.tingli.learn.push(idx); u.tingli.log[idx] = { t:now, c:1, next:nextDate(now,1) }; }
+        if (u.tingli.log[idx].c >= PERIOD.length && !u.tingli.done.includes(idx)) u.tingli.done.push(idx);
+    }
+    if (!u.tingli.dailyLog) u.tingli.dailyLog = {};
+    let today = todayKey();
+    if (!u.tingli.dailyLog[today]) u.tingli.dailyLog[today] = { learn:0, review:0 };
+    u.tingli.dailyLog[today].review++;
+    return u;
+}
+
+// ============================================================
+// TTS & 语音设置
+// ============================================================
+const KOKORO_VOICES = {
+    female: [
+        {id:'af_heart',name:'温暖友好',stars:5},{id:'af_bella',name:'优雅精致',stars:5},{id:'af_nicole',name:'专业清晰',stars:5},
+        {id:'af_sky',name:'明亮活力',stars:5},{id:'af_sarah',name:'清晰流利',stars:5},{id:'af_jessica',name:'富有表现力',stars:4},
+        {id:'af_kore',name:'柔和温柔',stars:4},{id:'af_nova',name:'艺术梦幻',stars:4},{id:'af_alloy',name:'现代干脆',stars:4},
+        {id:'af_aoede',name:'音乐抒情',stars:4},{id:'af_river',name:'流畅平静',stars:4}
+    ],
+    male: [
+        {id:'am_michael',name:'专业稳重',stars:5},{id:'am_adam',name:'年轻活力',stars:5},{id:'am_eric',name:'友好温暖',stars:4},
+        {id:'am_liam',name:'清晰自信',stars:4},{id:'am_fenrir',name:'深沉权威',stars:4},{id:'am_echo',name:'共鸣感强',stars:4},
+        {id:'am_onyx',name:'大胆有力',stars:4},{id:'am_puck',name:'俏皮有趣',stars:4},{id:'am_santa',name:'欢乐温暖',stars:4}
+    ]
+};
+const EDGE_VOICES = {
+    female: [
+        {id:'en-US-JennyNeural',name:'Jenny',stars:5},{id:'en-US-AriaNeural',name:'Aria',stars:5},
+        {id:'en-US-AmberNeural',name:'Amber',stars:4},{id:'en-US-EmmaNeural',name:'Emma',stars:4},
+        {id:'en-GB-SoniaNeural',name:'Sonia (英音)',stars:5},{id:'en-GB-LibbyNeural',name:'Libby (英音)',stars:4},
+        {id:'en-AU-NatashaNeural',name:'Natasha (澳音)',stars:4}
+    ],
+    male: [
+        {id:'en-US-GuyNeural',name:'Guy',stars:5},{id:'en-US-DavisNeural',name:'Davis',stars:4},
+        {id:'en-US-AndrewNeural',name:'Andrew',stars:4},{id:'en-US-BrianNeural',name:'Brian',stars:4},
+        {id:'en-GB-RyanNeural',name:'Ryan (英音)',stars:5},{id:'en-GB-ThomasNeural',name:'Thomas (英音)',stars:4},
+        {id:'en-AU-WilliamNeural',name:'William (澳音)',stars:4}
+    ]
+};
+
+function buildVoiceOptions(model) {
+    let voices = model === 'edge' ? EDGE_VOICES : KOKORO_VOICES;
+    let html = '<optgroup label="👩 女声">';
+    for (let v of voices.female) html += `<option value="${v.id}">${v.id} — ${v.name} ${'⭐'.repeat(v.stars)}</option>`;
+    html += '</optgroup><optgroup label="👨 男声">';
+    for (let v of voices.male) html += `<option value="${v.id}">${v.id} — ${v.name} ${'⭐'.repeat(v.stars)}</option>`;
+    html += '</optgroup>';
+    return html;
+}
+
+let _settingsLoading = false;
+function onModelChange() {
+    if (_settingsLoading) return;
+    let model = document.getElementById('tts-model').value;
+    let voiceSelect = document.getElementById('tts-voice');
+    voiceSelect.innerHTML = buildVoiceOptions(model);
+    voiceSelect.value = model === 'edge' ? 'en-US-JennyNeural' : 'af_sarah';
+    document.getElementById('tts-model-desc').textContent = model === 'edge' ? '微软云端 TTS · 音质优秀 · 需联网' : 'Kokoro 82M · 离线运行 · 低延迟';
+    document.getElementById('tts-voice-desc').textContent = model === 'edge' ? '微软 Neural 语音，自然流畅' : '训练数据：约100小时音频 · 目标质量：自然流畅';
+    saveSettings();
+}
+function saveSettings() {
+    if (_settingsLoading) return;
+    let u = safeUser(getUser());
+    u.tingli.ttsModel = document.getElementById('tts-model').value;
+    u.tingli.voice = document.getElementById('tts-voice').value;
+    u.tingli.ttsSpeed = parseInt(document.getElementById('tts-speed').value);
+    setUser(u);
+}
+function loadSettings() {
+    _settingsLoading = true;
+    let u = safeUser(getUser());
+    let model = u.tingli.ttsModel || 'kokoro';
+    loadModels().then(() => {
+        document.getElementById('tts-model').value = model;
+        let voiceSelect = document.getElementById('tts-voice');
+        voiceSelect.innerHTML = buildVoiceOptions(model);
+        voiceSelect.value = u.tingli.voice || (model === 'edge' ? 'en-US-JennyNeural' : 'af_sarah');
+        document.getElementById('tts-speed').value = u.tingli.ttsSpeed || 85;
+        document.getElementById('tts-speed-val').textContent = (u.tingli.ttsSpeed / 100).toFixed(2) + 'x';
+        document.getElementById('tts-model-desc').textContent = model === 'edge' ? '微软云端 TTS · 音质优秀 · 需联网' : 'Kokoro 82M · 离线运行 · 低延迟';
+        document.getElementById('tts-voice-desc').textContent = model === 'edge' ? '微软 Neural 语音，自然流畅' : '训练数据：约100小时音频 · 目标质量：自然流畅';
+        switchMode(u.tingli.wordMode || 'fillblank', true);
+        _settingsLoading = false;
+    });
+}
+async function loadModels() {
+    let modelSelect = document.getElementById('tts-model');
+    let savedOnchange = modelSelect.onchange;
+    modelSelect.onchange = null;
+    try {
+        let res = await fetch(TTS_URL.replace('/tts', '/models'));
+        let models = await res.json();
+        modelSelect.innerHTML = '';
+        for (let m of models) { let opt = document.createElement('option'); opt.value = m.id; opt.textContent = m.name; modelSelect.appendChild(opt); }
+        if (models.length === 0) modelSelect.innerHTML = '<option value="kokoro">Kokoro (本地)</option>';
+    } catch { modelSelect.innerHTML = '<option value="kokoro">Kokoro (本地)</option><option value="edge">Edge TTS (云端)</option>'; }
+    modelSelect.onchange = savedOnchange;
+}
+function updateSpeedDisplay() {
+    let speedEl = document.getElementById('tts-speed');
+    if (speedEl) document.getElementById('tts-speed-val').textContent = (parseInt(speedEl.value) / 100).toFixed(2) + 'x';
+}
+
+let previewAudio = null, previewLoading = false;
+async function previewVoice() {
+    if (previewLoading) return;
+    if (previewAudio) { previewAudio.pause(); previewAudio = null; }
+    let btn = document.getElementById('preview-btn');
+    let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    previewLoading = true;
+    btn.textContent = '⏳ 加载中...'; btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none';
+    try {
+        const res = await fetch(TTS_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text:'Hello! This is a preview of the selected voice. How does it sound?', voice, speed, model }) });
+        if (!res.ok) { toast('试听失败：模型不可用','error'); resetPreviewBtn(); return; }
+        const blob = await res.blob();
+        previewAudio = new Audio(URL.createObjectURL(blob));
+        previewAudio.play();
+        btn.textContent = '🔊 播放中...';
+        previewAudio.onended = () => resetPreviewBtn();
+        previewAudio.onerror = () => { toast('试听播放失败','error'); resetPreviewBtn(); };
+    } catch { toast('试听请求失败','error'); resetPreviewBtn(); }
+}
+function resetPreviewBtn() {
+    let btn = document.getElementById('preview-btn');
+    btn.textContent = '🔊 试听当前设置'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+    previewLoading = false;
+}
+
+async function ttsFetch(text) {
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+    try {
+        const res = await fetch(TTS_URL + '/stream', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text, voice, speed, model }) });
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return URL.createObjectURL(blob);
+    } catch { return null; }
+}
+
+async function fetchTtsWithTimestamp(text, model, voice, speed) {
+    return fetch('http://localhost:5003/tts/timestamp', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, model, voice, speed })
+    }).then(res => res.json()).catch(() => null);
+}
+
+function base64ToAudio(base64Data, mimetype) {
+    let byteString = atob(base64Data);
+    let ab = new ArrayBuffer(byteString.length);
+    let ua = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) ua[i] = byteString.charCodeAt(i);
+    return URL.createObjectURL(new Blob([ab], { type: mimetype }));
+}
+
+// ============================================================
+// AudioPlayer 类 —— 统一管理 HTML5 Audio 播放
+// ============================================================
+class AudioPlayer {
+    constructor(els) {
+        // els: { playBtn, replayBtn, statusEl, progressEl, currentEl, durationEl, progressBarEl, volumeEl, volumeValEl }
+        this.els = els;
+        this.audio = null;
+        this.playing = false;
+        this.loading = false;
+        this.finished = false;
+        this._timer = null;
+        this.onFinished = null;
+        this.onReveal = null;  // callback(hide: boolean)
+        // 绑定事件
+        this.els.playBtn.onclick = () => this.toggle();
+        this.els.replayBtn.onclick = () => this.replay();
+        this.els.volumeEl.oninput = () => this.changeVolume(this.els.volumeEl.value);
+        this.els.progressBarEl.onclick = (e) => this.seek(e);
+    }
+    getArticle() { return null; }  // 子类/外部覆盖
+
+    async toggle() {
+        let article = this.getArticle();
+        if (!article) return;
+        if (this.loading) return;
+        if (this.playing) {
+            if (this.audio) this.audio.pause();
+            speechSynthesis.cancel();
+            this.playing = false;
+            this._stopTimer();
+            this.updateUI();
+            return;
+        }
+        if (this.audio && this.audio.paused && !this.finished) {
+            this.audio.play();
+            this.playing = true;
+            this._startTimer();
+            this.updateUI();
+            return;
+        }
+        if (this.onReveal) this.onReveal(true);
+        let vol = parseInt(this.els.volumeEl.value) / 100;
+        this.loading = true;
+        this.finished = false;
+        this._resetProgress();
+        this.updateUI();
+        try {
+            let url = await ttsFetch(article.text);
+            if (url) {
+                this.audio = new Audio(url);
+                this.audio.volume = vol;
+                this.audio.play();
+                this.playing = true;
+                this.loading = false;
+                this.updateUI();
+                this.audio.onended = () => { this.playing = false; this.finished = true; this._stopTimer(); this.updateUI(); if (this.onFinished) this.onFinished(); };
+                this.audio.onerror = () => { this.playing = false; this._stopTimer(); this.updateUI(); toast('音频播放失败','error'); };
+                this.audio.onloadedmetadata = () => { this._updateDuration(); this._startTimer(); };
+            } else { this.loading = false; this._playLocalTTS(article.text); }
+        } catch { this.loading = false; this._playLocalTTS(article.text); }
+    }
+
+    _playLocalTTS(text) {
+        speechSynthesis.cancel();
+        let utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'en-US';
+        utter.rate = parseInt(document.getElementById('tts-speed').value) / 100;
+        utter.volume = parseInt(this.els.volumeEl.value) / 100;
+        speechSynthesis.speak(utter);
+        this.playing = true; this.finished = false; this.updateUI();
+        utter.onend = () => { this.playing = false; this.finished = true; this.updateUI(); if (this.onFinished) this.onFinished(); };
+        utter.onerror = () => { this.playing = false; this.updateUI(); };
+    }
+
+    replay() {
+        let article = this.getArticle();
+        if (!article || this.loading) return;
+        if (this.audio) { this.audio.pause(); this.audio = null; }
+        speechSynthesis.cancel();
+        this.playing = false; this.loading = false; this.finished = false;
+        this._stopTimer();
+        if (this.onReveal) this.onReveal(true);
+        this._resetProgress();
+        this.updateUI();
+        setTimeout(() => this.toggle(), 100);
+    }
+
+    changeVolume(val) {
+        if (this.els.volumeValEl) this.els.volumeValEl.textContent = val + '%';
+        if (this.audio) this.audio.volume = val / 100;
+    }
+
+    updateUI() {
+        let btn = this.els.playBtn, status = this.els.statusEl;
+        if (this.loading) {
+            btn.textContent = '⏳'; btn.style.background = 'linear-gradient(135deg,#ffa726,#fb8c00)'; btn.style.pointerEvents = 'none';
+            status.textContent = '⏳ 音频加载中...'; status.className = 'audio-status loading';
+        } else if (this.playing) {
+            btn.textContent = '⏸'; btn.style.background = 'linear-gradient(135deg,#e53935,#ef5350)'; btn.style.pointerEvents = 'auto';
+            status.textContent = '🔊 正在播放...'; status.className = 'audio-status playing';
+        } else {
+            btn.textContent = '▶'; btn.style.background = 'linear-gradient(135deg,var(--primary),var(--primary-light))'; btn.style.pointerEvents = 'auto';
+            status.textContent = '点击播放按钮开始'; status.className = 'audio-status';
+        }
+    }
+
+    _resetProgress() {
+        this._stopTimer();
+        this.els.progressEl.style.width = '0%';
+        this.els.currentEl.textContent = '0:00';
+        this.els.durationEl.textContent = '0:00';
+    }
+    _updateDuration() { if (this.audio && isFinite(this.audio.duration)) this.els.durationEl.textContent = formatTime(this.audio.duration); }
+    _updateProgress() {
+        if (!this.audio) return;
+        let cur = this.audio.currentTime || 0, dur = this.audio.duration || 1;
+        if (!isFinite(dur) || dur <= 0) return;
+        this.els.progressEl.style.width = (cur / dur * 100) + '%';
+        this.els.currentEl.textContent = formatTime(cur);
+    }
+    _startTimer() { this._stopTimer(); this._timer = setInterval(() => this._updateProgress(), 200); }
+    _stopTimer() { if (this._timer) { clearInterval(this._timer); this._timer = null; } }
+
+    seek(e) {
+        if (!this.audio || !isFinite(this.audio.duration)) return;
+        let rect = this.els.progressBarEl.getBoundingClientRect();
+        let pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        this.audio.currentTime = pct * this.audio.duration;
+        this._updateProgress();
+    }
+
+    pause() {
+        if (this.audio) this.audio.pause();
+        speechSynthesis.cancel();
+        this.playing = false; this._stopTimer(); this.updateUI();
+    }
+
+    cleanup() {
+        if (this.audio) { this.audio.pause(); this.audio = null; }
+        speechSynthesis.cancel();
+        this.playing = false; this.loading = false; this.finished = false;
+        this._stopTimer();
+    }
+}
+
+// ============================================================
+// PronunciationPlayer 类 —— WebAudio 播放 + 时间戳高亮
+// ============================================================
+class PronunciationPlayer {
+    constructor(els) {
+        // els: { targetTextEl, pronBtn, resultsEl, volumeEl, sentenceClass }
+        this.els = els;
+        this.audioContext = null;
+        this.audioBuffer = null;
+        this.bufferSource = null;
+        this.startTime = 0;
+        this.pausedTime = 0;
+        this.timestamps = [];
+        this.loading = false;
+        this.paused = false;
+        this._highlightActive = false;
+        this.getArticle = null;  // function
+        this.els.pronBtn.onclick = () => this.playReference();
+    }
+
+    async playReference() {
+        let article = this.getArticle();
+        if (!article) return;
+        let btn = this.els.pronBtn;
+        if (this.loading) return;
+
+        if (this.bufferSource && !this.paused) {
+            this._pausePlayback(); this.paused = true;
+            btn.innerHTML = '▶️ 继续播放'; this._clearHighlight(); return;
+        }
+        if (this.audioBuffer && this.paused) {
+            this._resumePlayback(btn); this.paused = false; return;
+        }
+
+        let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+        let voice = document.getElementById('tts-voice').value || 'af_sarah';
+        let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+
+        this.loading = true; this.paused = false;
+        btn.innerHTML = '⏳ 正在生成发音...'; btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none';
+
+        let data = await fetchTtsWithTimestamp(article.text, model, voice, speed);
+        this.loading = false;
+        if (!data) { this._resetBtn(btn); return; }
+
+        this.timestamps = data.timestamps;
+        this._renderText(article.text, this.timestamps);
+        let audioUrl = base64ToAudio(data.audio, data.mimetype);
+        this._loadAndPlay(audioUrl, btn);
+    }
+
+    _loadAndPlay(audioUrl, btn) {
+        if (this.audioContext) { this.audioContext.close(); this.audioContext = null; }
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        fetch(audioUrl).then(r => r.arrayBuffer()).then(ab => this.audioContext.decodeAudioData(ab)).then(buffer => {
+            this.audioBuffer = buffer;
+            this._startPlayback(btn);
+        }).catch(() => { this._resetBtn(btn); this.loading = false; this.paused = false; toast('加载音频失败','error'); });
+    }
+
+    _startPlayback(btn) {
+        if (!this.audioContext || !this.audioBuffer) return;
+        this.bufferSource = this.audioContext.createBufferSource();
+        this.bufferSource.buffer = this.audioBuffer;
+        let gain = this.audioContext.createGain();
+        gain.gain.value = parseInt(this.els.volumeEl.value) / 100;
+        this.bufferSource.connect(gain); gain.connect(this.audioContext.destination);
+        this.startTime = this.audioContext.currentTime - this.pausedTime;
+        this.bufferSource.start(0, this.pausedTime);
+        btn.innerHTML = '⏸️ 暂停播放'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+        this._startHighlight();
+        this.bufferSource.onended = () => { this._cleanup(); this.paused = false; this.pausedTime = 0; this._resetBtn(btn); this._clearHighlight(); };
+    }
+
+    _pausePlayback() {
+        if (!this.bufferSource || !this.audioContext) return;
+        this.pausedTime = this.audioContext.currentTime - this.startTime;
+        this.bufferSource.stop(); this.bufferSource = null;
+        this._stopHighlight();
+    }
+
+    _resumePlayback(btn) {
+        if (!this.audioBuffer) return;
+        this.bufferSource = this.audioContext.createBufferSource();
+        this.bufferSource.buffer = this.audioBuffer;
+        let gain = this.audioContext.createGain();
+        gain.gain.value = parseInt(this.els.volumeEl.value) / 100;
+        this.bufferSource.connect(gain); gain.connect(this.audioContext.destination);
+        this.startTime = this.audioContext.currentTime - this.pausedTime;
+        this.bufferSource.start(0, this.pausedTime);
+        btn.innerHTML = '⏸️ 暂停播放';
+        this._startHighlight();
+        this.bufferSource.onended = () => { this._cleanup(); this.paused = false; this.pausedTime = 0; this._resetBtn(btn); this._clearHighlight(); };
+    }
+
+    _cleanup() {
+        this._stopHighlight();
+        if (this.bufferSource) { try { this.bufferSource.stop(); } catch(e) {} this.bufferSource = null; }
+        if (this.audioContext) { this.audioContext.close(); this.audioContext = null; }
+        this.audioBuffer = null;
+    }
+
+    _startHighlight() {
+        this._stopHighlight(); this._highlightActive = true;
+        const update = () => {
+            if (!this._highlightActive) return;
+            if (!this.audioContext || this.paused) { requestAnimationFrame(update); return; }
+            let ct = this.audioContext.currentTime - this.startTime;
+            let idx = this.timestamps.findIndex(t => ct >= t.start && ct < t.end);
+            if (idx >= 0) this._setActive(idx);
+            requestAnimationFrame(update);
+        };
+        requestAnimationFrame(update);
+    }
+    _stopHighlight() { this._highlightActive = false; }
+
+    _renderText(text, timestamps) {
+        let container = this.els.targetTextEl;
+        if (!container) return;
+        if (timestamps && timestamps.length > 0) {
+            container.innerHTML = timestamps.map((item, i) =>
+                `<span class="${this.els.sentenceClass}" data-index="${i}">${escapeHtml(item.text)}</span>`
+            ).join('');
+        } else { container.textContent = text; }
+    }
+
+    _clearHighlight() { document.querySelectorAll('.' + this.els.sentenceClass).forEach(el => el.classList.remove('active')); }
+    _setActive(index) { this._clearHighlight(); let el = document.querySelector(`.${this.els.sentenceClass}[data-index="${index}"]`); if (el) { el.classList.add('active'); el.scrollIntoView({ behavior:'smooth', block:'center' }); } }
+    _resetBtn(btn) { btn.innerHTML = '🔊 听标准发音'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+
+    cleanup() { this._cleanup(); this.paused = false; this.pausedTime = 0; this.loading = false; this._resetBtn(this.els.pronBtn); this._clearHighlight(); }
+}
+
+// ============================================================
+// RecordingSession 类 —— 录音 & 播放录音 & 评分
+// ============================================================
+class RecordingSession {
+    constructor(els) {
+        // els: { recordBtn, playRecordBtn, timerEl, volumeEl, resultsEl }
+        this.els = els;
+        this.mediaStream = null;
+        this.audioCtx = null;
+        this.scriptNode = null;
+        this.samples = [];
+        this.recording = false;
+        this._timer = null;
+        this.duration = 0;
+        this.audioBlob = null;
+        this.playbackAudio = null;
+        this.playingRecording = false;
+        this.onScored = null;  // callback(result, article)
+        this.getArticle = null;  // function
+        this.els.recordBtn.onclick = () => this.toggle();
+        this.els.playRecordBtn.onclick = () => this.playRecording();
+    }
+
+    async toggle() {
+        if (this.recording) this._stop(); else await this._start();
+    }
+
+    async _start() {
+        try {
+            this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            let source = this.audioCtx.createMediaStreamSource(this.mediaStream);
+            this.scriptNode = this.audioCtx.createScriptProcessor(4096, 1, 1);
+            this.samples = [];
+            this.scriptNode.onaudioprocess = (e) => { if (this.recording) this.samples.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+            source.connect(this.scriptNode); this.scriptNode.connect(this.audioCtx.destination);
+            this.recording = true; this.duration = 0;
+            let btn = this.els.recordBtn;
+            btn.classList.add('recording'); btn.querySelector('.record-text').textContent = '点击停止';
+            this.els.timerEl.style.display = 'block'; this.els.timerEl.textContent = '0.0s';
+            this._timer = setInterval(() => { this.duration += 0.1; this.els.timerEl.textContent = this.duration.toFixed(1) + 's'; }, 100);
+        } catch (err) { toast('无法访问麦克风：' + err.message, 'error'); }
+    }
+
+    _stop() {
+        this.recording = false;
+        if (this._timer) { clearInterval(this._timer); this._timer = null; }
+        let btn = this.els.recordBtn;
+        btn.classList.remove('recording'); btn.querySelector('.record-text').textContent = '点击录音';
+        this.els.timerEl.style.display = 'none';
+        if (this.scriptNode) { this.scriptNode.disconnect(); this.scriptNode = null; }
+        if (this.mediaStream) { this.mediaStream.getTracks().forEach(t => t.stop()); this.mediaStream = null; }
+        if (this.samples.length > 0) {
+            let sampleRate = this.audioCtx ? this.audioCtx.sampleRate : 16000;
+            if (this.audioCtx) { this.audioCtx.close(); this.audioCtx = null; }
+            let totalLen = this.samples.reduce((acc, buf) => acc + buf.length, 0);
+            let merged = new Float32Array(totalLen);
+            let offset = 0;
+            for (let buf of this.samples) { merged.set(buf, offset); offset += buf.length; }
+            this.audioBlob = encodeWAV(merged, sampleRate);
+            this.samples = [];
+            this.els.playRecordBtn.style.display = 'flex';
+            this._submitScore(this.audioBlob);
+        }
+    }
+
+    async _submitScore(wavBlob) {
+        let article = this.getArticle();
+        if (!article) return;
+        let resultsEl = this.els.resultsEl;
+        resultsEl.style.display = 'block';
+        resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:var(--text3);">⏳ 评分中...</div>';
+        let formData = new FormData();
+        formData.append('audio', wavBlob, 'recording.wav');
+        formData.append('target', article.text);
+        try {
+            let res = await fetch(SCORE_URL, { method:'POST', body: formData });
+            if (!res.ok) { resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分失败，请重试</div>'; return; }
+            let result = await res.json();
+            displayPronResults(resultsEl, result);
+            if (this.onScored) this.onScored(result, article);
+        } catch (err) {
+            resultsEl.innerHTML = '<h3>📊 打分结果</h3><div style="text-align:center;padding:20px;color:#ef5350;">评分出错，请检查服务是否启动</div>';
+        }
+    }
+
+    playRecording() {
+        let btn = this.els.playRecordBtn;
+        if (!this.audioBlob) return;
+        if (this.playingRecording && this.playbackAudio) {
+            this.playbackAudio.pause(); this.playingRecording = false;
+            btn.querySelector('.record-icon').textContent = '▶️'; btn.querySelector('.record-text').textContent = '播放录音'; return;
+        }
+        if (this.playbackAudio && !this.playingRecording) {
+            this.playbackAudio.play(); this.playingRecording = true;
+            btn.querySelector('.record-icon').textContent = '⏸️'; btn.querySelector('.record-text').textContent = '暂停录音'; return;
+        }
+        let audioUrl = URL.createObjectURL(this.audioBlob);
+        this.playbackAudio = new Audio(audioUrl);
+        this.playbackAudio.volume = parseInt(this.els.volumeEl.value) / 100;
+        this.playbackAudio.onplay = () => { this.playingRecording = true; btn.querySelector('.record-icon').textContent = '⏸️'; btn.querySelector('.record-text').textContent = '暂停录音'; };
+        this.playbackAudio.onpause = () => { this.playingRecording = false; btn.querySelector('.record-icon').textContent = '▶️'; btn.querySelector('.record-text').textContent = '继续播放'; };
+        this.playbackAudio.onended = () => { this.playingRecording = false; btn.querySelector('.record-icon').textContent = '▶️'; btn.querySelector('.record-text').textContent = '播放录音'; this.playbackAudio = null; };
+        this.playbackAudio.play();
+    }
+
+    cleanup() {
+        this.recording = false;
+        if (this._timer) { clearInterval(this._timer); this._timer = null; }
+        if (this.scriptNode) { this.scriptNode.disconnect(); this.scriptNode = null; }
+        if (this.mediaStream) { this.mediaStream.getTracks().forEach(t => t.stop()); this.mediaStream = null; }
+        if (this.audioCtx) { this.audioCtx.close(); this.audioCtx = null; }
+        this.samples = [];
+        if (this.playbackAudio) { this.playbackAudio.pause(); this.playbackAudio = null; }
+        this.playingRecording = false;
+        this.audioBlob = null;
+        this.els.playRecordBtn.style.display = 'none';
+        this.els.recordBtn.classList.remove('recording');
+        this.els.recordBtn.querySelector('.record-text').textContent = '点击录音';
+        this.els.timerEl.style.display = 'none';
+    }
+}
+
+// ============================================================
+// 通用工具函数
+// ============================================================
+function formatTime(sec) { if (!sec || !isFinite(sec)) return '0:00'; return Math.floor(sec / 60) + ':' + String(Math.floor(sec % 60)).padStart(2, '0'); }
+
+function encodeWAV(samples, sampleRate) {
+    let buffer = new ArrayBuffer(44 + samples.length * 2);
+    let view = new DataView(buffer);
+    function writeStr(v, o, s) { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    writeStr(view, 0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true); writeStr(view, 8, 'WAVE');
+    writeStr(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+    writeStr(view, 36, 'data'); view.setUint32(40, samples.length * 2, true);
+    let off = 44;
+    for (let i = 0; i < samples.length; i++) { let s = Math.max(-1, Math.min(1, samples[i])); view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true); off += 2; }
+    return new Blob([buffer], { type: 'audio/wav' });
+}
+
+function escapeHtml(text) { let div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+
+function displayPronResults(el, result) {
+    let fluency = result.fluency || 0, phoneAccuracy = result.phone_accuracy || 0;
+    let pauseRatio = result.pause_ratio || 0, duration = result.duration || 0, heard = result.heard || '';
+    let fClass = fluency >= 80 ? 'high' : fluency >= 60 ? 'mid' : 'low';
+    let aClass = phoneAccuracy >= 80 ? 'high' : phoneAccuracy >= 60 ? 'mid' : 'low';
+    let resultsHtml = '';
+    if (result.results && result.results.length > 0) {
+        resultsHtml = '<div style="margin-top:8px;font-size:13px;color:var(--text2);">' + result.results.map(r => (r.correct ? '✅' : '❌') + ' /' + r.phone + '/').join(' ') + '</div>';
+    }
+    el.innerHTML = `<h3>📊 打分结果</h3>
+        <div class="pron-result-grid">
+            <div class="pron-result-item"><div class="pron-result-val ${fClass}">${fluency.toFixed(1)}</div><div class="pron-result-label">流利度</div></div>
+            <div class="pron-result-item"><div class="pron-result-val ${aClass}">${phoneAccuracy.toFixed(1)}%</div><div class="pron-result-label">音素准确率</div></div>
+            <div class="pron-result-item"><div class="pron-result-val">${(pauseRatio*100).toFixed(1)}%</div><div class="pron-result-label">停顿比</div></div>
+            <div class="pron-result-item"><div class="pron-result-val">${duration.toFixed(1)}s</div><div class="pron-result-label">时长</div></div>
+        </div>
+        <div class="pron-heard"><strong>识别结果：</strong>${heard || '(未识别到内容)'}</div>${resultsHtml}`;
+}
+
+// ============================================================
+// 参数化填空函数
+// ============================================================
+function initFillblank(cfg, article) {
+    // cfg = { containerEl, resultsEl }
+    let text = article.text;
+    let wordList = (article.words || '').split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    let wordSet = new Set(wordList);
+    let lines = text.split('\n');
+    let html = '', blankIndex = 0;
+    for (let line of lines) {
+        let tokens = line.split(/(\s+)/);
+        for (let token of tokens) {
+            if (!token.trim()) { html += token; continue; }
+            let match = token.match(/^([^\w]*)(\w+)([^\w]*)$/);
+            if (match) {
+                let [, prefix, word, suffix] = match;
+                if (wordSet.has(word.toLowerCase())) {
+                    let w = word.length, inputW = Math.max(w * 12, 60);
+                    html += prefix + `<input type="text" class="fill-input" data-answer="${word}" data-index="${blankIndex}" autocomplete="off" style="width:${inputW}px;" placeholder="${'_'.repeat(w)}">` + suffix;
+                    blankIndex++;
+                } else { html += token; }
+            } else { html += token; }
+        }
+        html += '\n';
+    }
+    cfg.containerEl.innerHTML = html.trim();
+    cfg.resultsEl.style.display = 'none';
+    cfg.containerEl.querySelectorAll('.fill-input').forEach(input => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); let inputs = cfg.containerEl.querySelectorAll('.fill-input'); let idx = parseInt(this.dataset.index); if (idx < inputs.length - 1) inputs[idx + 1].focus(); }
+        });
+    });
+}
+
+function checkFillAnswers(cfg, article, onComplete) {
+    let inputs = cfg.containerEl.querySelectorAll('.fill-input');
+    let correct = 0, total = inputs.length;
+    inputs.forEach(input => {
+        let answer = input.dataset.answer.toLowerCase();
+        let userAnswer = input.value.trim().toLowerCase();
+        input.disabled = false;
+        if (userAnswer === answer) { input.classList.add('correct'); input.classList.remove('wrong'); correct++; }
+        else { input.classList.add('wrong'); input.classList.remove('correct'); }
+    });
+    let pct = total > 0 ? Math.round(correct / total * 100) : 0;
+    let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
+    let wrongWords = [];
+    inputs.forEach(input => { if (input.classList.contains('wrong')) wrongWords.push(input.dataset.answer); });
+    let wrongHtml = wrongWords.length > 0 ?
+        `<div style="margin-top:8px;font-size:13px;color:#ef5350;">❌ 错误单词：${wrongWords.map(w => `<span style="background:#ffebee;padding:2px 8px;border-radius:4px;margin:0 2px;">${w}</span>`).join('')}</div>` :
+        '<div style="margin-top:8px;font-size:13px;color:#43a047;">🎉 全部正确！</div>';
+    cfg.resultsEl.style.display = 'block';
+    cfg.resultsEl.innerHTML = `<h3>📊 填空结果</h3><div class="fill-score" style="color:${pctColor};">${pct}%</div><div class="fill-detail">正确 ${correct}/${total}</div>${wrongHtml}`;
+    if (onComplete) onComplete(pct, correct, total, inputs);
+}
+
+function resetFillInputs(cfg) {
+    cfg.containerEl.querySelectorAll('.fill-input').forEach(input => { input.value = ''; input.disabled = false; input.classList.remove('correct','wrong'); });
+    cfg.resultsEl.style.display = 'none';
+}
+
+// ============================================================
+// 参数化答案揭示函数
+// ============================================================
+function renderAnswerCanvas(canvasEl, text, words) {
+    let ctx = canvasEl.getContext('2d');
+    let wordList = words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    let maxWidth = 600, lineHeight = 28, padding = 20;
+    ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
+    let lines = [], currentLine = '', textWords = text.split(/(\s+)/);
+    for (let i = 0; i < textWords.length; i++) {
+        let word = textWords[i], testLine = currentLine + word;
+        if (ctx.measureText(testLine).width > maxWidth - padding * 2 && currentLine !== '') { lines.push(currentLine); currentLine = word; }
+        else currentLine = testLine;
+    }
+    if (currentLine) lines.push(currentLine);
+    canvasEl.width = maxWidth; canvasEl.height = lines.length * lineHeight + padding * 2;
+    ctx.fillStyle = '#f5f5f5'; ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
+    ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif'; ctx.textBaseline = 'top';
+    let y = padding;
+    for (let line of lines) {
+        let x = padding, lineWords = line.split(/(\s+)/);
+        for (let word of lineWords) {
+            let cleanWord = word.replace(/[^\w]/g, '').toLowerCase(), isKeyword = wordList.includes(cleanWord);
+            if (isKeyword && word.trim()) { ctx.fillStyle = '#1D9E75'; ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif'; }
+            else { ctx.fillStyle = '#333'; ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif'; }
+            ctx.fillText(word, x, y); x += ctx.measureText(word).width;
+        }
+        y += lineHeight;
+    }
+}
+
+function revealAnswer(cfg) {
+    // cfg = { article, inputEl, revealEl, canvasEl, revealTextEl, scoreBarEl, scorePctEl, scoreDetailEl }
+    let article = cfg.article;
+    if (!article) return;
+    cfg.revealEl.style.display = 'block';
+    let canvas = renderAnswerCanvas(cfg.canvasEl, article.text, article.words || '');
+    canvas.style.display = 'block';
+    cfg.revealTextEl.style.display = 'none';
+    let input = cfg.inputEl ? cfg.inputEl.value.trim() : '';
+    if (input) {
+        let wordList = (article.words || '').split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+        let inputWordSet = new Set(input.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
+        let matched = wordList.filter(w => inputWordSet.has(w)).length;
+        let totalWords = article.text.split(/\s+/).filter(Boolean).length;
+        let inputWords = input.split(/\s+/).filter(Boolean).length;
+        let wordPct = wordList.length > 0 ? Math.round(matched / wordList.length * 100) : 0;
+        cfg.scoreBarEl.style.display = 'flex';
+        cfg.scorePctEl.textContent = wordPct + '%';
+        cfg.scorePctEl.className = 'pct ' + (wordPct >= 80 ? 'high' : wordPct >= 60 ? 'mid' : 'low');
+        cfg.scoreDetailEl.textContent = `输入 ${inputWords} 词 / 关联词 ${matched}/${wordList.length} / 原文 ${totalWords} 词`;
+    }
+}
+
+function hideAnswer(cfg) {
+    cfg.revealEl.style.display = 'none';
+    cfg.scoreBarEl.style.display = 'none';
+}
+
+// ============================================================
+// 实例化 —— 单篇弹窗
+// ============================================================
+let singleAudio = new AudioPlayer({
+    playBtn: document.getElementById('play-btn'),
+    replayBtn: document.getElementById('replay-btn'),
+    statusEl: document.getElementById('audio-status'),
+    progressEl: document.getElementById('audio-progress'),
+    currentEl: document.getElementById('audio-current'),
+    durationEl: document.getElementById('audio-duration'),
+    progressBarEl: document.getElementById('audio-progress-bar'),
+    volumeEl: document.getElementById('volume-slider'),
+    volumeValEl: document.getElementById('volume-val')
+});
+singleAudio.getArticle = () => currentArticle;
+singleAudio.onReveal = (hide) => {
+    if (!hide && answerRevealed) { answerRevealed = false; document.getElementById('answer-reveal').style.display = 'none'; document.getElementById('score-bar').style.display = 'none'; }
+};
+singleAudio.onFinished = () => {
+    if (currentArticle && currentMode === 'dictation') addShowAnswerButton();
+};
+
+let singlePron = new PronunciationPlayer({
+    targetTextEl: document.getElementById('pron-target-text'),
+    pronBtn: document.getElementById('pron-ref-btn'),
+    resultsEl: document.getElementById('pron-results'),
+    volumeEl: document.getElementById('volume-slider'),
+    sentenceClass: 'sentence-item'
+});
+singlePron.getArticle = () => currentArticle;
+
+let singleRec = new RecordingSession({
+    recordBtn: document.getElementById('record-btn'),
+    playRecordBtn: document.getElementById('play-record-btn'),
+    timerEl: document.getElementById('record-timer'),
+    volumeEl: document.getElementById('volume-slider'),
+    resultsEl: document.getElementById('pron-results')
+});
+singleRec.getArticle = () => currentArticle;
+singleRec.onScored = (result, article) => {
+    displayPronResults(document.getElementById('pron-results'), result);
+};
+
+let singleFill = { containerEl: document.getElementById('fill-text'), resultsEl: document.getElementById('fill-results') };
+let answerRevealed = false;
+
+let singleAnswerCfg = {
+    get article() { return currentArticle; },
+    get inputEl() { return document.getElementById('answer-input'); },
+    revealEl: document.getElementById('answer-reveal'),
+    canvasEl: document.getElementById('answer-canvas'),
+    revealTextEl: document.getElementById('reveal-text'),
+    scoreBarEl: document.getElementById('score-bar'),
+    scorePctEl: document.getElementById('score-pct'),
+    scoreDetailEl: document.getElementById('score-detail')
+};
+
+// ============================================================
+// 实例化 —— 批量弹窗
+// ============================================================
+let batchAudio = new AudioPlayer({
+    playBtn: document.getElementById('batch-play-btn'),
+    replayBtn: document.getElementById('batch-replay-btn'),
+    statusEl: document.getElementById('batch-audio-status'),
+    progressEl: document.getElementById('batch-audio-progress'),
+    currentEl: document.getElementById('batch-audio-current'),
+    durationEl: document.getElementById('batch-audio-duration'),
+    progressBarEl: document.getElementById('batch-audio-progress-bar'),
+    volumeEl: document.getElementById('batch-volume'),
+    volumeValEl: document.getElementById('batch-volume-val')
+});
+batchAudio.getArticle = () => batchArticles[batchIndex] || null;
+batchAudio.onReveal = (hide) => {
+    if (!hide && batchRevealed) { batchRevealed = false; document.getElementById('batch-answer-reveal').style.display = 'none'; document.getElementById('batch-score-bar').style.display = 'none'; document.getElementById('batch-reveal-btn').style.display = 'none'; }
+};
+
+let batchPron = new PronunciationPlayer({
+    targetTextEl: document.getElementById('batch-pron-target-text'),
+    pronBtn: document.getElementById('batch-pron-btn'),
+    resultsEl: document.getElementById('batch-pron-results'),
+    volumeEl: document.getElementById('batch-volume'),
+    sentenceClass: 'batch-sentence-item'
+});
+batchPron.getArticle = () => batchArticles[batchIndex] || null;
+
+let batchRec = new RecordingSession({
+    recordBtn: document.getElementById('batch-record-btn'),
+    playRecordBtn: document.getElementById('batch-play-record-btn'),
+    timerEl: document.getElementById('batch-record-timer'),
+    volumeEl: document.getElementById('batch-volume'),
+    resultsEl: document.getElementById('batch-pron-results')
+});
+batchRec.getArticle = () => batchArticles[batchIndex] || null;
+batchRec.onScored = (result, article) => {
+    let phoneAccuracy = result.phone_accuracy || 0;
+    batchAnswers.push({ idx: article.id, article, input: result.heard || '', correct: phoneAccuracy >= 60, simScore: phoneAccuracy, mode: 'pronunciation',
+        fluency: Math.round(result.fluency || 0), phone_accuracy: phoneAccuracy, pause_ratio: result.pause_ratio || 0, duration: result.duration || 0, heard: result.heard || '' });
+    setTimeout(() => {
+        let submitBtn = document.getElementById('batch-submit-btn');
+        if (submitBtn) { submitBtn.style.display = 'inline-flex'; submitBtn.textContent = '➡️ 下一题'; }
+    }, 1000);
+};
+
+let batchFill = { containerEl: document.getElementById('batch-fill-text'), resultsEl: document.getElementById('batch-fill-results') };
+let batchRevealed = false;
+
+let batchAnswerCfg = {
+    get article() { return batchArticles[batchIndex]; },
+    get inputEl() { return document.getElementById('batch-answer'); },
+    revealEl: document.getElementById('batch-answer-reveal'),
+    canvasEl: document.getElementById('batch-answer-canvas'),
+    revealTextEl: document.getElementById('batch-reveal-text'),
+    scoreBarEl: document.getElementById('batch-score-bar'),
+    scorePctEl: document.getElementById('batch-score-pct'),
+    scoreDetailEl: document.getElementById('batch-score-detail')
+};
+
+// ============================================================
+// 单篇弹窗逻辑
+// ============================================================
+function addShowAnswerButton() {
+    let actions = document.getElementById('listen-actions');
+    if (!actions || document.getElementById('show-answer-btn')) return;
+    let btn = document.createElement('button');
+    btn.className = 'btn btn-orange'; btn.id = 'show-answer-btn'; btn.textContent = '👁️ 查看答案';
+    btn.onclick = () => { answerRevealed = true; revealAnswer(singleAnswerCfg); };
+    actions.insertBefore(btn, actions.firstChild);
+}
+
+function openListenModal(articleId) {
+    currentArticle = ARTICLES.find(a => a.id === articleId);
+    if (!currentArticle) return;
+    answerRevealed = false;
+    singleAudio.finished = false;
+    singleAudio.cleanup();
+    singlePron.cleanup();
+    singleRec.cleanup();
+    let u = safeUser(getUser());
+    switchMode(u.tingli.wordMode || 'fillblank', true);
+    singleAudio.updateUI();
+    document.getElementById('modal-title').textContent = '🎧 ' + currentArticle.title;
+    document.getElementById('modal-meta').textContent = `分类：${currentArticle.category}`;
+    document.getElementById('answer-input').value = '';
+    document.getElementById('answer-input').disabled = false;
+    document.getElementById('answer-input').oninput = checkCompleteButton;
+    document.getElementById('answer-reveal').style.display = 'none';
+    document.getElementById('score-bar').style.display = 'none';
+    document.getElementById('complete-btn').style.display = 'none';
+    let oldBtn = document.getElementById('show-answer-btn');
+    if (oldBtn) oldBtn.remove();
+    document.getElementById('listen-modal').classList.add('active');
+    if (currentMode !== 'pronunciation') setTimeout(() => singleAudio.toggle(), 300);
+}
+
+function closeListenModal() {
+    singleAudio.cleanup();
+    singlePron.cleanup();
+    singleRec.cleanup();
+    currentArticle = null;
+    document.getElementById('listen-modal').classList.remove('active');
+}
+
+function checkCompleteButton() {
+    let input = document.getElementById('answer-input').value.trim().toLowerCase();
+    let inputWords = new Set(input.replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
+    let btn = document.getElementById('complete-btn');
+    if (!currentArticle) { btn.style.display = 'none'; return; }
+    let wordList = (currentArticle.words || '').split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    if (wordList.length === 0) { btn.style.display = 'none'; return; }
+    let matched = wordList.filter(w => inputWords.has(w)).length;
+    btn.style.display = matched / wordList.length >= 0.6 ? 'inline-flex' : 'none';
+}
+
+function completeListening() {
+    if (!currentArticle) return;
+    singleAudio.cleanup();
+    let u = recordProgress(currentArticle.id, true);
+    u.stars = (u.stars || 0) + 5;
+    setUser(u);
+    toast('✅ 听力复习完成！+5⭐', 'success');
+    closeListenModal();
+    renderAll();
+}
+
+// ============================================================
+// 批量弹窗逻辑
+// ============================================================
+function startQuickListen(count) {
+    let pool = selectedCategory ? ARTICLES.filter(a => a.category === selectedCategory) : [...ARTICLES];
+    if (pool.length === 0) { toast('暂无短文', 'warning'); return; }
+    pool.sort(() => Math.random() - 0.5);
+    batchArticles = pool.slice(0, Math.min(count, pool.length));
+    batchIndex = 0;
+    batchAnswers = [];
+    document.getElementById('batch-modal').classList.add('active');
+    renderBatchQuestion();
+}
+
+function renderBatchQuestion() {
+    if (batchIndex >= batchArticles.length) { finishBatch(); return; }
+    let article = batchArticles[batchIndex];
+    batchRevealed = false;
+    batchAudio.finished = false;
+    document.getElementById('batch-progress').textContent = `${batchIndex + 1} / ${batchArticles.length}`;
+    document.getElementById('batch-bar').style.width = ((batchIndex + 1) / batchArticles.length * 100) + '%';
+    document.getElementById('batch-meta').textContent = `${article.title}`;
+    document.getElementById('batch-answer').value = '';
+    document.getElementById('batch-answer').disabled = false;
+    document.getElementById('batch-answer-reveal').style.display = 'none';
+    document.getElementById('batch-score-bar').style.display = 'none';
+    document.getElementById('batch-submit-btn').disabled = false;
+    document.getElementById('batch-skip-btn').disabled = false;
+    document.getElementById('batch-reveal-btn').style.display = 'none';
+    document.getElementById('batch-fill-results').style.display = 'none';
+    document.getElementById('batch-hint').textContent = '💡 可多次播放，输入后点击提交';
+    batchAudio.cleanup();
+    batchAudio.updateUI();
+
+    let batchAudioCtrl = document.getElementById('batch-audio-controls');
+    let batchDictation = document.getElementById('batch-mode-dictation');
+    let batchFillEl = document.getElementById('batch-mode-fillblank');
+    let batchPronEl = document.getElementById('batch-mode-pronunciation');
+    let batchRevealBtn = document.getElementById('batch-reveal-btn');
+    let batchSubmitBtn = document.getElementById('batch-submit-btn');
+    let batchSkipBtn = document.getElementById('batch-skip-btn');
+
+    if (currentMode === 'fillblank') {
+        batchAudioCtrl.style.display = 'block'; batchDictation.style.display = 'none'; batchFillEl.style.display = 'block'; batchPronEl.style.display = 'none';
+        initFillblank(batchFill, article);
+        batchRevealBtn.style.display = 'none'; batchSubmitBtn.style.display = 'inline-flex'; batchSubmitBtn.textContent = '✅ 提交并下一题'; batchSkipBtn.style.display = 'inline-flex';
+    } else if (currentMode === 'pronunciation') {
+        batchAudioCtrl.style.display = 'none'; batchDictation.style.display = 'none'; batchFillEl.style.display = 'none'; batchPronEl.style.display = 'block';
+        initBatchPronunciationMode();
+        batchRevealBtn.style.display = 'none'; batchSubmitBtn.style.display = 'none'; batchSkipBtn.style.display = 'inline-flex'; batchSkipBtn.textContent = '⏭️ 跳过';
+    } else {
+        batchAudioCtrl.style.display = 'block'; batchDictation.style.display = 'block'; batchFillEl.style.display = 'none'; batchPronEl.style.display = 'none';
+        batchRevealBtn.style.display = 'none'; batchSubmitBtn.style.display = 'inline-flex'; batchSubmitBtn.textContent = '✅ 提交并下一题'; batchSkipBtn.style.display = 'inline-flex';
+    }
+    if (currentMode !== 'pronunciation') setTimeout(() => batchAudio.toggle(), 300);
+}
+
+function initBatchPronunciationMode() {
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    batchRec.audioBlob = null;
+    batchRec.playbackAudio = null;
+    batchRec.playingRecording = false;
+    batchPron._renderText(article.text, null);
+    document.getElementById('batch-pron-results').style.display = 'none';
+    let btn = document.getElementById('batch-record-btn');
+    btn.classList.remove('recording'); btn.querySelector('.record-text').textContent = '点击录音';
+    document.getElementById('batch-record-timer').style.display = 'none';
+    document.getElementById('batch-play-record-btn').style.display = 'none';
+}
+
+function submitBatchAnswer() {
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    if (currentMode === 'pronunciation') {
+        batchPron.cleanup();
+        batchIndex++; renderBatchQuestion(); return;
+    }
+    if (currentMode === 'fillblank') {
+        checkFillAnswers(batchFill, article, (pct, correct, total, inputs) => {
+            let userInputs = Array.from(inputs).map(i => i.value.trim());
+            batchAnswers.push({ idx: article.id, article, input: userInputs.join(' '), correct: pct >= 60, simScore: pct, mode: 'fillblank',
+                fillCorrect: correct, fillTotal: total, fillAnswers: Array.from(inputs).map(i => ({ user: i.value.trim(), answer: i.dataset.answer })) });
+        });
+    } else {
+        let input = document.getElementById('batch-answer').value.trim();
+        let originalText = article.text.trim();
+        let pct = 0;
+        if (input) {
+            let inputWords = input.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+            let originalWords = originalText.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+            if (originalWords.length > 0) { let matched = inputWords.filter(w => originalWords.includes(w)).length; pct = Math.round((matched / originalWords.length) * 100); }
+        }
+        batchAnswers.push({ idx: article.id, article, input, correct: pct >= 80, simScore: pct, mode: 'dictation' });
+    }
+    batchAudio.cleanup();
+    batchIndex++; renderBatchQuestion();
+}
+
+function skipBatchAnswer() {
+    if (batchIndex >= batchArticles.length) return;
+    let article = batchArticles[batchIndex];
+    batchAnswers.push({ idx: article.id, article, input: '', correct: false, simScore: 0, skipped: true, mode: currentMode });
+    batchAudio.cleanup();
+    batchPron.cleanup();
+    batchIndex++; renderBatchQuestion();
+}
+
+function finishBatch() {
+    batchAudio.cleanup();
+    batchPron.cleanup();
+    let u = safeUser(getUser());
+    let correctCount = batchAnswers.filter(a => a.correct).length;
+    let now = Date.now();
+    if (!u.tingli.dailyLog) u.tingli.dailyLog = {};
+    if (!u.tingli.dailyLog[todayKey()]) u.tingli.dailyLog[todayKey()] = { learn:0, review:0 };
+    batchAnswers.forEach(a => {
+        u = recordProgress(a.idx, a.correct);
+    });
+    let starReward = batchAnswers.reduce((sum, a) => {
+        let base = a.mode === 'pronunciation' ? 5 : (a.mode === 'fillblank' ? 10 : 20);
+        return sum + (a.correct ? base : -5);
+    }, 0);
+    u.stars = (u.stars || 0) + starReward;
+    setUser(u);
+    closeBatchModal();
+    showBatchResult(correctCount, starReward);
+    renderAll();
+}
+
+function closeBatchModal() {
+    batchAudio.cleanup();
+    batchPron.cleanup();
+    batchRec.cleanup();
+    document.getElementById('batch-modal').classList.remove('active');
+}
+
+// ============================================================
+// 考试结果
+// ============================================================
+let _resultAudio = null;
+
+function showBatchResult(correctCount, starReward) {
+    document.getElementById('result-summary').textContent = `正确 ${correctCount}/${batchAnswers.length}，+${starReward}⭐`;
+    let list = document.getElementById('result-list');
+    list.innerHTML = batchAnswers.map((a, i) => {
+        let pct = a.simScore || 0;
+        let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
+        let statusIcon = a.correct ? '✅' : (a.skipped ? '⏭️' : '❌');
+        let wordList = (a.article.words || '').split(',').map(w => w.trim()).filter(Boolean);
+        let modeLabel = a.mode === 'pronunciation' ? '🗣️ 拼读' : (a.mode === 'fillblank' ? '✏️ 填空' : '🎧 听写');
+        let extraInfo = '';
+        if (a.mode === 'pronunciation') extraInfo = `<div style="font-size:12px;color:var(--text3);margin-top:6px;">流利度: ${a.fluency||0}% | 音素准确率: ${a.phone_accuracy||0}%</div>`;
+        else if (a.mode === 'fillblank' && a.fillAnswers) extraInfo = `<div style="font-size:12px;color:var(--text3);margin-top:6px;">填空正确: ${a.fillCorrect||0}/${a.fillTotal||0}</div><div style="margin-top:6px;font-size:12px;">${a.fillAnswers.map(f => { let ok = f.user.toLowerCase() === f.answer.toLowerCase(); return `<span style="display:inline-block;margin:2px;padding:2px 6px;border-radius:4px;background:${ok?'#e8f5e9':'#ffebee'};">${ok?'✅':'❌'} ${f.user||'(空)'} / ${f.answer}</span>`; }).join('')}</div>`;
+        return `<div style="border:1px solid #e0e0e0;border-radius:10px;padding:12px;margin-bottom:10px;background:${a.correct?'#f0faf4':'#fff5f5'};">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-weight:600;font-size:14px;">${statusIcon} ${i+1}. ${a.article.title} <span style="font-size:12px;font-weight:normal;color:var(--text3);">${modeLabel}</span></span>
+                <span style="font-weight:700;font-size:18px;color:${pctColor};">${pct}%</span>
+            </div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:6px;">关联词：${wordList.length>0?wordList.map(w=>`<span style="background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:4px;margin:0 2px;">${w}</span>`).join(''):'无'}</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:4px;white-space:pre-wrap;line-height:1.6;background:#f9f9f9;padding:8px;border-radius:6px;">${a.article.text}</div>
+            ${a.input?`<div style="font-size:13px;color:#555;margin-top:6px;white-space:pre-wrap;line-height:1.6;background:#fff8e1;padding:8px;border-radius:6px;border:1px dashed #ffc107;">📝 ${a.input}</div>`:'<div style="font-size:12px;color:#999;margin-top:6px;">未作答</div>'}
+            ${extraInfo}
+            <div style="margin-top:8px;text-align:right;"><button class="btn btn-blue" style="font-size:12px;padding:4px 12px;" onclick="playResultAudio(${i})">🔊 播放</button></div>
+        </div>`;
+    }).join('');
+    document.getElementById('result-modal').classList.add('active');
+}
+
+function closeResultModal() { if (_resultAudio) { _resultAudio.pause(); _resultAudio = null; } speechSynthesis.cancel(); document.getElementById('result-modal').classList.remove('active'); }
+
+async function playResultAudio(index) {
+    if (_resultAudio) { _resultAudio.pause(); _resultAudio = null; }
+    speechSynthesis.cancel();
+    let a = batchAnswers[index]; if (!a || !a.article) return;
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+    try {
+        const res = await fetch(TTS_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text:a.article.text, voice, speed, model }) });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        _resultAudio = new Audio(URL.createObjectURL(blob));
+        _resultAudio.play();
+    } catch {}
+}
+
+function retakeBatch() {
+    closeResultModal();
+    batchArticles = batchAnswers.map(a => a.article);
+    batchIndex = 0; batchAnswers = [];
+    batchRevealed = false;
+    document.getElementById('batch-modal').classList.add('active');
+    renderBatchQuestion();
+}
+
+// ============================================================
+// 模式切换
+// ============================================================
+function switchMode(mode, fromStorage = false) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('on', t.dataset.mode === mode));
+
+    let audioCtrl = document.getElementById('listen-audio-controls');
+    let dictation = document.getElementById('mode-dictation');
+    let pron = document.getElementById('mode-pronunciation');
+    let fill = document.getElementById('mode-fillblank');
+    let batchAudioCtrl = document.getElementById('batch-audio-controls');
+    let batchDictation = document.getElementById('batch-mode-dictation');
+    let batchFillEl = document.getElementById('batch-mode-fillblank');
+    let batchPronEl = document.getElementById('batch-mode-pronunciation');
+
+    if (mode === 'dictation') {
+        audioCtrl.style.display = 'block'; dictation.style.display = 'block'; pron.style.display = 'none'; fill.style.display = 'none';
+        batchAudioCtrl.style.display = 'block'; batchDictation.style.display = 'block'; batchFillEl.style.display = 'none'; batchPronEl.style.display = 'none';
+    } else if (mode === 'pronunciation') {
+        singleAudio.cleanup(); batchAudio.cleanup();
+        audioCtrl.style.display = 'none'; dictation.style.display = 'none'; pron.style.display = 'block'; fill.style.display = 'none';
+        batchAudioCtrl.style.display = 'none'; batchDictation.style.display = 'none'; batchFillEl.style.display = 'none'; batchPronEl.style.display = 'block';
+        if (currentArticle) initPronunciationMode();
+    } else if (mode === 'fillblank') {
+        audioCtrl.style.display = 'block'; dictation.style.display = 'none'; pron.style.display = 'none'; fill.style.display = 'block';
+        batchAudioCtrl.style.display = 'block'; batchDictation.style.display = 'none'; batchFillEl.style.display = 'block'; batchPronEl.style.display = 'none';
+        if (currentArticle) initFillblank(singleFill, currentArticle);
+    }
+    let oldBtn = document.getElementById('show-answer-btn');
+    if (oldBtn) oldBtn.remove();
+    if (!fromStorage) { let u = safeUser(getUser()); u.tingli.wordMode = mode; setUser(u); }
+}
+
+function initPronunciationMode() {
+    if (!currentArticle) return;
+    singlePron._renderText(currentArticle.text, null);
+    document.getElementById('pron-results').style.display = 'none';
+    singleRec.cleanup();
+}
+
+// ============================================================
+// UI 渲染
+// ============================================================
+function toggleUser() { user = user === "A" ? "B" : "A"; document.getElementById("user-btn").textContent = "同学" + user; renderAll(); }
+function showPage(p) {
+    document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+    document.getElementById('page-' + p).classList.add('active');
+    document.querySelectorAll('.nav a').forEach(a => a.classList.remove('on'));
+    document.querySelector(`.nav a[data-page="${p}"]`).classList.add('on');
+    renderAll();
+}
+document.getElementById('main-nav').addEventListener('click', function(e) { if (e.target.tagName === 'A' && e.target.dataset.page) showPage(e.target.dataset.page); });
+
+function getReviewList() {
+    let u = safeUser(getUser());
+    let now = new Date(); now.setHours(23,59,59,999);
+    let todayEnd = now.getTime();
+    let items = [];
+    for (let idx in u.tingli?.log || {}) {
+        let info = u.tingli.log[idx];
+        if (info.next && info.next <= todayEnd && info.c < PERIOD.length) {
+            let article = ARTICLES.find(a => a.id === parseInt(idx));
+            if (article) items.push({ idx:parseInt(idx), article, info });
+        }
+    }
+    return items;
+}
+
+function renderHomeStats() {
+    let u = safeUser(getUser());
+    document.getElementById('stat-total').textContent = u.listeningTotal || 0;
+    document.getElementById('stat-articles').textContent = Object.keys(u.tingli?.listeningLog || {}).length;
+    document.getElementById('stat-learned').textContent = (u.tingli?.learn || []).length;
+    document.getElementById('stat-done').textContent = (u.tingli?.done || []).length;
+    document.getElementById('header-stars').textContent = u.stars || 0;
+}
+
+function renderHomeReview() {
+    let items = getReviewList();
+    let el = document.getElementById('home-review-list');
+    if (items.length === 0) { el.innerHTML = '<div class="empty">今日无待复习短文 🎉</div>'; return; }
+    let show = items.slice(0, 5);
+    el.innerHTML = show.map(item => `<div class="review-item"><div class="review-left"><div class="title">${item.article.title}</div><div class="meta">单词：${item.article.words} | 复习第${item.info.c+1}次</div></div><button class="btn btn-blue btn-sm" onclick="openListenModal(${item.article.id})">🎧</button></div>`).join('') + (items.length > 5 ? `<div style="text-align:center;padding:8px;color:var(--text3);font-size:13px;">还有 ${items.length-5} 篇...去待复习页面查看</div>` : '');
+}
+
+function renderReviewList() {
+    let items = getReviewList();
+    let el = document.getElementById('review-list');
+    if (items.length === 0) { el.innerHTML = '<div class="empty">暂无待复习短文 🎉</div>'; return; }
+    el.innerHTML = items.map(item => { let log = (safeUser(getUser()).listeningLog || {})[item.article.id]; let lc = log ? log.count : 0;
+        return `<div class="review-item"><div class="review-left"><div class="title">${item.article.title}</div><div class="meta">单词：${item.article.words} | 复习第${item.info.c+1}次 | 听力${lc}次</div></div><button class="btn btn-blue btn-sm" onclick="openListenModal(${item.article.id})">🎧 听力</button></div>`;
+    }).join('');
+}
+
+function renderCategoryTags() {
+    let categories = [...new Set(ARTICLES.map(a => a.category))];
+    let el = document.getElementById('category-tags');
+    el.innerHTML = `<span class="tag ${selectedCategory===''?'on':''}" onclick="filterCategory('')">全部</span>` + categories.map(c => `<span class="tag ${selectedCategory===c?'on':''}" onclick="filterCategory('${c}')">${c}</span>`).join('');
+}
+function filterCategory(cat) { selectedCategory = cat; renderCategoryTags(); renderArticleList(); }
+
+function renderArticleList() {
+    let u = safeUser(getUser());
+    let filtered = selectedCategory ? ARTICLES.filter(a => a.category === selectedCategory) : ARTICLES;
+    let kw = (document.getElementById("article-search").value || "").trim().toLowerCase();
+    if (kw) filtered = filtered.filter(a => a.title.toLowerCase().includes(kw) || a.words.toLowerCase().includes(kw));
+    document.getElementById('article-count').textContent = filtered.length;
+    let el = document.getElementById('article-list');
+    if (filtered.length === 0) { el.innerHTML = '<div class="empty">该分类暂无短文</div>'; return; }
+    el.innerHTML = filtered.map(a => {
+        let reviewInfo = (u.tingli?.log || {})[a.id];
+        let statusHtml = '';
+        if (reviewInfo) {
+            let isMastered = reviewInfo.c >= PERIOD.length;
+            let nextD = reviewInfo.next ? new Date(reviewInfo.next) : null;
+            if (isMastered) statusHtml = '<span style="color:#43a047;font-size:11px;font-weight:500;">✅ 已掌握</span>';
+            else if (nextD && nextD <= new Date().getTime()) statusHtml = '<span style="color:#ef5350;font-size:11px;font-weight:500;">📌 待复习</span>';
+            else statusHtml = `<span style="color:#999;font-size:11px;">复习${reviewInfo.c}/${PERIOD.length-1}</span>`;
+        }
+        let log = (u.tingli?.listeningLog || {})[a.id]; let lc = log ? log.count : 0;
+        return `<div class="article-item"><div class="article-info"><div class="article-title">${a.title} ${statusHtml}</div><div class="article-meta">单词：${a.words} | ${a.category} | 听力${lc}次</div></div><div class="article-actions"><button class="btn btn-blue btn-sm" onclick="openListenModal(${a.id})">🎧 开始</button></div></div>`;
+    }).join('');
+}
+
+function renderMineStats() {
+    let u = safeUser(getUser());
+    let today = new Date(); today.setHours(0,0,0,0); let ts = today.getTime();
+    let countWait = (usr) => { let c = 0; for (let idx in usr.tingli?.log || {}) { if (usr.tingli.log[idx].next && usr.tingli.log[idx].next <= ts + 86400000 && usr.tingli.log[idx].c < PERIOD.length) c++; } return c; };
+    document.getElementById('my-total').textContent = (u.tingli?.learn || []).length + ' 篇';
+    document.getElementById('my-wait').textContent = countWait(u) + ' 篇';
+    document.getElementById('my-done').textContent = (u.tingli?.done || []).length + ' 篇';
+    document.getElementById('my-listen-total').textContent = u.listeningTotal || 0;
+    document.getElementById('my-listen-articles').textContent = Object.keys(u.tingli?.listeningLog || {}).length;
+    document.getElementById('my-stars').textContent = u.stars || 0;
+}
+
+function resetData() { if (!confirm('确定重置同学' + user + '的所有学习数据？此操作不可恢复！')) return; localStorage.removeItem("wuser" + user); toast('数据已重置','info'); renderAll(); }
+
+// ============================================================
+// 短文管理
+// ============================================================
+let editingArticleId = null;
+function openArticleEditor(id) {
+    editingArticleId = id || null;
+    if (editingArticleId) { let a = ARTICLES.find(x => x.id === editingArticleId); if (!a) return; document.getElementById('editor-title').textContent = '✏️ 编辑短文'; document.getElementById('ed-title').value = a.title; document.getElementById('ed-words').value = a.words || ''; document.getElementById('ed-category').value = a.category || ''; document.getElementById('ed-text').value = a.text || ''; }
+    else { document.getElementById('editor-title').textContent = '📝 添加短文'; document.getElementById('ed-title').value = ''; document.getElementById('ed-words').value = ''; document.getElementById('ed-category').value = ''; document.getElementById('ed-text').value = ''; }
+    document.getElementById('editor-modal').classList.add('active');
+}
+function closeArticleEditor() { editingArticleId = null; document.getElementById('editor-modal').classList.remove('active'); }
+
+async function saveArticleFromEditor() {
+    let title = document.getElementById('ed-title').value.trim(), words = document.getElementById('ed-words').value.trim();
+    let category = document.getElementById('ed-category').value.trim(), text = document.getElementById('ed-text').value.trim();
+    if (!title || !text) { toast('标题和文本不能为空','error'); return; }
+    if (editingArticleId) { let a = ARTICLES.find(x => x.id === editingArticleId); if (a) { a.title = title; a.words = words; a.category = category; a.text = text; await putArticle(a); } }
+    else { let newId = getNextId(); let article = {id:newId,title,words,category,text}; await putArticle(article); ARTICLES.push(article); ARTICLES.sort((a,b) => a.id - b.id); }
+    closeArticleEditor(); toast(editingArticleId ? '短文已更新' : '短文已添加','success'); renderAll();
+}
+
+async function deleteArticleConfirm(id) { let a = ARTICLES.find(x => x.id === id); if (!a) return; if (!confirm(`确定删除「${a.title}」？`)) return; await deleteArticle(id); ARTICLES = ARTICLES.filter(x => x.id !== id); toast('短文已删除','success'); renderAll(); }
+
+function renderManageList() {
+    let el = document.getElementById('manage-list');
+    document.getElementById('manage-count').textContent = ARTICLES.length;
+    if (ARTICLES.length === 0) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:30px;">暂无短文，点击上方按钮添加</div>'; return; }
+    el.innerHTML = ARTICLES.map(a => `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);"><div style="flex:1;min-width:0;"><div style="font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">#${a.id} ${a.title}</div><div style="font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">单词：${a.words||'-'} | ${a.category||'-'}</div></div><button class="btn btn-blue" style="padding:4px 10px;font-size:12px;" onclick="openArticleEditor(${a.id})">编辑</button><button class="btn btn-red" style="padding:4px 10px;font-size:12px;" onclick="deleteArticleConfirm(${a.id})">删除</button></div>`).join('');
+}
+
+// ============================================================
+// 导入导出
+// ============================================================
+function exportArticles(format) {
+    if (ARTICLES.length === 0) { toast('暂无短文可导出','error'); return; }
+    let filename, content, mime;
+    if (format === 'json') { filename = 'articles.json'; content = JSON.stringify(ARTICLES, null, 2); mime = 'application/json'; }
+    else { filename = 'articles.csv'; let header = 'id,title,words,category,text'; let rows = ARTICLES.map(a => [a.id, '"'+(a.title||'').replace(/"/g,'""')+'"', '"'+(a.words||'').replace(/"/g,'""')+'"', '"'+(a.category||'').replace(/"/g,'""')+'"', '"'+(a.text||'').replace(/"/g,'""').replace(/\n/g,'\\n')+'"'].join(',')); content = header + '\n' + rows.join('\n'); mime = 'text/csv'; }
+    let blob = new Blob([content], { type: mime + ';charset=utf-8' });
+    let url = URL.createObjectURL(blob);
+    let link = document.createElement('a'); link.href = url; link.download = filename; link.click();
+    URL.revokeObjectURL(url);
+    toast(`已导出 ${ARTICLES.length} 篇短文 (${format.toUpperCase()})`, 'success');
+}
+
+async function importArticles(event) {
+    let file = event.target.files[0]; if (!file) return;
+    let mode = document.getElementById('import-mode').value;
+    let text = await file.text();
+    let imported = [];
+    if (file.name.endsWith('.json')) { try { imported = JSON.parse(text); } catch(e) { toast('JSON格式错误：'+e.message,'error'); event.target.value=''; return; } if (!Array.isArray(imported)) { toast('JSON需要是数组格式','error'); event.target.value=''; return; } }
+    else if (file.name.endsWith('.csv')) { let lines = text.split('\n').filter(l => l.trim()); if (lines.length < 2) { toast('CSV文件为空','error'); event.target.value=''; return; } for (let i = 1; i < lines.length; i++) { let parts = parseCSVLine(lines[i]); if (parts.length >= 5) imported.push({ id:parseInt(parts[0])||0, title:parts[1], words:parts[2], category:parts[3], text:parts[4].replace(/\\n/g,'\n') }); } }
+    else { toast('仅支持 .json 和 .csv 文件','error'); event.target.value=''; return; }
+    if (imported.length === 0) { toast('未解析到有效数据','error'); event.target.value=''; return; }
+    if (mode === 'replace') { for (let a of ARTICLES) await deleteArticle(a.id); ARTICLES = []; }
+    let maxId = ARTICLES.length > 0 ? Math.max(...ARTICLES.map(a => a.id)) : 0;
+    for (let a of imported) { maxId++; a.id = maxId; await putArticle(a); ARTICLES.push(a); }
+    ARTICLES.sort((a,b) => a.id - b.id);
+    toast(`已导入 ${imported.length} 篇短文（${mode==='replace'?'替换':'追加'}）`,'success');
+    event.target.value = '';
+    renderAll();
+}
+
+function parseCSVLine(line) {
+    let result = [], current = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) { let ch = line[i]; if (inQuotes) { if (ch === '"') { if (i+1<line.length && line[i+1]==='"') { current+='"'; i++; } else inQuotes = false; } else current += ch; } else { if (ch === '"') inQuotes = true; else if (ch === ',') { result.push(current); current = ''; } else current += ch; } }
+    result.push(current); return result;
+}
+
+// ============================================================
+// TTS 缓存 & 预生成
+// ============================================================
+let generateEventSource = null, isGenerating = false, isPaused = false;
+const TTS_CACHE_KEY = 'tts_cache';
+
+function getTtsCache() { try { return JSON.parse(localStorage.getItem(TTS_CACHE_KEY)) || {}; } catch { return {}; } }
+function setTtsCache(cache) { try { localStorage.setItem(TTS_CACHE_KEY, JSON.stringify(cache)); } catch(e) { console.error('Failed to save TTS cache:', e); } }
+function updateTtsCache(articleId, voice, speed, model, generated) { let cache = getTtsCache(); cache[articleId] = { voice, speed, model, generated, timestamp: Date.now() }; setTtsCache(cache); updateGenerateSummary(); }
+
+function updateGenerateSummary() {
+    let cache = getTtsCache();
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let model = document.getElementById('tts-model').value || 'kokoro';
+    let total = ARTICLES.length, generated = 0, outdated = 0;
+    for (let article of ARTICLES) { let entry = cache[article.id]; if (entry && entry.generated) { if (entry.voice === voice && entry.speed === speed && entry.model === model) generated++; else outdated++; } }
+    let summary = document.getElementById('generate-summary');
+    if (generated === total) summary.innerHTML = `✅ 全部 <span style="color:#4CAF50;font-weight:bold;">${generated}</span> 篇已生成（当前设置）`;
+    else if (generated + outdated === total) summary.innerHTML = `⚠️ <span style="color:#ff9800;">${outdated}</span> 篇设置已变更，需重新生成`;
+    else summary.innerHTML = `📊 <span style="color:#4CAF50;">${generated}</span>/${total} 篇已生成，<span style="color:#999;">${total-generated-outdated}</span> 篇待生成`;
+}
+
+function getPendingArticles() {
+    let cache = getTtsCache();
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let model = document.getElementById('tts-model').value || 'kokoro';
+    let pending = [];
+    for (let article of ARTICLES) { let entry = cache[article.id]; if (!entry || !entry.generated || entry.voice !== voice || entry.speed !== speed || entry.model !== model) pending.push(article); }
+    return pending;
+}
+
+function startBatchGeneration() {
+    if (isGenerating) return;
+    let voice = document.getElementById('tts-voice').value || 'af_sarah';
+    let speed = parseInt(document.getElementById('tts-speed').value) / 100;
+    let model = document.getElementById('tts-model').value || 'kokoro';
+    let pending = getPendingArticles();
+    if (pending.length === 0) { toast('所有短文已生成，无需重复生成','info'); updateGenerateSummary(); return; }
+    document.getElementById('generate-btn').style.display = 'none'; document.getElementById('regenerate-btn').style.display = 'none';
+    document.getElementById('generate-progress').style.display = 'block'; document.getElementById('generate-summary').style.display = 'none';
+    document.getElementById('generate-log').innerHTML = ''; document.getElementById('progress-bar').style.width = '0%';
+    document.getElementById('progress-text').textContent = `0/${pending.length}`;
+    document.getElementById('generate-status').textContent = `共 ${pending.length} 篇待生成`;
+    isGenerating = true; isPaused = false;
+    fetch(TTS_URL.replace('/tts','/tts/generate/batch'), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ articles:pending, voice, speed, model }) }).then(async response => {
+        if (!response.ok) throw new Error('Failed to start generation');
+        const reader = response.body.getReader(), decoder = new TextDecoder('utf-8'); let buffer = '';
+        while (isGenerating) {
+            const { done, value } = await reader.read(); if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            while (buffer.includes('\n\n')) { const index = buffer.indexOf('\n\n'); const chunk = buffer.substring(0, index); buffer = buffer.substring(index + 2);
+                if (chunk.startsWith('data: ')) { try { const data = JSON.parse(chunk.substring(6)); updateGenerationProgress(data, pending, voice, speed, model); } catch(e) {} } }
+        }
+        reader.releaseLock();
+    }).catch(error => { isGenerating = false; document.getElementById('generate-btn').style.display = 'block'; document.getElementById('regenerate-btn').style.display = 'block'; document.getElementById('generate-summary').style.display = 'block'; toast('启动失败: '+error.message,'error'); });
+}
+
+function regenerateAll() { setTtsCache({}); toast('已清除所有缓存，点击开始生成','info'); updateGenerateSummary(); startBatchGeneration(); }
+
+function updateGenerationProgress(data, pending, voice, speed, model) {
+    let log = document.getElementById('generate-log'), progressBar = document.getElementById('progress-bar'), progressText = document.getElementById('progress-text'), status = document.getElementById('generate-status');
+    let total = pending.length, current = data.completed + data.failed;
+    progressBar.style.width = Math.round(current / total * 100) + '%'; progressText.textContent = `${current}/${total}`;
+    let timestamp = new Date().toLocaleTimeString(), logEntry = document.createElement('div');
+    switch(data.status) {
+        case 'cached': logEntry.textContent = `[${timestamp}] ✅ ${data.title} - 已缓存`; logEntry.style.color = '#4CAF50'; break;
+        case 'success': logEntry.textContent = `[${timestamp}] ✅ ${data.title} - 生成成功`; logEntry.style.color = '#4CAF50'; if (data.index !== undefined && pending[data.index]) updateTtsCache(pending[data.index].id, voice, speed, model, true); break;
+        case 'error': logEntry.textContent = `[${timestamp}] ❌ ${data.title} - 生成失败`; logEntry.style.color = '#f44336'; break;
+        case 'stopped': logEntry.textContent = `[${timestamp}] ⏹️ 生成已停止`; logEntry.style.color = '#ff9800'; break;
+        case 'finished': logEntry.textContent = `[${timestamp}] 🎉 生成完成！成功: ${data.completed}, 失败: ${data.failed}`; logEntry.style.color = '#2196F3'; break;
+        default: logEntry.textContent = `[${timestamp}] ${data.message}`;
+    }
+    log.appendChild(logEntry); log.scrollTop = log.scrollHeight;
+    if (data.status === 'finished' || data.status === 'stopped') {
+        isGenerating = false; document.getElementById('generate-btn').style.display = 'block'; document.getElementById('regenerate-btn').style.display = 'block'; document.getElementById('generate-summary').style.display = 'block';
+        updateGenerateSummary(); status.textContent = `完成！成功: ${data.completed}, 失败: ${data.failed}`;
+        if (data.status === 'finished') toast(`预生成完成！成功: ${data.completed}, 失败: ${data.failed}`,'success');
+    }
+}
+
+// ============================================================
+// Toast & 渲染
+// ============================================================
+function toast(msg, type='info') { let el = document.createElement('div'); el.className = 'toast ' + type; el.textContent = msg; document.body.appendChild(el); setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2500); }
+
+function renderAll() { renderHomeStats(); renderHomeReview(); renderReviewList(); renderCategoryTags(); renderArticleList(); renderManageList(); renderMineStats(); updateGenerateSummary(); }
+
+window.onload = async function() { await initArticles(); renderAll(); loadSettings(); };
+</script>
+</body>
+</html>
