@@ -295,10 +295,10 @@ def text_to_sentences(text):
     return result
 
 def estimate_sentence_duration(text, speed=1.0):
-    """估算句子的发音时长（基于字符数）"""
-    chars_per_second = 12  # 平均每秒朗读字符数
+    """估算句子的发音时长（基于字符数）- 已废弃，保留用于兼容"""
+    chars_per_second = 12
     base_duration = len(text) / chars_per_second / speed
-    return max(base_duration, 0.5)  # 最小0.5秒
+    return max(base_duration, 0.5)
 
 # ========== TTS Routes ==========
 @app.post("/tts/timestamp")
@@ -346,16 +346,26 @@ async def tts_with_timestamp(request_body: dict):
             except Exception as e:
                 return JSONResponse({"error": str(e)}, status_code=500)
     
-    # 计算时间戳（基于估算）
+    # 计算时间戳（基于实际音频时长）
+    import soundfile as sf
+    import numpy as np
+    
+    audio_buf = io.BytesIO(audio_data)
+    samples, sample_rate = sf.read(audio_buf)
+    actual_duration = len(samples) / sample_rate
+    
+    # 按字符数比例分配时间
+    total_chars = sum(len(s) for s in sentences)
     timestamps = []
     current_time = 0.0
     for i, sentence in enumerate(sentences):
-        duration = estimate_sentence_duration(sentence, speed)
+        ratio = len(sentence) / total_chars if total_chars > 0 else 1.0 / len(sentences)
+        duration = actual_duration * ratio
         timestamps.append({
             "index": i,
             "text": sentence,
-            "start": round(current_time, 2),
-            "end": round(current_time + duration, 2)
+            "start": round(current_time, 3),
+            "end": round(current_time + duration, 3)
         })
         current_time += duration
     
@@ -363,7 +373,7 @@ async def tts_with_timestamp(request_body: dict):
         "audio": base64.b64encode(audio_data).decode('utf-8'),
         "mimetype": mimetype,
         "timestamps": timestamps,
-        "duration": round(current_time, 2)
+        "duration": round(actual_duration, 3)
     })
 
 @app.post("/tts")
