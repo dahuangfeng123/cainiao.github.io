@@ -1249,12 +1249,10 @@ let singleAudioPlayer = null;
 let batchArticles = [];
 let batchIndex = 0;
 let batchAnswers = [];
-let batchAudio = null;
 let batchPlaying = false;
 let batchLoading = false;
 let batchRevealed = false;
 let batchAudioFinished = false;
-let _batchProgressTimer = null;
 
 function getUser() { try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; } }
 function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
@@ -2297,10 +2295,9 @@ function seekBatchAudio(e) {
 function revealBatchAnswer() {
     if (batchIndex >= batchArticles.length) return;
     let article = batchArticles[batchIndex];
-    if (batchAudio) batchAudio.pause();
+    if (batchAudioPlayer) batchAudioPlayer.pause();
     speechSynthesis.cancel();
     batchPlaying = false;
-    stopBatchProgressTimer();
     updateBatchPlayUI();
     batchRevealed = true;
 
@@ -2891,10 +2888,9 @@ function switchMode(mode, fromStorage = false) {
         fill.style.display = 'none';
         initPronunciationMode();
         
-        if (batchAudio) { batchAudio.pause(); batchAudio = null; }
+        if (batchAudioPlayer) batchAudioPlayer.pause();
         speechSynthesis.cancel();
         batchPlaying = false;
-        stopBatchProgressTimer();
         updateBatchPlayUI();
         batchAudioCtrl.style.display = 'none';
         batchDictation.style.display = 'none';
