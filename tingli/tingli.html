@@ -1554,20 +1554,6 @@ async function ttsFetch(text) {
     }
 }
 
-function playLocalTTS(text) {
-    speechSynthesis.cancel();
-    let utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'en-US';
-    utter.rate = parseInt(document.getElementById('tts-speed').value) / 100;
-    utter.volume = parseInt(document.getElementById('volume-slider').value) / 100;
-    speechSynthesis.speak(utter);
-    isPlaying = true;
-    audioFinished = false;
-    updatePlayUI();
-    utter.onend = () => { isPlaying = false; audioFinished = true; updatePlayUI(); };
-    utter.onerror = () => { isPlaying = false; updatePlayUI(); };
-}
-
 async function togglePlay() {
   if (!currentArticle) return;
   if (!singleAudioPlayer) {
