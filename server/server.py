@@ -278,32 +278,20 @@ app.add_middleware(
 # ========== Timestamp TTS Helper Functions ==========
 def text_to_sentences(text):
     """将文本分割成句子，优先按换行符切分，标点跟随前一句"""
+    if '\n' in text:
+        return [line.strip() for line in text.split('\n') if line.strip()]
+    
     result = []
-    
-    # 优先按换行符切分
-    lines = text.split('\n')
-    
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        
-        # 对每一行按标点切分，保留标点在前面的句子
-        parts = re.split(r'([.!?。！？]+)', line)
-        
-        current = ""
-        for part in parts:
-            current += part
-            # 如果当前部分以标点结尾，说明是一个完整句子
-            if part and part[-1] in '.!?。！？':
-                if current.strip():
-                    result.append(current.strip())
-                current = ""
-        
-        # 处理一行末尾没有标点的情况
-        if current.strip():
-            result.append(current.strip())
-    
+    parts = re.split(r'([.!?。！？]+)', text)
+    current = ""
+    for part in parts:
+        current += part
+        if part and part[-1] in '.!?。！？':
+            if current.strip():
+                result.append(current.strip())
+            current = ""
+    if current.strip():
+        result.append(current.strip())
     return result
 
 def estimate_sentence_duration(text, speed=1.0):
