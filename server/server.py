@@ -276,6 +276,7 @@ async def tts_stream(request_body: dict):
     model = request_body.get("model", "kokoro")
     voice = request_body.get("voice", "af_sarah")
     speed = float(request_body.get("speed", 1.0))
+    start = time.time()
 
     cache_id = audio_cache_id(text, voice, speed, model)
     cached = get_cached_audio(cache_id, model)
@@ -307,9 +308,15 @@ async def tts_stream(request_body: dict):
             communicate = edge_tts.Communicate(text, voice, rate=rate_str)
             
             async def stream_audio():
+                buffer = b""
                 async for chunk in communicate.stream():
                     if chunk["type"] == "audio":
-                        yield chunk["data"]
+                        buffer += chunk["data"]
+                        if len(buffer) >= 4096:
+                            yield buffer
+                            buffer = b""
+                if buffer:
+                    yield buffer
             
             print(f"[Edge TTS] streaming started")
             return StreamingResponse(
@@ -318,10 +325,10 @@ async def tts_stream(request_body: dict):
                 headers={
                     "Access-Control-Allow-Origin": "*",
                     "X-Cache": "MISS",
-                    "Transfer-Encoding": "chunked",
                 },
             )
         except Exception as e:
+            print(f"[Edge TTS Error] {e}")
             return JSONResponse({"error": str(e)}, status_code=500)
     else:
         if not _kokoro_available:
