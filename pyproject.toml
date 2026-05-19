@@ -16,6 +16,7 @@ dependencies = [
     "nltk>=3.9.4",
     "openai-whisper>=20250625",
     "pandas>=3.0.3",
+    "pillow>=12.2.0",
     "python-multipart>=0.0.29",
     "soundfile>=0.13.1",
     "speechbrain>=1.1.0",

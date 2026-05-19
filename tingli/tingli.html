@@ -48,7 +48,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 .review-left .meta{font-size:12px;color:var(--text3);margin-top:2px;}
 .empty{text-align:center;padding:30px;color:var(--text3);font-size:14px;}
 .search-box{width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:12px;}
-
+.sentence-item{display:flex;align-items:center;justify-content:space-between;transition:background 0.2s;}
+.sentence-item:hover{background:#f0f0f0;}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;display:none;justify-content:center;align-items:center;}
 .modal-overlay.active{display:flex;}
 .modal{background:#fff;border-radius:20px;width:92%;max-width:600px;max-height:90vh;overflow-y:auto;padding:24px;position:relative;animation:modalIn 0.3s ease;}
@@ -124,10 +125,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 .pron-target{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;}
 .pron-target h3{font-size:14px;margin-bottom:8px;color:var(--primary);}
 .pron-text{font-size:16px;line-height:1.8;color:var(--text);white-space:pre-wrap;}
-.pron-record{display:flex;flex-direction:column;align-items:center;gap:12px;margin:20px 0;}
+.pron-record{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;margin:20px 0;}
 .record-btn{width:80px;height:80px;border-radius:50%;border:3px solid var(--primary);background:#fff;font-size:28px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all 0.2s;box-shadow:0 4px 16px rgba(29,158,117,0.2);}
 .record-btn:active{transform:scale(0.95);}
 .record-btn.recording{border-color:#e53935;background:#ffebee;animation:recordPulse 1s infinite;}
+.play-record-btn{border-color:#1D9E75;background:#e8f5e9;color:#1D9E75;margin-left:12px;}
 @keyframes recordPulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,0.4);}50%{box-shadow:0 0 0 12px rgba(229,57,53,0);}}
 .record-icon{font-size:28px;}
 .record-text{font-size:11px;color:var(--text3);margin-top:2px;}
@@ -372,6 +374,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
         <button class="record-btn" id="record-btn" onclick="toggleRecording()">
           <span class="record-icon">🎙️</span>
           <span class="record-text">点击录音</span>
+        </button>
+        <button class="record-btn play-record-btn" id="play-record-btn" onclick="togglePlayRecording()" style="display:none;">
+          <span class="record-icon">▶️</span>
+          <span class="record-text">播放录音</span>
         </button>
         <div class="record-timer" id="record-timer" style="display:none;">0.0s</div>
       </div>
@@ -1148,13 +1154,20 @@ function openListenModal(articleId) {
 function closeListenModal() {
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     if (pronAudio) { pronAudio.pause(); pronAudio = null; }
+    if (recordedAudio) { recordedAudio.pause(); recordedAudio = null; }
+    cleanupWebAudio();
     if (isRecording) stopRecordingCleanup();
     speechSynthesis.cancel();
     isPlaying = false;
     isLoading = false;
     pronLoading = false;
     pronPaused = false;
+    pronAudioPausedTime = 0;
+    isPlayingRecording = false;
     currentArticle = null;
+    recordedAudioBlob = null;
+    
+    hidePlayRecordingBtn();
     
     let btn = document.querySelector('.pron-ref-btn');
     if (btn) {
@@ -2530,17 +2543,17 @@ function playPronReference() {
     
     if (pronLoading) return;
     
-    if (pronAudio && !pronPaused) {
-        pronAudio.pause();
+    if (pronAudioBufferSource && !pronPaused) {
+        pauseAudioPlayback();
         pronPaused = true;
         btn.innerHTML = '▶️ 继续播放';
+        clearActiveSentence();
         return;
     }
     
-    if (pronAudio && pronPaused) {
-        pronAudio.play();
+    if (pronAudioBuffer && pronPaused) {
+        resumeAudioPlayback(btn);
         pronPaused = false;
-        btn.innerHTML = '⏸️ 暂停播放';
         return;
     }
     
@@ -2554,34 +2567,21 @@ function playPronReference() {
     btn.style.opacity = '0.6';
     btn.style.pointerEvents = 'none';
     
-    ttsFetch(currentArticle.text).then(url => {
+    fetchTtsWithTimestamp(currentArticle.text, model, voice, speed).then(data => {
         pronLoading = false;
         
-        if (!url) {
+        if (!data) {
             btn.innerHTML = '🔊 听标准发音';
             btn.style.opacity = '1';
             btn.style.pointerEvents = 'auto';
             return;
         }
         
-        pronAudio = new Audio(url);
-        pronAudio.volume = parseInt(document.getElementById('volume-slider').value) / 100;
-        pronAudio.play();
-        btn.innerHTML = '⏸️ 暂停播放';
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = 'auto';
+        pronTimestamps = data.timestamps;
+        renderPronunciationText(currentArticle.text, pronTimestamps);
         
-        pronAudio.onended = () => {
-            pronAudio = null;
-            pronPaused = false;
-            btn.innerHTML = '🔊 听标准发音';
-        };
-        pronAudio.onerror = () => {
-            pronAudio = null;
-            pronPaused = false;
-            btn.innerHTML = '🔊 听标准发音';
-            toast('播放失败', 'error');
-        };
+        let audioData = base64ToAudio(data.audio, data.mimetype);
+        loadAndPlayAudioWithWebAudio(audioData, btn);
     }).catch(err => {
         pronLoading = false;
         pronPaused = false;
@@ -2590,6 +2590,230 @@ function playPronReference() {
         btn.style.pointerEvents = 'auto';
         toast('生成失败', 'error');
     });
+}
+
+let pronTimestamps = [];
+let highlightTimer = null;
+let pronAudioContext = null;
+let pronAudioSource = null;
+let pronAudioBuffer = null;
+let pronAudioBufferSource = null;
+let pronAudioStartTime = 0;
+let pronAudioPausedTime = 0;
+
+function loadAndPlayAudioWithWebAudio(audioUrl, btn) {
+    if (pronAudioContext) {
+        pronAudioContext.close();
+        pronAudioContext = null;
+    }
+    
+    pronAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    fetch(audioUrl)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => pronAudioContext.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+            pronAudioBuffer = audioBuffer;
+            startAudioPlayback(btn);
+        })
+        .catch(error => {
+            console.error('Failed to load audio:', error);
+            btn.innerHTML = '🔊 听标准发音';
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+            pronLoading = false;
+            pronPaused = false;
+            toast('加载音频失败', 'error');
+        });
+}
+
+function startAudioPlayback(btn) {
+    if (!pronAudioContext || !pronAudioBuffer) return;
+    
+    pronAudioBufferSource = pronAudioContext.createBufferSource();
+    pronAudioBufferSource.buffer = pronAudioBuffer;
+    
+    let gainNode = pronAudioContext.createGain();
+    gainNode.gain.value = parseInt(document.getElementById('volume-slider').value) / 100;
+    pronAudioBufferSource.connect(gainNode);
+    gainNode.connect(pronAudioContext.destination);
+    
+    pronAudioStartTime = pronAudioContext.currentTime - pronAudioPausedTime;
+    pronAudioBufferSource.start(0, pronAudioPausedTime);
+    
+    btn.innerHTML = '⏸️ 暂停播放';
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+    
+    startWebAudioHighlight();
+    
+    pronAudioBufferSource.onended = () => {
+        cleanupWebAudio();
+        pronPaused = false;
+        pronAudioPausedTime = 0;
+        btn.innerHTML = '🔊 听标准发音';
+        clearActiveSentence();
+    };
+}
+
+function pauseAudioPlayback() {
+    if (!pronAudioBufferSource || !pronAudioContext) return;
+    
+    pronAudioPausedTime = pronAudioContext.currentTime - pronAudioStartTime;
+    pronAudioBufferSource.stop();
+    pronAudioBufferSource = null;
+    stopWebAudioHighlight();
+}
+
+function resumeAudioPlayback(btn) {
+    if (!pronAudioBuffer) return;
+    
+    pronAudioBufferSource = pronAudioContext.createBufferSource();
+    pronAudioBufferSource.buffer = pronAudioBuffer;
+    
+    let gainNode = pronAudioContext.createGain();
+    gainNode.gain.value = parseInt(document.getElementById('volume-slider').value) / 100;
+    pronAudioBufferSource.connect(gainNode);
+    gainNode.connect(pronAudioContext.destination);
+    
+    pronAudioStartTime = pronAudioContext.currentTime - pronAudioPausedTime;
+    pronAudioBufferSource.start(0, pronAudioPausedTime);
+    
+    btn.innerHTML = '⏸️ 暂停播放';
+    startWebAudioHighlight();
+    
+    pronAudioBufferSource.onended = () => {
+        cleanupWebAudio();
+        pronPaused = false;
+        pronAudioPausedTime = 0;
+        btn.innerHTML = '🔊 听标准发音';
+        clearActiveSentence();
+    };
+}
+
+function cleanupWebAudio() {
+    stopWebAudioHighlight();
+    if (pronAudioBufferSource) {
+        try { pronAudioBufferSource.stop(); } catch(e) {}
+        pronAudioBufferSource = null;
+    }
+    if (pronAudioContext) {
+        pronAudioContext.close();
+        pronAudioContext = null;
+    }
+    pronAudioBuffer = null;
+}
+
+function startWebAudioHighlight() {
+    stopWebAudioHighlight();
+    
+    function updateHighlight() {
+        if (!pronAudioContext || pronPaused) {
+            requestAnimationFrame(updateHighlight);
+            return;
+        }
+        
+        let currentTime = pronAudioContext.currentTime - pronAudioStartTime;
+        let activeIndex = pronTimestamps.findIndex(t => 
+            currentTime >= t.start && currentTime < t.end
+        );
+        
+        if (activeIndex >= 0) {
+            setActiveSentence(activeIndex);
+        }
+        
+        requestAnimationFrame(updateHighlight);
+    }
+    
+    requestAnimationFrame(updateHighlight);
+}
+
+function stopWebAudioHighlight() {
+    // requestAnimationFrame 会自动停止
+}
+
+function fetchTtsWithTimestamp(text, model, voice, speed) {
+    return fetch('http://localhost:5003/tts/timestamp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, model, voice, speed })
+    }).then(res => res.json()).catch(err => {
+        console.error('TTS fetch error:', err);
+        return null;
+    });
+}
+
+function base64ToAudio(base64Data, mimetype) {
+    let byteString = atob(base64Data);
+    let arrayBuffer = new ArrayBuffer(byteString.length);
+    let uint8Array = new Uint8Array(arrayBuffer);
+    for (let i = 0; i < byteString.length; i++) {
+        uint8Array[i] = byteString.charCodeAt(i);
+    }
+    let blob = new Blob([arrayBuffer], { type: mimetype });
+    return URL.createObjectURL(blob);
+}
+
+function renderPronunciationText(text, timestamps) {
+    let container = document.getElementById('pron-target-text');
+    if (!container) return;
+    
+    container.innerHTML = timestamps.map((item, index) => 
+        `<span class="sentence-item" data-index="${index}">${escapeHtml(item.text)}</span>`
+    ).join('');
+    
+    let style = document.createElement('style');
+    style.textContent = `
+        .sentence-item.active {
+            color: #1D9E75;
+            font-weight: 600;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function clearActiveSentence() {
+    document.querySelectorAll('.sentence-item').forEach(el => {
+        el.classList.remove('active');
+    });
+}
+
+function setActiveSentence(index) {
+    clearActiveSentence();
+    let el = document.querySelector(`.sentence-item[data-index="${index}"]`);
+    if (el) {
+        el.classList.add('active');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function startHighlightTimer() {
+    stopHighlightTimer();
+    highlightTimer = setInterval(() => {
+        if (!pronAudio || pronPaused) return;
+        
+        let currentTime = pronAudio.currentTime;
+        let activeIndex = pronTimestamps.findIndex(t => 
+            currentTime >= t.start && currentTime < t.end
+        );
+        
+        if (activeIndex >= 0) {
+            setActiveSentence(activeIndex);
+        }
+    }, 100);
+}
+
+function stopHighlightTimer() {
+    if (highlightTimer) {
+        clearInterval(highlightTimer);
+        highlightTimer = null;
+    }
+}
+
+function escapeHtml(text) {
+    let div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 let mediaStream = null;
@@ -2639,6 +2863,10 @@ async function startRecording() {
     }
 }
 
+let recordedAudioBlob = null;
+let recordedAudio = null;
+let isPlayingRecording = false;
+
 function stopRecording() {
     isRecording = false;
     if (recordingTimer) { clearInterval(recordingTimer); recordingTimer = null; }
@@ -2655,9 +2883,70 @@ function stopRecording() {
         let merged = new Float32Array(totalLen);
         let offset = 0;
         for (let buf of recordedSamples) { merged.set(buf, offset); offset += buf.length; }
-        let wavBlob = encodeWAV(merged, sampleRate);
-        sendScoreRequest(wavBlob);
+        recordedAudioBlob = encodeWAV(merged, sampleRate);
+        sendScoreRequest(recordedAudioBlob);
+        showPlayRecordingBtn();
     }
+}
+
+function showPlayRecordingBtn() {
+    document.getElementById('play-record-btn').style.display = 'flex';
+}
+
+function hidePlayRecordingBtn() {
+    document.getElementById('play-record-btn').style.display = 'none';
+    if (recordedAudio) {
+        recordedAudio.pause();
+        recordedAudio = null;
+    }
+    isPlayingRecording = false;
+}
+
+function togglePlayRecording() {
+    let btn = document.getElementById('play-record-btn');
+    
+    if (!recordedAudioBlob) return;
+    
+    if (isPlayingRecording && recordedAudio) {
+        recordedAudio.pause();
+        isPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '播放录音';
+        return;
+    }
+    
+    if (recordedAudio && !isPlayingRecording) {
+        recordedAudio.play();
+        isPlayingRecording = true;
+        btn.querySelector('.record-icon').textContent = '⏸️';
+        btn.querySelector('.record-text').textContent = '暂停录音';
+        return;
+    }
+    
+    let audioUrl = URL.createObjectURL(recordedAudioBlob);
+    recordedAudio = new Audio(audioUrl);
+    recordedAudio.volume = parseInt(document.getElementById('volume-slider').value) / 100;
+    
+    recordedAudio.onplay = () => {
+        isPlayingRecording = true;
+        btn.querySelector('.record-icon').textContent = '⏸️';
+        btn.querySelector('.record-text').textContent = '暂停录音';
+    };
+    
+    recordedAudio.onpause = () => {
+        isPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '继续播放';
+    };
+    
+    recordedAudio.onended = () => {
+        isPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '播放录音';
+        recordedAudio = null;
+    };
+    
+    recordedAudio.play();
 }
 
 function stopRecordingCleanup() {

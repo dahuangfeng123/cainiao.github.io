@@ -9,6 +9,7 @@ import asyncio
 import time
 import io
 import hashlib
+import base64
 import threading
 import json
 import librosa
@@ -274,7 +275,109 @@ app.add_middleware(
 )
 
 
+# ========== Timestamp TTS Helper Functions ==========
+def text_to_sentences(text):
+    """将文本分割成句子，优先按换行符切分，标点跟随前一句"""
+    result = []
+    
+    # 优先按换行符切分
+    lines = text.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        # 对每一行按标点切分，保留标点在前面的句子
+        parts = re.split(r'([.!?。！？]+)', line)
+        
+        current = ""
+        for part in parts:
+            current += part
+            # 如果当前部分以标点结尾，说明是一个完整句子
+            if part and part[-1] in '.!?。！？':
+                if current.strip():
+                    result.append(current.strip())
+                current = ""
+        
+        # 处理一行末尾没有标点的情况
+        if current.strip():
+            result.append(current.strip())
+    
+    return result
+
+def estimate_sentence_duration(text, speed=1.0):
+    """估算句子的发音时长（基于字符数）"""
+    chars_per_second = 12  # 平均每秒朗读字符数
+    base_duration = len(text) / chars_per_second / speed
+    return max(base_duration, 0.5)  # 最小0.5秒
+
 # ========== TTS Routes ==========
+@app.post("/tts/timestamp")
+async def tts_with_timestamp(request_body: dict):
+    text = request_body.get("text", "")
+    model = request_body.get("model", "kokoro")
+    voice = request_body.get("voice", "af_sarah")
+    speed = float(request_body.get("speed", 1.0))
+    
+    sentences = text_to_sentences(text)
+    if not sentences:
+        return JSONResponse({"error": "No text provided"}, status_code=400)
+    
+    # 生成完整音频
+    cache_id = audio_cache_id(text, voice, speed, model)
+    cached = get_cached_audio(cache_id, model)
+    
+    if cached:
+        mimetype = "audio/mpeg" if model == "edge" else "audio/wav"
+        with open(cached, "rb") as f:
+            audio_data = f.read()
+    else:
+        if model == "edge":
+            if not _edge_tts_available:
+                return JSONResponse({"error": "Edge TTS not available"}, status_code=503)
+            try:
+                audio_data, mimetype = await edge_tts_synthesize(text, voice, speed)
+                cache_path = audio_cache_path(cache_id, model)
+                with open(cache_path, "wb") as f:
+                    f.write(audio_data)
+            except Exception as e:
+                return JSONResponse({"error": str(e)}, status_code=500)
+        else:
+            if not _kokoro_available:
+                return JSONResponse({"error": "Kokoro TTS not available"}, status_code=503)
+            try:
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(None, kokoro_tts_batch, text, voice, speed)
+                if result is None:
+                    return JSONResponse({"error": "Kokoro model not loaded"}, status_code=503)
+                audio_data, mimetype = result
+                cache_path = audio_cache_path(cache_id, model)
+                with open(cache_path, "wb") as f:
+                    f.write(audio_data)
+            except Exception as e:
+                return JSONResponse({"error": str(e)}, status_code=500)
+    
+    # 计算时间戳（基于估算）
+    timestamps = []
+    current_time = 0.0
+    for i, sentence in enumerate(sentences):
+        duration = estimate_sentence_duration(sentence, speed)
+        timestamps.append({
+            "index": i,
+            "text": sentence,
+            "start": round(current_time, 2),
+            "end": round(current_time + duration, 2)
+        })
+        current_time += duration
+    
+    return JSONResponse({
+        "audio": base64.b64encode(audio_data).decode('utf-8'),
+        "mimetype": mimetype,
+        "timestamps": timestamps,
+        "duration": round(current_time, 2)
+    })
+
 @app.post("/tts")
 async def tts(request_body: dict):
     text = request_body.get("text", "")
@@ -1006,6 +1109,14 @@ def health():
         "edge_tts": _edge_tts_available,
     }
 
+
+# ========== Favicon Route ==========
+@app.get("/favicon.ico")
+async def favicon():
+    favicon_path = os.path.join(BASE_DIR, "favicon.ico")
+    if os.path.exists(favicon_path):
+        return FileResponse(favicon_path, media_type="image/x-icon")
+    return Response(content=b'', media_type='image/x-icon')
 
 # ========== Entry Point ==========
 if __name__ == "__main__":
