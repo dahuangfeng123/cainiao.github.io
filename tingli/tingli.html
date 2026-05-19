@@ -445,7 +445,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
         <h3>📖 朗读文本</h3>
         <div class="pron-text" id="batch-pron-target-text"></div>
       </div>
-      <button class="pron-ref-btn" onclick="playBatchPronReference()">🔊 听标准发音</button>
+      <button class="pron-ref-btn" id="batch-pron-btn" onclick="playBatchPronReference()">🔊 听标准发音</button>
       <div class="pron-record">
         <button class="record-btn" id="batch-record-btn" onclick="toggleBatchRecording()">
           <span class="record-icon">🎙️</span>
@@ -2143,7 +2143,7 @@ function closeBatchModal() {
     batchPronLoading = false;
     batchPronPaused = false;
     
-    let btn = document.querySelector('.pron-ref-btn');
+    let btn = document.getElementById('batch-pron-btn');
     if (btn) {
         btn.innerHTML = '🔊 听标准发音';
         btn.style.opacity = '1';
@@ -2982,7 +2982,7 @@ let batchPronPaused = false;
 function playBatchPronReference() {
     if (batchIndex >= batchArticles.length) return;
     
-    let btn = document.querySelector('.pron-ref-btn');
+    let btn = document.getElementById('batch-pron-btn');
     
     if (batchPronLoading) return;
     
