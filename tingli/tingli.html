@@ -125,8 +125,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 .pron-target{background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;}
 .pron-target h3{font-size:14px;margin-bottom:8px;color:var(--primary);}
 .pron-text{font-size:16px;line-height:1.8;color:var(--text);white-space:pre-wrap;}
-.pron-text .sentence-item{display:inline;}
-.pron-text .batch-sentence-item{display:inline;}
+.pron-text .sentence-item{display:block;}
+.pron-text .batch-sentence-item{display:block;}
 .pron-record{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;margin:20px 0;}
 .record-btn{width:80px;height:80px;border-radius:50%;border:3px solid var(--primary);background:#fff;font-size:28px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all 0.2s;box-shadow:0 4px 16px rgba(29,158,117,0.2);}
 .record-btn:active{transform:scale(0.95);}
@@ -458,6 +458,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
         <button class="record-btn" id="batch-record-btn" onclick="toggleBatchRecording()">
           <span class="record-icon">🎙️</span>
           <span class="record-text">点击录音</span>
+        </button>
+        <button class="record-btn play-record-btn" id="batch-play-record-btn" onclick="togglePlayBatchRecording()" style="display:none;">
+          <span class="record-icon">▶️</span>
+          <span class="record-text">播放录音</span>
         </button>
         <div class="record-timer" id="batch-record-timer" style="display:none;">0.0s</div>
       </div>
@@ -2152,6 +2156,7 @@ function finishBatch() {
 function closeBatchModal() {
     if (batchAudio) { batchAudio.pause(); batchAudio = null; }
     cleanupBatchPronAudio();
+    hideBatchPlayRecordingBtn();
     speechSynthesis.cancel();
     batchPlaying = false;
     batchLoading = false;
@@ -3268,12 +3273,16 @@ function initBatchPronunciationMode() {
     if (batchIndex >= batchArticles.length) return;
     let article = batchArticles[batchIndex];
     batchRecordedSamples = [];
+    batchRecordedAudioBlob = null;
+    batchRecordedAudio = null;
+    batchIsPlayingRecording = false;
     renderBatchPronunciationText(article.text, null);
     document.getElementById('batch-pron-results').style.display = 'none';
     let btn = document.getElementById('batch-record-btn');
     btn.classList.remove('recording');
     btn.querySelector('.record-text').textContent = '点击录音';
     document.getElementById('batch-record-timer').style.display = 'none';
+    hideBatchPlayRecordingBtn();
 }
 
 function playBatchPronReference() {
@@ -3497,17 +3506,88 @@ function startBatchPronHighlight() {
     requestAnimationFrame(updateHighlight);
 }
 
-function stopBatchPronHighlight() {
-    // requestAnimationFrame will stop automatically
-}
-
 let batchMediaStream = null;
 let batchAudioCtx = null;
 let batchScriptNode = null;
 let batchRecordedSamples = [];
+let batchRecordedAudioBlob = null;
+let batchRecordedAudio = null;
+let batchIsPlayingRecording = false;
 let batchIsRecording = false;
 let batchRecordingTimer = null;
 let batchRecordingDuration = 0;
+
+function stopBatchPronHighlight() {
+    // requestAnimationFrame will stop automatically
+}
+
+function showBatchPlayRecordingBtn() {
+    document.getElementById('batch-play-record-btn').style.display = 'flex';
+}
+
+function hideBatchPlayRecordingBtn() {
+    document.getElementById('batch-play-record-btn').style.display = 'none';
+    if (batchRecordedAudio) {
+        batchRecordedAudio.pause();
+        batchRecordedAudio = null;
+    }
+    batchIsPlayingRecording = false;
+}
+
+function togglePlayBatchRecording() {
+    let btn = document.getElementById('batch-play-record-btn');
+    
+    if (!batchRecordedAudioBlob) return;
+    
+    if (batchIsPlayingRecording && batchRecordedAudio) {
+        batchRecordedAudio.pause();
+        batchIsPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '播放录音';
+        return;
+    }
+    
+    if (batchRecordedAudio && !batchIsPlayingRecording) {
+        batchRecordedAudio.play();
+        batchIsPlayingRecording = true;
+        btn.querySelector('.record-icon').textContent = '⏸️';
+        btn.querySelector('.record-text').textContent = '暂停录音';
+        return;
+    }
+    
+    let audioUrl = URL.createObjectURL(batchRecordedAudioBlob);
+    batchRecordedAudio = new Audio(audioUrl);
+    batchRecordedAudio.volume = parseInt(document.getElementById('batch-volume').value) / 100;
+    
+    batchRecordedAudio.onplay = () => {
+        batchIsPlayingRecording = true;
+        btn.querySelector('.record-icon').textContent = '⏸️';
+        btn.querySelector('.record-text').textContent = '暂停录音';
+    };
+    
+    batchRecordedAudio.onpause = () => {
+        batchIsPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '继续播放';
+    };
+    
+    batchRecordedAudio.onended = () => {
+        batchIsPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '播放录音';
+        batchRecordedAudio = null;
+    };
+    
+    batchRecordedAudio.onerror = () => {
+        batchIsPlayingRecording = false;
+        btn.querySelector('.record-icon').textContent = '▶️';
+        btn.querySelector('.record-text').textContent = '播放录音';
+        batchRecordedAudio = null;
+        toast('播放录音失败', 'error');
+    };
+    
+    batchRecordedAudio.play();
+}
 
 async function toggleBatchRecording() {
     if (batchIsRecording) {
@@ -3558,23 +3638,25 @@ function stopBatchRecording() {
     btn.querySelector('.record-text').textContent = '点击录音';
     document.getElementById('batch-record-timer').style.display = 'none';
     if (batchRecordedSamples.length > 0) {
-        submitBatchPronunciation();
+        let sampleRate = batchAudioCtx ? batchAudioCtx.sampleRate : 16000;
+        if (batchAudioCtx) { batchAudioCtx.close(); batchAudioCtx = null; }
+        let merged = new Float32Array(batchRecordedSamples.reduce((a, b) => a + b.length, 0));
+        let offset = 0;
+        for (let s of batchRecordedSamples) {
+            merged.set(s, offset);
+            offset += s.length;
+        }
+        batchRecordedAudioBlob = encodeWAV(merged, sampleRate);
+        batchRecordedSamples = [];
+        showBatchPlayRecordingBtn();
+        submitBatchPronunciation(batchRecordedAudioBlob);
     }
 }
 
-async function submitBatchPronunciation() {
-    if (batchRecordedSamples.length === 0) return;
+async function submitBatchPronunciation(wavBlob) {
+    if (!wavBlob) return;
     if (batchIndex >= batchArticles.length) return;
     let article = batchArticles[batchIndex];
-    let sampleRate = batchAudioCtx ? batchAudioCtx.sampleRate : 16000;
-    if (batchAudioCtx) { batchAudioCtx.close(); batchAudioCtx = null; }
-    let merged = new Float32Array(batchRecordedSamples.reduce((a, b) => a + b.length, 0));
-    let offset = 0;
-    for (let s of batchRecordedSamples) {
-        merged.set(s, offset);
-        offset += s.length;
-    }
-    let wavBlob = encodeWAV(merged, sampleRate);
     let formData = new FormData();
     formData.append('audio', wavBlob, 'recording.wav');
     formData.append('target', article.text);
