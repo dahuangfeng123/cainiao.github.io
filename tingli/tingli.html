@@ -2238,18 +2238,48 @@ function initPronunciationMode() {
     document.getElementById('record-timer').style.display = 'none';
 }
 
+let pronLoading = false;
+
 function playPronReference() {
     if (!currentArticle) return;
+    if (pronLoading) return;
     if (pronAudio) { pronAudio.pause(); pronAudio = null; }
+    
+    let btn = document.querySelector('.pron-ref-btn');
     let speed = parseInt(document.getElementById('tts-speed').value) / 100;
     let voice = document.getElementById('tts-voice').value || 'af_sarah';
     let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+    
+    pronLoading = true;
+    btn.innerHTML = '⏳ 正在生成发音...';
+    btn.style.opacity = '0.6';
+    btn.style.pointerEvents = 'none';
+    
     ttsFetch(currentArticle.text).then(url => {
+        btn.innerHTML = '🔊 听标准发音';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        pronLoading = false;
+        
         if (url) {
             pronAudio = new Audio(url);
             pronAudio.volume = parseInt(document.getElementById('volume-slider').value) / 100;
             pronAudio.play();
+            btn.innerHTML = '🔊 播放中...';
+            pronAudio.onended = () => {
+                btn.innerHTML = '🔊 听标准发音';
+            };
+            pronAudio.onerror = () => {
+                btn.innerHTML = '🔊 听标准发音';
+                toast('播放失败', 'error');
+            };
         }
+    }).catch(err => {
+        btn.innerHTML = '🔊 听标准发音';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        pronLoading = false;
+        toast('生成失败', 'error');
     });
 }
 
@@ -2637,19 +2667,49 @@ function initBatchPronunciationMode() {
     document.getElementById('batch-record-timer').style.display = 'none';
 }
 
+let batchPronLoading = false;
+
 function playBatchPronReference() {
     if (batchIndex >= batchArticles.length) return;
+    if (batchPronLoading) return;
     let article = batchArticles[batchIndex];
     if (batchPronAudio) { batchPronAudio.pause(); batchPronAudio = null; }
+    
+    let btn = document.querySelector('.pron-ref-btn');
     let speed = parseInt(document.getElementById('tts-speed').value) / 100;
     let voice = document.getElementById('tts-voice').value || 'af_sarah';
     let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
+    
+    batchPronLoading = true;
+    btn.innerHTML = '⏳ 正在生成发音...';
+    btn.style.opacity = '0.6';
+    btn.style.pointerEvents = 'none';
+    
     ttsFetch(article.text).then(url => {
+        btn.innerHTML = '🔊 听标准发音';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        batchPronLoading = false;
+        
         if (url) {
             batchPronAudio = new Audio(url);
             batchPronAudio.volume = parseInt(document.getElementById('batch-volume').value) / 100;
             batchPronAudio.play();
+            btn.innerHTML = '🔊 播放中...';
+            batchPronAudio.onended = () => {
+                btn.innerHTML = '🔊 听标准发音';
+            };
+            batchPronAudio.onerror = () => {
+                btn.innerHTML = '🔊 听标准发音';
+                toast('播放失败', 'error');
+            };
         }
+    }).catch(err => {
+        btn.innerHTML = '🔊 听标准发音';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        batchPronLoading = false;
+        toast('生成失败', 'error');
     });
 }
 
