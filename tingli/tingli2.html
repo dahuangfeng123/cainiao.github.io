@@ -771,23 +771,79 @@ function resetPreviewBtn() {
     previewLoading = false;
 }
 
-async function ttsFetch(text) {
+async function ttsFetch(text, abortSignal) {
     let speed = parseInt(document.getElementById('tts-speed').value) / 100;
     let voice = document.getElementById('tts-voice').value || 'af_sarah';
     let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
     try {
-        const res = await fetch(TTS_URL + '/stream', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text, voice, speed, model }) });
+        const res = await fetch(TTS_URL + '/stream', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text, voice, speed, model }), signal: abortSignal });
         if (!res.ok) return null;
         const blob = await res.blob();
         return URL.createObjectURL(blob);
-    } catch { return null; }
+    } catch (e) { if (e.name === 'AbortError') return null; return null; }
 }
 
-async function fetchTtsWithTimestamp(text, model, voice, speed) {
-    return fetch('http://localhost:5003/tts/timestamp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, model, voice, speed })
-    }).then(res => res.json()).catch(() => null);
+async function fetchTtsWithTimestamp(text, model, voice, speed, onProgress, abortSignal) {
+    // 优先尝试SSE流式接口（支持进度回调）
+    try {
+        return await new Promise((resolve, reject) => {
+            fetch('http://localhost:5003/tts/timestamp/stream', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, model, voice, speed }),
+                signal: abortSignal
+            }).then(response => {
+                if (!response.ok) { reject(new Error('SSE request failed')); return; }
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let resultData = null;
+
+                function read() {
+                    reader.read().then(({ done, value }) => {
+                        if (done) {
+                            resolve(resultData);
+                            return;
+                        }
+                        buffer += decoder.decode(value, { stream: true });
+                        // 解析SSE事件
+                        let lines = buffer.split('\n');
+                        buffer = lines.pop() || ''; // 保留不完整的行
+                        for (let line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    let event = JSON.parse(line.slice(6));
+                                    if (event.type === 'progress' && onProgress) {
+                                        onProgress(event.current, event.total);
+                                    } else if (event.type === 'result') {
+                                        resultData = {
+                                            audio: event.audio,
+                                            mimetype: event.mimetype,
+                                            timestamps: event.timestamps,
+                                            duration: event.duration
+                                        };
+                                    } else if (event.type === 'error') {
+                                        reject(new Error(event.error));
+                                        return;
+                                    }
+                                } catch (e) { /* 忽略解析错误 */ }
+                            }
+                        }
+                        read();
+                    }).catch(reject);
+                }
+                read();
+            }).catch(reject);
+        });
+    } catch (e) {
+        if (e.name === 'AbortError') return null;  // 请求被取消，静默返回
+        // SSE失败，回退到普通接口
+        console.warn('SSE stream failed, falling back to regular endpoint:', e);
+        return fetch('http://localhost:5003/tts/timestamp', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, model, voice, speed }),
+            signal: abortSignal
+        }).then(res => res.json()).catch(() => null);
+    }
 }
 
 function base64ToAudio(base64Data, mimetype) {
@@ -810,6 +866,8 @@ class AudioPlayer {
         this.loading = false;
         this.finished = false;
         this._timer = null;
+        this._requestId = 0;  // 用于取消过期的异步播放请求
+        this._abortCtrl = null;  // 用于中断 pending 的 TTS 请求
         this.onFinished = null;
         this.onReveal = null;  // callback(hide: boolean)
         // 绑定事件
@@ -845,8 +903,15 @@ class AudioPlayer {
         this.finished = false;
         this._resetProgress();
         this.updateUI();
+        let myRequestId = ++this._requestId;  // 标记本次请求
+        // 中断之前的请求，创建新的 AbortController
+        if (this._abortCtrl) this._abortCtrl.abort();
+        this._abortCtrl = new AbortController();
+        let signal = this._abortCtrl.signal;
         try {
-            let url = await ttsFetch(article.text);
+            let url = await ttsFetch(article.text, signal);
+            // 检查请求是否已过期（弹窗关闭或 cleanup 已调用）
+            if (myRequestId !== this._requestId) return;
             if (url) {
                 this.audio = new Audio(url);
                 this.audio.volume = vol;
@@ -858,7 +923,7 @@ class AudioPlayer {
                 this.audio.onerror = () => { this.playing = false; this._stopTimer(); this.updateUI(); toast('音频播放失败','error'); };
                 this.audio.onloadedmetadata = () => { this._updateDuration(); this._startTimer(); };
             } else { this.loading = false; this._playLocalTTS(article.text); }
-        } catch { this.loading = false; this._playLocalTTS(article.text); }
+        } catch { if (myRequestId === this._requestId) { this.loading = false; this._playLocalTTS(article.text); } }
     }
 
     _playLocalTTS(text) {
@@ -937,6 +1002,8 @@ class AudioPlayer {
     }
 
     cleanup() {
+        this._requestId++;  // 使所有 pending 的异步操作失效
+        if (this._abortCtrl) { this._abortCtrl.abort(); this._abortCtrl = null; }  // 中断网络请求
         if (this.audio) { this.audio.pause(); this.audio = null; }
         speechSynthesis.cancel();
         this.playing = false; this.loading = false; this.finished = false;
@@ -960,6 +1027,8 @@ class PronunciationPlayer {
         this.loading = false;
         this.paused = false;
         this._highlightActive = false;
+        this._requestId = 0;  // 用于取消过期的异步播放请求
+        this._abortCtrl = null;  // 用于中断 pending 的 TTS 请求
         this.getArticle = null;  // function
         this.els.pronBtn.onclick = () => this.playReference();
     }
@@ -985,7 +1054,19 @@ class PronunciationPlayer {
         this.loading = true; this.paused = false;
         btn.innerHTML = '⏳ 正在生成发音...'; btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none';
 
-        let data = await fetchTtsWithTimestamp(article.text, model, voice, speed);
+        let myRequestId = ++this._requestId;  // 标记本次请求
+        // 中断之前的请求，创建新的 AbortController
+        if (this._abortCtrl) this._abortCtrl.abort();
+        this._abortCtrl = new AbortController();
+        let signal = this._abortCtrl.signal;
+        let self = this;
+        let data = await fetchTtsWithTimestamp(article.text, model, voice, speed, (current, total) => {
+            // 进度回调：更新按钮文字（仅当请求仍有效时）
+            if (myRequestId !== self._requestId) return;
+            btn.innerHTML = `⏳ 生成发音(${current}/${total})...`;
+        }, signal);
+        // 检查请求是否已过期
+        if (myRequestId !== this._requestId) { this.loading = false; return; }
         this.loading = false;
         if (!data) { this._resetBtn(btn); return; }
 
@@ -996,12 +1077,15 @@ class PronunciationPlayer {
     }
 
     _loadAndPlay(audioUrl, btn) {
+        let myRequestId = this._requestId;  // 捕获当前 requestId
         if (this.audioContext) { this.audioContext.close(); this.audioContext = null; }
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         fetch(audioUrl).then(r => r.arrayBuffer()).then(ab => this.audioContext.decodeAudioData(ab)).then(buffer => {
+            // 检查请求是否已过期
+            if (myRequestId !== this._requestId) { this._cleanup(); return; }
             this.audioBuffer = buffer;
             this._startPlayback(btn);
-        }).catch(() => { this._resetBtn(btn); this.loading = false; this.paused = false; toast('加载音频失败','error'); });
+        }).catch(() => { if (myRequestId === this._requestId) { this._resetBtn(btn); this.loading = false; this.paused = false; toast('加载音频失败','error'); } });
     }
 
     _startPlayback(btn) {
@@ -1074,7 +1158,7 @@ class PronunciationPlayer {
     _setActive(index) { this._clearHighlight(); let el = document.querySelector(`.${this.els.sentenceClass}[data-index="${index}"]`); if (el) { el.classList.add('active'); el.scrollIntoView({ behavior:'smooth', block:'center' }); } }
     _resetBtn(btn) { btn.innerHTML = '🔊 听标准发音'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
 
-    cleanup() { this._cleanup(); this.paused = false; this.pausedTime = 0; this.loading = false; this._resetBtn(this.els.pronBtn); this._clearHighlight(); }
+    cleanup() { this._requestId++; if (this._abortCtrl) { this._abortCtrl.abort(); this._abortCtrl = null; } this._cleanup(); this.paused = false; this.pausedTime = 0; this.loading = false; this._resetBtn(this.els.pronBtn); this._clearHighlight(); }
 }
 
 // ============================================================
@@ -1307,16 +1391,20 @@ function resetFillInputs(cfg) {
 function renderAnswerCanvas(canvasEl, text, words) {
     let ctx = canvasEl.getContext('2d');
     let wordList = words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+    // 先将换行符转为空格，保证 canvas 单行渲染正确
+    let flatText = text.replace(/\n/g, '  ');
     let maxWidth = 600, lineHeight = 28, padding = 20;
     ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
-    let lines = [], currentLine = '', textWords = text.split(/(\s+)/);
+    let lines = [], currentLine = '', textWords = flatText.split(/(\s+)/);
     for (let i = 0; i < textWords.length; i++) {
         let word = textWords[i], testLine = currentLine + word;
         if (ctx.measureText(testLine).width > maxWidth - padding * 2 && currentLine !== '') { lines.push(currentLine); currentLine = word; }
         else currentLine = testLine;
     }
     if (currentLine) lines.push(currentLine);
+    // 设置canvas尺寸（会清除内容，需在之后重新绘制）
     canvasEl.width = maxWidth; canvasEl.height = lines.length * lineHeight + padding * 2;
+    // 重新设置绘图状态（canvas尺寸变更后context状态被重置）
     ctx.fillStyle = '#f5f5f5'; ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
     ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif'; ctx.textBaseline = 'top';
     let y = padding;
@@ -1330,6 +1418,7 @@ function renderAnswerCanvas(canvasEl, text, words) {
         }
         y += lineHeight;
     }
+    return canvasEl;
 }
 
 function revealAnswer(cfg) {
@@ -1337,9 +1426,18 @@ function revealAnswer(cfg) {
     let article = cfg.article;
     if (!article) return;
     cfg.revealEl.style.display = 'block';
-    let canvas = renderAnswerCanvas(cfg.canvasEl, article.text, article.words || '');
-    canvas.style.display = 'block';
-    cfg.revealTextEl.style.display = 'none';
+    // 渲染 canvas 并显示
+    try {
+        renderAnswerCanvas(cfg.canvasEl, article.text, article.words || '');
+        cfg.canvasEl.style.display = 'block';
+        cfg.revealTextEl.style.display = 'none';
+    } catch (e) {
+        // canvas 渲染失败时回退到纯文本
+        console.warn('Canvas render failed, falling back to text:', e);
+        cfg.canvasEl.style.display = 'none';
+        cfg.revealTextEl.style.display = 'block';
+        cfg.revealTextEl.textContent = article.text;
+    }
     let input = cfg.inputEl ? cfg.inputEl.value.trim() : '';
     if (input) {
         let wordList = (article.words || '').split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
@@ -1376,7 +1474,14 @@ let singleAudio = new AudioPlayer({
 });
 singleAudio.getArticle = () => currentArticle;
 singleAudio.onReveal = (hide) => {
-    if (!hide && answerRevealed) { answerRevealed = false; document.getElementById('answer-reveal').style.display = 'none'; document.getElementById('score-bar').style.display = 'none'; }
+    // 点击播放时隐藏已展开的答案（防抄答案）
+    if (hide && answerRevealed) {
+        answerRevealed = false;
+        document.getElementById('answer-reveal').style.display = 'none';
+        document.getElementById('score-bar').style.display = 'none';
+        let btn = document.getElementById('show-answer-btn');
+        if (btn) btn.textContent = '👁️ 查看答案';
+    }
 };
 singleAudio.onFinished = () => {
     if (currentArticle && currentMode === 'dictation') addShowAnswerButton();
@@ -1485,9 +1590,29 @@ function addShowAnswerButton() {
     if (!actions || document.getElementById('show-answer-btn')) return;
     let btn = document.createElement('button');
     btn.className = 'btn btn-orange'; btn.id = 'show-answer-btn'; btn.textContent = '👁️ 查看答案';
-    btn.onclick = () => { answerRevealed = true; revealAnswer(singleAnswerCfg); };
+    btn.onclick = () => {
+        let input = document.getElementById('answer-input').value.trim();
+        if (!input) {
+            toast('✏️ 请先输入你的答案', 'warning');
+            document.getElementById('answer-input').focus();
+            return;
+        }
+        if (answerRevealed) {
+            // 已展开 → 隐藏
+            answerRevealed = false;
+            hideAnswer(singleAnswerCfg);
+            btn.textContent = '👁️ 查看答案';
+        } else {
+            // 未展开 → 显示
+            answerRevealed = true;
+            revealAnswer(singleAnswerCfg);
+            btn.textContent = '🙈 隐藏答案';
+        }
+    };
     actions.insertBefore(btn, actions.firstChild);
 }
+
+let _singleAutoPlayTimer = null;
 
 function openListenModal(articleId) {
     currentArticle = ARTICLES.find(a => a.id === articleId);
@@ -1505,16 +1630,30 @@ function openListenModal(articleId) {
     document.getElementById('answer-input').value = '';
     document.getElementById('answer-input').disabled = false;
     document.getElementById('answer-input').oninput = checkCompleteButton;
+    // 点击输入框时隐藏答案（防止抄答案）
+    document.getElementById('answer-input').onfocus = () => {
+        if (answerRevealed) {
+            answerRevealed = false;
+            hideAnswer(singleAnswerCfg);
+            let btn = document.getElementById('show-answer-btn');
+            if (btn) btn.textContent = '👁️ 查看答案';
+        }
+    };
     document.getElementById('answer-reveal').style.display = 'none';
     document.getElementById('score-bar').style.display = 'none';
     document.getElementById('complete-btn').style.display = 'none';
     let oldBtn = document.getElementById('show-answer-btn');
     if (oldBtn) oldBtn.remove();
     document.getElementById('listen-modal').classList.add('active');
-    if (currentMode !== 'pronunciation') setTimeout(() => singleAudio.toggle(), 300);
+    if (currentMode !== 'pronunciation') {
+        clearTimeout(_singleAutoPlayTimer);
+        _singleAutoPlayTimer = setTimeout(() => singleAudio.toggle(), 300);
+    }
 }
 
 function closeListenModal() {
+    clearTimeout(_singleAutoPlayTimer);
+    _singleAutoPlayTimer = null;
     singleAudio.cleanup();
     singlePron.cleanup();
     singleRec.cleanup();
@@ -1543,6 +1682,8 @@ function completeListening() {
     closeListenModal();
     renderAll();
 }
+
+let _batchAutoPlayTimer = null;
 
 // ============================================================
 // 批量弹窗逻辑
@@ -1598,7 +1739,10 @@ function renderBatchQuestion() {
         batchAudioCtrl.style.display = 'block'; batchDictation.style.display = 'block'; batchFillEl.style.display = 'none'; batchPronEl.style.display = 'none';
         batchRevealBtn.style.display = 'none'; batchSubmitBtn.style.display = 'inline-flex'; batchSubmitBtn.textContent = '✅ 提交并下一题'; batchSkipBtn.style.display = 'inline-flex';
     }
-    if (currentMode !== 'pronunciation') setTimeout(() => batchAudio.toggle(), 300);
+    if (currentMode !== 'pronunciation') {
+        clearTimeout(_batchAutoPlayTimer);
+        _batchAutoPlayTimer = setTimeout(() => batchAudio.toggle(), 300);
+    }
 }
 
 function initBatchPronunciationMode() {
@@ -1675,6 +1819,8 @@ function finishBatch() {
 }
 
 function closeBatchModal() {
+    clearTimeout(_batchAutoPlayTimer);
+    _batchAutoPlayTimer = null;
     batchAudio.cleanup();
     batchPron.cleanup();
     batchRec.cleanup();
@@ -1760,6 +1906,8 @@ function switchMode(mode, fromStorage = false) {
         audioCtrl.style.display = 'block'; dictation.style.display = 'block'; pron.style.display = 'none'; fill.style.display = 'none';
         batchAudioCtrl.style.display = 'block'; batchDictation.style.display = 'block'; batchFillEl.style.display = 'none'; batchPronEl.style.display = 'none';
     } else if (mode === 'pronunciation') {
+        clearTimeout(_singleAutoPlayTimer); _singleAutoPlayTimer = null;
+        clearTimeout(_batchAutoPlayTimer); _batchAutoPlayTimer = null;
         singleAudio.cleanup(); batchAudio.cleanup();
         audioCtrl.style.display = 'none'; dictation.style.display = 'none'; pron.style.display = 'block'; fill.style.display = 'none';
         batchAudioCtrl.style.display = 'none'; batchDictation.style.display = 'none'; batchFillEl.style.display = 'none'; batchPronEl.style.display = 'block';

@@ -137,20 +137,26 @@ def split_text(text, max_chars=150):
     return chunks
 
 
-def kokoro_tts_batch(text, voice, speed, max_workers=4):
+def kokoro_tts_batch(text, voice, speed, max_workers=4, on_progress=None):
     """逐段生成TTS音频并拼接。
     
     注意：Kokoro ONNX推理不是线程安全的，必须顺序调用，
     多线程并行会导致部分chunk产出空/损坏音频。
+    
+    Args:
+        on_progress: 可选回调函数 on_progress(current, total, chunk_text)
     """
     kokoro = get_kokoro()
     if kokoro is None:
         return None
     
     chunks = split_text(text, max_chars=150)
-    print(f"[Kokoro Batch] splitting into {len(chunks)} chunks")
+    total_chunks = len(chunks)
+    print(f"[Kokoro Batch] splitting into {total_chunks} chunks")
     
     if len(chunks) == 1:
+        if on_progress:
+            on_progress(1, 1, chunks[0])
         with _kokoro_gen_lock:
             samples, sample_rate = kokoro.create(chunks[0], voice=voice, speed=speed, lang="en-us")
         buf = io.BytesIO()
@@ -188,7 +194,9 @@ def kokoro_tts_batch(text, voice, speed, max_workers=4):
                     continue
                 
                 results.append((samples, sr))
-                print(f"[Kokoro Batch] Chunk {i}/{len(chunks)}: {duration:.2f}s - {repr(chunk_text[:50])}")
+                if on_progress:
+                    on_progress(i + 1, total_chunks, chunk_text)
+                print(f"[Kokoro Batch] Chunk {i+1}/{total_chunks}: {duration:.2f}s - {repr(chunk_text[:50])}")
                 break
                 
             except Exception as e:
@@ -198,7 +206,9 @@ def kokoro_tts_batch(text, voice, speed, max_workers=4):
                     silence_dur = 0.3
                     silence_samples = np.zeros(int(sample_rate * silence_dur))
                     results.append((silence_samples, sample_rate))
-                    print(f"[Kokoro Batch] Chunk {i} failed after retries, inserted {silence_dur}s silence")
+                    if on_progress:
+                        on_progress(i + 1, total_chunks, chunk_text)
+                    print(f"[Kokoro Batch] Chunk {i+1}/{total_chunks} failed after retries, inserted {silence_dur}s silence")
     
     if not results:
         return None
@@ -429,6 +439,133 @@ async def tts_with_timestamp(request_body: dict):
         "timestamps": timestamps,
         "duration": round(actual_duration, 3)
     })
+
+
+@app.post("/tts/timestamp/stream")
+async def tts_timestamp_stream(request_body: dict):
+    """SSE流式返回TTS生成进度 + 最终结果。
+    
+    事件类型:
+    - progress: {current, total, text}  当前chunk进度
+    - result:  {audio, mimetype, timestamps, duration}  最终结果
+    - error:   {error}  错误
+    """
+    text = request_body.get("text", "")
+    model = request_body.get("model", "kokoro")
+    voice = request_body.get("voice", "af_sarah")
+    speed = float(request_body.get("speed", 1.0))
+    
+    sentences = text_to_sentences(text)
+    if not sentences:
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'error': 'No text provided'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+    
+    async def generate():
+        try:
+            # 生成完整音频
+            cache_id = audio_cache_id(text, voice, speed, model)
+            cached = get_cached_audio(cache_id, model)
+            
+            if cached:
+                mimetype = "audio/mpeg" if model == "edge" else "audio/wav"
+                with open(cached, "rb") as f:
+                    audio_data = f.read()
+                # 缓存命中，直接返回结果（无进度）
+            else:
+                if model == "edge":
+                    if not _edge_tts_available:
+                        yield f"data: {json.dumps({'type': 'error', 'error': 'Edge TTS not available'})}\n\n"
+                        return
+                    audio_data, mimetype = await edge_tts_synthesize(text, voice, speed)
+                    cache_path = audio_cache_path(cache_id, model)
+                    with open(cache_path, "wb") as f:
+                        f.write(audio_data)
+                else:
+                    if not _kokoro_available:
+                        yield f"data: {json.dumps({'type': 'error', 'error': 'Kokoro TTS not available'})}\n\n"
+                        return
+                    
+                    # 进度队列：run_in_executor 中的同步回调通过此队列传递给异步生成器
+                    progress_queue = asyncio.Queue()
+                    
+                    def on_progress(current, total, chunk_text):
+                        try:
+                            progress_queue.put_nowait((current, total, chunk_text))
+                        except Exception:
+                            pass
+                    
+                    # 启动TTS生成（在线程池中）
+                    loop = asyncio.get_event_loop()
+                    gen_future = loop.run_in_executor(
+                        None, 
+                        lambda: kokoro_tts_batch(text, voice, speed, on_progress=on_progress)
+                    )
+                    
+                    # 同时消费进度事件
+                    while not gen_future.done():
+                        try:
+                            current, total, chunk_text = await asyncio.wait_for(
+                                progress_queue.get(), timeout=0.1
+                            )
+                            yield f"data: {json.dumps({'type': 'progress', 'current': current, 'total': total, 'text': chunk_text[:50]})}\n\n"
+                        except asyncio.TimeoutError:
+                            continue
+                    
+                    # 消费剩余进度
+                    while not progress_queue.empty():
+                        try:
+                            current, total, chunk_text = progress_queue.get_nowait()
+                            yield f"data: {json.dumps({'type': 'progress', 'current': current, 'total': total, 'text': chunk_text[:50]})}\n\n"
+                        except Exception:
+                            break
+                    
+                    result = gen_future.result()
+                    if result is None:
+                        yield f"data: {json.dumps({'type': 'error', 'error': 'Kokoro model not loaded'})}\n\n"
+                        return
+                    audio_data, mimetype = result
+                    cache_path = audio_cache_path(cache_id, model)
+                    with open(cache_path, "wb") as f:
+                        f.write(audio_data)
+            
+            # 计算时间戳
+            import soundfile as sf
+            import numpy as np
+            
+            audio_buf = io.BytesIO(audio_data)
+            samples, sample_rate = sf.read(audio_buf)
+            actual_duration = len(samples) / sample_rate
+            
+            total_chars = sum(len(s) for s in sentences)
+            timestamps = []
+            current_time = 0.0
+            for i, sentence in enumerate(sentences):
+                ratio = len(sentence) / total_chars if total_chars > 0 else 1.0 / len(sentences)
+                duration = actual_duration * ratio
+                timestamps.append({
+                    "index": i,
+                    "text": sentence,
+                    "start": round(current_time, 3),
+                    "end": round(current_time + duration, 3)
+                })
+                current_time += duration
+            
+            # 发送最终结果
+            yield f"data: {json.dumps({'type': 'result', 'audio': base64.b64encode(audio_data).decode('utf-8'), 'mimetype': mimetype, 'timestamps': timestamps, 'duration': round(actual_duration, 3)})}\n\n"
+        
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 @app.post("/tts")
 async def tts(request_body: dict):

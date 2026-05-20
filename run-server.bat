@@ -24,7 +24,8 @@ if errorlevel 1 (
 echo Starting server.py (FastAPI Unified Service)...
 echo.
 
-uv run server/server.py
+:uv run server/server.py
+uv run uvicorn server:app --reload --port 5003 --app-dir server
 
 if errorlevel 1 (
     echo.

@@ -4579,7 +4579,12 @@
         function checkWrongClearBonus() {
             let u = safeUser(getUser());
             let todayStr = todayKey();
-            let todayExams = (u.examScores || []).filter(s => s.date && s.date.startsWith(todayStr));
+            let todayExams = (u.examScores || []).filter(s => {
+                if (!s.date) return false;
+                let d = new Date(s.date);
+                let examDateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                return examDateStr === todayStr;
+            });
             if (todayExams.length === 0) return;
             let wrongCount = Object.values(u.wrongPool || {}).filter(w => w.status === 1).length;
             if (wrongCount > 0) return;
