@@ -1876,7 +1876,8 @@ function finishBatch() {
         // correct === null（跳过）不更新 log
 
         // --- 更新 dailyLog ---
-        if (_isExamMode) {
+        // 只有非跳过的题目才计入考试任务
+        if (_isExamMode && !a.skipped && a.correct !== null) {
             u.tingli.dailyLog[today].examCount = (u.tingli.dailyLog[today].examCount || 0) + 1;
         }
         u.tingli.dailyLog[today].review++;
@@ -1908,6 +1909,7 @@ function closeBatchModal() {
     clearTimeout(_batchAutoPlayTimer); _batchAutoPlayTimer = null;
     batchAudio.cleanup(); batchPron.cleanup(); batchRec.cleanup();
     document.getElementById('batch-modal').classList.remove('active');
+    _isExamMode = false;  // 取消考试时重置标志
 }
 
 // ============================================================
@@ -2189,7 +2191,7 @@ function renderDailyTasks() {
     let examHtml = `<div class="task-card ${examClass}">
         <div class="task-icon">🎯</div>
         <div class="task-title">考试任务</div>
-        <div class="task-progress">已复习${tasks.examCurrent}篇</div>
+        <div class="task-progress">已完成${tasks.examCurrent}篇</div>
         <div class="task-reward">${examRewardLabel}</div>
     </div>`;
 
