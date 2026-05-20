@@ -1,0 +1,37 @@
+{
+  "tingli": {
+    "learn": [2],
+    "done": [],
+    "log": {
+      "2": {
+        "t": 1779252781000,
+        "c": 1,
+        "next": 1779339181149
+      }
+    },
+    "dailyLog": {
+      "2026-05-19": {
+        "learn": 0,
+        "review": 0
+      },
+      "2026-05-20": {
+        "learn": 0,
+        "review": 53,
+        "goalRewarded": true,
+        "clearRewarded": true
+      }
+    },
+    "listeningLog": {},
+    "voice": "af_bella",
+    "ttsSpeed": 80,
+    "ttsModel": "kokoro",
+    "wordMode": "dictation",
+    "autoReviewPlan": false,
+    "streak": {
+      "count": 1,
+      "lastDate": "2026-05-20"
+    }
+  },
+  "stars": 315,
+  "listeningTotal": 51
+}

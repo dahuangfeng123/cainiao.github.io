@@ -148,6 +148,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 .fill-detail{font-size:13px;color:var(--text2);}
 .sentence-item,.batch-sentence-item{display:block;}
 .sentence-item.active,.batch-sentence-item.active{color:#1D9E75;font-weight:600;}
+.task-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px;}
+.task-card{background:#fafafa;border-radius:12px;padding:14px 10px;text-align:center;position:relative;border:2px solid #e8e8e8;transition:all 0.3s;}
+.task-card.done{border-color:#43a047;background:#e8f5e9;}
+.task-card .task-icon{font-size:22px;margin-bottom:2px;}
+.task-card .task-title{font-size:12px;font-weight:600;margin-bottom:2px;color:var(--text);}
+.task-card .task-progress{font-size:11px;color:var(--text3);margin-bottom:2px;}
+.task-card .task-reward{font-size:11px;color:#fbbc04;font-weight:600;}
+.task-card.done .task-reward{color:#43a047;}
+.task-card.done .task-icon::after{content:' ✅';font-size:12px;}
+@media(max-width:480px){.task-cards{grid-template-columns:1fr;gap:8px;}}
 </style>
 </head>
 <body>
@@ -186,6 +196,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
         <div class="stat-box"><div class="val" id="stat-learned">0</div><div class="label">已学习</div></div>
         <div class="stat-box"><div class="val" id="stat-done">0</div><div class="label">已掌握</div></div>
       </div>
+      <div id="streak-info" style="text-align:center;font-size:13px;color:var(--text3);margin-top:8px;"></div>
+    </div>
+    <div class="card">
+      <h2>📋 今日任务</h2>
+      <div class="task-cards" id="daily-tasks"></div>
     </div>
     <div class="card">
       <h2>📋 今日待复习</h2>
@@ -193,8 +208,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
     </div>
     <div class="card">
       <h2>🎯 快速开始</h2>
-      <p style="color:var(--text3);font-size:13px;margin-bottom:12px;">随机抽取短文进行听力练习</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <p style="color:var(--text3);font-size:13px;margin-bottom:12px;" id="quick-start-desc">随机抽取短文进行听力练习</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="quick-start-btns">
         <button class="btn btn-green" onclick="startQuickListen(3)">🎧 听3篇</button>
         <button class="btn btn-blue" onclick="startQuickListen(5)">🎧 听5篇</button>
         <button class="btn btn-orange" onclick="startQuickListen(10)">🎧 听10篇</button>
@@ -307,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 
 </div>
 
-<!-- 单篇听力弹窗 -->
+<!-- 单篇听力弹窗-自由练习 -->
 <div class="modal-overlay" id="listen-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeListenModal()">✕</button>
@@ -375,13 +390,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
       <div class="fill-results" id="fill-results" style="display:none;"></div>
     </div>
     <div class="modal-actions" id="listen-actions">
-      <button class="btn btn-green" id="complete-btn" onclick="completeListening()" style="display:none;">✅ 完成听力复习</button>
+      <button class="btn btn-green" id="join-plan-btn" onclick="joinReviewPlan()" style="display:none;" disabled>📌 加入复习计划</button>
+      <button class="btn btn-green" id="complete-btn" onclick="completeListening()" style="display:none;" disabled>✅ 完成复习</button>
       <button class="btn btn-gray" onclick="closeListenModal()">关闭</button>
     </div>
   </div>
 </div>
 
-<!-- 批量听力弹窗 -->
+<!-- 批量听力弹窗-听力考试 -->
 <div class="modal-overlay" id="batch-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeBatchModal()">✕</button>
@@ -611,7 +627,7 @@ let batchAnswers = [];
 function getUser() { try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; } }
 function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
 function safeUser(u) {
-    let def = { tingli:{ learn:[], done:[], log:{}, dailyLog:{}, listeningLog:{}, voice:'af_sarah', ttsSpeed:85, ttsModel:'kokoro', wordMode:'fillblank' }, stars:0, listeningTotal:0 };
+    let def = { tingli:{ learn:[], done:[], log:{}, dailyLog:{}, listeningLog:{}, voice:'af_sarah', ttsSpeed:85, ttsModel:'kokoro', wordMode:'fillblank', streak:{count:0,lastDate:''} }, stars:0, listeningTotal:0 };
     if (!u) return def;
     let merged = { ...def, ...u };
     if (!merged.tingli) { merged.tingli = def.tingli; } else { merged.tingli = { ...def.tingli, ...merged.tingli }; }
@@ -629,23 +645,33 @@ function safeUser(u) {
 function todayKey() { let d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function nextDate(st, count) { if (count >= PERIOD.length) return null; let d = new Date(st); d.setDate(d.getDate() + PERIOD[count]); return d.getTime(); }
 
-function recordProgress(articleId, correct) {
+function recordProgress(articleId, correct, context) {
     let u = safeUser(getUser());
     let now = Date.now();
     let idx = articleId;
     u.listeningTotal = (u.listeningTotal || 0) + 1;
     if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
     if (u.tingli.listeningLog[idx]) { u.tingli.listeningLog[idx].count += 1; u.tingli.listeningLog[idx].lastTime = now; }
-    else { u.tingli.listeningLog[idx] = { count:1, lastTime:now }; }
-    if (correct) {
+    else { u.tingli.listeningLog[idx] = { count:1, lastTime:now, practiceCount:0, reviewCount:0 }; }
+    // 回退策略表：答错时 c → 回退到的新 c 值
+    const REGRESS = {1:1, 2:1, 3:2, 4:2, 5:3, 6:4};
+    if (correct === true) {
         if (u.tingli.log[idx]) { u.tingli.log[idx].c += 1; u.tingli.log[idx].next = nextDate(now, u.tingli.log[idx].c); }
         else { if (!u.tingli.learn.includes(idx)) u.tingli.learn.push(idx); u.tingli.log[idx] = { t:now, c:1, next:nextDate(now,1) }; }
-        if (u.tingli.log[idx].c >= PERIOD.length && !u.tingli.done.includes(idx)) u.tingli.done.push(idx);
+        if (u.tingli.log[idx] && u.tingli.log[idx].c >= PERIOD.length && !u.tingli.done.includes(idx)) u.tingli.done.push(idx);
+    } else if (correct === false) {
+        // 答错回退：c 不变但 next 回退到更短间隔
+        if (u.tingli.log[idx]) {
+            let newC = REGRESS[u.tingli.log[idx].c] || 1;
+            u.tingli.log[idx].next = nextDate(u.tingli.log[idx].t, newC);
+        }
     }
+    // correct === null（跳过）：不改变 log，仅记录 listeningLog 和 dailyLog
     if (!u.tingli.dailyLog) u.tingli.dailyLog = {};
     let today = todayKey();
-    if (!u.tingli.dailyLog[today]) u.tingli.dailyLog[today] = { learn:0, review:0 };
-    u.tingli.dailyLog[today].review++;
+    ensureDailyLog(u, today);
+    if (context === 'practice') u.tingli.dailyLog[today].learn++;
+    else u.tingli.dailyLog[today].review++;
     return u;
 }
 
@@ -1377,6 +1403,8 @@ function checkFillAnswers(cfg, article, onComplete) {
         '<div style="margin-top:8px;font-size:13px;color:#43a047;">🎉 全部正确！</div>';
     cfg.resultsEl.style.display = 'block';
     cfg.resultsEl.innerHTML = `<h3>📊 填空结果</h3><div class="fill-score" style="color:${pctColor};">${pct}%</div><div class="fill-detail">正确 ${correct}/${total}</div>${wrongHtml}`;
+    // 记录单篇模式的填空评分
+    if (cfg === singleFill) { _lastSinglePct = pct; _lastSingleMode = 'fillblank'; updateActionBtnState(); }
     if (onComplete) onComplete(pct, correct, total, inputs);
 }
 
@@ -1450,6 +1478,8 @@ function revealAnswer(cfg) {
         cfg.scorePctEl.textContent = wordPct + '%';
         cfg.scorePctEl.className = 'pct ' + (wordPct >= 80 ? 'high' : wordPct >= 60 ? 'mid' : 'low');
         cfg.scoreDetailEl.textContent = `输入 ${inputWords} 词 / 关联词 ${matched}/${wordList.length} / 原文 ${totalWords} 词`;
+        // 记录单篇模式的评分，供 completeListening 使用
+        if (cfg === singleAnswerCfg) { _lastSinglePct = wordPct; _lastSingleMode = 'dictation'; updateActionBtnState(); }
     }
 }
 
@@ -1506,10 +1536,17 @@ let singleRec = new RecordingSession({
 singleRec.getArticle = () => currentArticle;
 singleRec.onScored = (result, article) => {
     displayPronResults(document.getElementById('pron-results'), result);
+    // 追踪拼读评分，供按钮启用判断
+    _lastSinglePct = result.phone_accuracy || 0;
+    _lastSingleMode = 'pronunciation';
+    updateActionBtnState();
 };
 
 let singleFill = { containerEl: document.getElementById('fill-text'), resultsEl: document.getElementById('fill-results') };
 let answerRevealed = false;
+let _lastSinglePct = 0; // 单篇模式最近一次评分（wordPct 或 fillPct）
+let _lastSingleMode = ''; // 单篇模式最近一次模式
+let _modalContext = 'practice'; // 'practice' 或 'review'
 
 let singleAnswerCfg = {
     get article() { return currentArticle; },
@@ -1614,10 +1651,13 @@ function addShowAnswerButton() {
 
 let _singleAutoPlayTimer = null;
 
-function openListenModal(articleId) {
+function openListenModal(articleId, fromReview) {
     currentArticle = ARTICLES.find(a => a.id === articleId);
     if (!currentArticle) return;
     answerRevealed = false;
+    _lastSinglePct = 0;
+    _lastSingleMode = '';
+    _modalContext = fromReview ? 'review' : 'practice';
     singleAudio.finished = false;
     singleAudio.cleanup();
     singlePron.cleanup();
@@ -1629,7 +1669,7 @@ function openListenModal(articleId) {
     document.getElementById('modal-meta').textContent = `分类：${currentArticle.category}`;
     document.getElementById('answer-input').value = '';
     document.getElementById('answer-input').disabled = false;
-    document.getElementById('answer-input').oninput = checkCompleteButton;
+    document.getElementById('answer-input').oninput = null;
     // 点击输入框时隐藏答案（防止抄答案）
     document.getElementById('answer-input').onfocus = () => {
         if (answerRevealed) {
@@ -1641,9 +1681,14 @@ function openListenModal(articleId) {
     };
     document.getElementById('answer-reveal').style.display = 'none';
     document.getElementById('score-bar').style.display = 'none';
-    document.getElementById('complete-btn').style.display = 'none';
+    document.getElementById('complete-btn').style.display = _modalContext === 'review' ? 'inline-flex' : 'none';
+    document.getElementById('complete-btn').disabled = true;
+    document.getElementById('join-plan-btn').style.display = _modalContext === 'practice' ? 'inline-flex' : 'none';
+    document.getElementById('join-plan-btn').disabled = true;
     let oldBtn = document.getElementById('show-answer-btn');
     if (oldBtn) oldBtn.remove();
+    let retryBtn = document.getElementById('retry-btn');
+    if (retryBtn) retryBtn.remove();
     document.getElementById('listen-modal').classList.add('active');
     if (currentMode !== 'pronunciation') {
         clearTimeout(_singleAutoPlayTimer);
@@ -1661,26 +1706,111 @@ function closeListenModal() {
     document.getElementById('listen-modal').classList.remove('active');
 }
 
-function checkCompleteButton() {
-    let input = document.getElementById('answer-input').value.trim().toLowerCase();
-    let inputWords = new Set(input.replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
-    let btn = document.getElementById('complete-btn');
-    if (!currentArticle) { btn.style.display = 'none'; return; }
-    let wordList = (currentArticle.words || '').split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
-    if (wordList.length === 0) { btn.style.display = 'none'; return; }
-    let matched = wordList.filter(w => inputWords.has(w)).length;
-    btn.style.display = matched / wordList.length >= 0.6 ? 'inline-flex' : 'none';
-}
-
 function completeListening() {
     if (!currentArticle) return;
+    if (_modalContext !== 'review') return;
     singleAudio.cleanup();
-    let u = recordProgress(currentArticle.id, true);
-    u.stars = (u.stars || 0) + 5;
+    let mode = currentMode;
+    let pct = _lastSinglePct;
+    // 记录进度：复习完成 = correct（会重新读取用户数据）
+    let u = recordProgress(currentArticle.id, true, 'review');
+    // 增加 reviewCount
+    if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
+    if (!u.tingli.listeningLog[currentArticle.id]) u.tingli.listeningLog[currentArticle.id] = { count:0, lastTime:0, practiceCount:0, reviewCount:0 };
+    u.tingli.listeningLog[currentArticle.id].reviewCount = (u.tingli.listeningLog[currentArticle.id].reviewCount || 0) + 1;
+    // 计算星星奖励（必须在 recordProgress 之后，确保 rewards 写入最终 u 对象）
+    let starGain = 0, msg = '';
+    if (mode === 'pronunciation') { starGain = 5; msg = '✅ 拼读完成！+5⭐'; }
+    else if (mode === 'fillblank') { starGain = 10; msg = `✅ 填空完成！${pct}% +10⭐`; }
+    else { starGain = pct >= 80 ? 20 : 10; msg = `✅ 听写完成！${pct}% +${starGain}⭐`; }
+    // 检查每日奖励限额
+    let today = todayKey();
+    let rewardKey = currentArticle.id + '_' + mode;
+    ensureDailyLog(u, today);
+    if (u.tingli.dailyLog[today].rewards[rewardKey]) {
+        starGain = 0;
+        msg = '✅ 完成复习！（今日已获得该题奖励）';
+    } else {
+        u.tingli.dailyLog[today].rewards[rewardKey] = true;
+    }
+    u.stars = Math.max(0, (u.stars || 0) + starGain);
     setUser(u);
-    toast('✅ 听力复习完成！+5⭐', 'success');
+    toast(msg, 'success');
     closeListenModal();
+    checkDailyTasks();
     renderAll();
+}
+
+// 加入复习计划（练习上下文）
+function joinReviewPlan() {
+    if (!currentArticle) return;
+    if (_modalContext !== 'practice') return;
+    singleAudio.cleanup();
+    let mode = currentMode;
+    let pct = _lastSinglePct;
+    // 先读取用户数据判断是否已在复习计划中
+    let uCheck = safeUser(getUser());
+    let today = todayKey();
+    let alreadyInPlan = (uCheck.tingli.learn || []).includes(currentArticle.id);
+
+    // 记录进度：加入复习计划 = correct=true（会重新读取用户数据）
+    let u = recordProgress(currentArticle.id, true, 'practice');
+    // 增加 practiceCount
+    if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
+    if (!u.tingli.listeningLog[currentArticle.id]) u.tingli.listeningLog[currentArticle.id] = { count:0, lastTime:0, practiceCount:0, reviewCount:0 };
+    u.tingli.listeningLog[currentArticle.id].practiceCount = (u.tingli.listeningLog[currentArticle.id].practiceCount || 0) + 1;
+
+    // 计算星星奖励（必须在 recordProgress 之后，确保 rewards 写入最终 u 对象）
+    ensureDailyLog(u, today);
+    let starGain = 0, msg = '';
+    let rewardKey = currentArticle.id + '_' + mode;
+
+    if (alreadyInPlan) {
+        // 已在复习计划中，检查每日奖励限额
+        if (u.tingli.dailyLog[today].rewards[rewardKey]) {
+            msg = '📌 已在复习计划中！（今日已获得奖励）';
+        } else {
+            if (mode === 'pronunciation') { starGain = 5; msg = '📌 已在复习计划中！+5⭐'; }
+            else if (mode === 'fillblank') { starGain = 10; msg = `📌 已在复习计划中！${pct}% +10⭐`; }
+            else { starGain = pct >= 80 ? 20 : 10; msg = `📌 已在复习计划中！${pct}% +${starGain}⭐`; }
+            u.tingli.dailyLog[today].rewards[rewardKey] = true;
+        }
+    } else {
+        // 新加入复习计划
+        if (mode === 'pronunciation') { starGain = 5; msg = '📌 已加入复习计划！+5⭐'; }
+        else if (mode === 'fillblank') { starGain = 10; msg = `📌 已加入复习计划！${pct}% +10⭐`; }
+        else { starGain = pct >= 80 ? 20 : 10; msg = `📌 已加入复习计划！${pct}% +${starGain}⭐`; }
+        // 检查每日奖励限额
+        if (u.tingli.dailyLog[today].rewards[rewardKey]) {
+            starGain = 0;
+            msg = '📌 已加入复习计划！（今日已获得该题奖励）';
+        } else {
+            u.tingli.dailyLog[today].rewards[rewardKey] = true;
+        }
+    }
+
+    u.stars = Math.max(0, (u.stars || 0) + starGain);
+    setUser(u);
+    toast(msg, 'success');
+    closeListenModal();
+    checkDailyTasks();
+    renderAll();
+}
+
+// 根据当前评分更新按钮启用/禁用状态
+function updateActionBtnState() {
+    if (!currentArticle) return;
+    let mode = currentMode;
+    let pct = _lastSinglePct;
+    let thresholdMet = false;
+    if (mode === 'pronunciation') thresholdMet = pct >= 80;
+    else if (mode === 'fillblank') thresholdMet = pct >= 80;
+    else thresholdMet = pct >= 60; // dictation
+
+    let joinBtn = document.getElementById('join-plan-btn');
+    let completeBtn = document.getElementById('complete-btn');
+    if (joinBtn) joinBtn.disabled = !thresholdMet;
+    if (completeBtn) completeBtn.disabled = !thresholdMet;
 }
 
 let _batchAutoPlayTimer = null;
@@ -1688,11 +1818,35 @@ let _batchAutoPlayTimer = null;
 // ============================================================
 // 批量弹窗逻辑
 // ============================================================
+// ============================================================
+// 加权选题：待复习5x > 答错过3x > 未练习2x > 已掌握0.5x
+// ============================================================
+function weightedPick(pool, count) {
+    let u = safeUser(getUser());
+    let now = Date.now();
+    let weighted = pool.map(a => {
+        let w = 2; // 默认：未练习
+        let info = u.tingli?.log?.[a.id];
+        let logInfo = u.tingli?.listeningLog?.[a.id];
+        if (info) {
+            if (info.c >= PERIOD.length) { w = 0.5; } // 已掌握
+            else if (info.next && info.next <= now) { w = 5; } // 待复习
+            else { w = 1; } // 复习中
+        }
+        // 如果曾答错过（listeningLog 有记录但 log.c 较低），提高权重
+        if (logInfo && logInfo.count > 1 && info && info.c <= 2) { w = Math.max(w, 3); }
+        return { article: a, weight: w };
+    });
+    // 先随机打乱（同等权重内随机），再按权重降序排
+    weighted.sort(() => Math.random() - 0.5);
+    weighted.sort((a, b) => b.weight - a.weight);
+    return weighted.slice(0, count).map(x => x.article);
+}
+
 function startQuickListen(count) {
     let pool = selectedCategory ? ARTICLES.filter(a => a.category === selectedCategory) : [...ARTICLES];
     if (pool.length === 0) { toast('暂无短文', 'warning'); return; }
-    pool.sort(() => Math.random() - 0.5);
-    batchArticles = pool.slice(0, Math.min(count, pool.length));
+    batchArticles = weightedPick(pool, Math.min(count, pool.length));
     batchIndex = 0;
     batchAnswers = [];
     document.getElementById('batch-modal').classList.add('active');
@@ -1790,7 +1944,7 @@ function submitBatchAnswer() {
 function skipBatchAnswer() {
     if (batchIndex >= batchArticles.length) return;
     let article = batchArticles[batchIndex];
-    batchAnswers.push({ idx: article.id, article, input: '', correct: false, simScore: 0, skipped: true, mode: currentMode });
+    batchAnswers.push({ idx: article.id, article, input: '', correct: null, simScore: 0, skipped: true, mode: currentMode });
     batchAudio.cleanup();
     batchPron.cleanup();
     batchIndex++; renderBatchQuestion();
@@ -1802,19 +1956,26 @@ function finishBatch() {
     let u = safeUser(getUser());
     let correctCount = batchAnswers.filter(a => a.correct).length;
     let now = Date.now();
-    if (!u.tingli.dailyLog) u.tingli.dailyLog = {};
-    if (!u.tingli.dailyLog[todayKey()]) u.tingli.dailyLog[todayKey()] = { learn:0, review:0 };
+    let today = todayKey();
+    ensureDailyLog(u, today);
     batchAnswers.forEach(a => {
         u = recordProgress(a.idx, a.correct);
     });
     let starReward = batchAnswers.reduce((sum, a) => {
+        if (a.skipped || a.correct === null) return sum; // 跳过不计分不扣分
+        let rewardKey = a.idx + '_' + (a.mode || currentMode);
+        // 检查每日奖励限额
+        if (u.tingli.dailyLog[today].rewards[rewardKey]) return sum; // 今日已获得该题该模式奖励
         let base = a.mode === 'pronunciation' ? 5 : (a.mode === 'fillblank' ? 10 : 20);
-        return sum + (a.correct ? base : -5);
+        let gain = a.correct ? base : -5;
+        if (gain > 0) u.tingli.dailyLog[today].rewards[rewardKey] = true; // 标记已奖励
+        return sum + gain;
     }, 0);
-    u.stars = (u.stars || 0) + starReward;
+    u.stars = Math.max(0, (u.stars || 0) + starReward);
     setUser(u);
     closeBatchModal();
     showBatchResult(correctCount, starReward);
+    checkDailyTasks();
     renderAll();
 }
 
@@ -1833,18 +1994,20 @@ function closeBatchModal() {
 let _resultAudio = null;
 
 function showBatchResult(correctCount, starReward) {
-    document.getElementById('result-summary').textContent = `正确 ${correctCount}/${batchAnswers.length}，+${starReward}⭐`;
+    let skippedCount = batchAnswers.filter(a => a.skipped || a.correct === null).length;
+    document.getElementById('result-summary').textContent = `正确 ${correctCount}/${batchAnswers.length}，跳过 ${skippedCount}，+${starReward}⭐`;
     let list = document.getElementById('result-list');
     list.innerHTML = batchAnswers.map((a, i) => {
         let pct = a.simScore || 0;
         let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
-        let statusIcon = a.correct ? '✅' : (a.skipped ? '⏭️' : '❌');
+        let statusIcon = a.correct === true ? '✅' : (a.skipped || a.correct === null ? '⏭️' : '❌');
+        let bgColor = a.correct === true ? '#f0faf4' : (a.skipped || a.correct === null ? '#f5f5f5' : '#fff5f5');
         let wordList = (a.article.words || '').split(',').map(w => w.trim()).filter(Boolean);
         let modeLabel = a.mode === 'pronunciation' ? '🗣️ 拼读' : (a.mode === 'fillblank' ? '✏️ 填空' : '🎧 听写');
         let extraInfo = '';
         if (a.mode === 'pronunciation') extraInfo = `<div style="font-size:12px;color:var(--text3);margin-top:6px;">流利度: ${a.fluency||0}% | 音素准确率: ${a.phone_accuracy||0}%</div>`;
         else if (a.mode === 'fillblank' && a.fillAnswers) extraInfo = `<div style="font-size:12px;color:var(--text3);margin-top:6px;">填空正确: ${a.fillCorrect||0}/${a.fillTotal||0}</div><div style="margin-top:6px;font-size:12px;">${a.fillAnswers.map(f => { let ok = f.user.toLowerCase() === f.answer.toLowerCase(); return `<span style="display:inline-block;margin:2px;padding:2px 6px;border-radius:4px;background:${ok?'#e8f5e9':'#ffebee'};">${ok?'✅':'❌'} ${f.user||'(空)'} / ${f.answer}</span>`; }).join('')}</div>`;
-        return `<div style="border:1px solid #e0e0e0;border-radius:10px;padding:12px;margin-bottom:10px;background:${a.correct?'#f0faf4':'#fff5f5'};">
+        return `<div style="border:1px solid #e0e0e0;border-radius:10px;padding:12px;margin-bottom:10px;background:${bgColor};">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                 <span style="font-weight:600;font-size:14px;">${statusIcon} ${i+1}. ${a.article.title} <span style="font-size:12px;font-weight:normal;color:var(--text3);">${modeLabel}</span></span>
                 <span style="font-weight:700;font-size:18px;color:${pctColor};">${pct}%</span>
@@ -1930,6 +2093,203 @@ function initPronunciationMode() {
 }
 
 // ============================================================
+// 每日任务系统 & 连续打卡
+// ============================================================
+// 确保每日日志字段完整
+function ensureDailyLog(u, today) {
+    if (!u.tingli.dailyLog) u.tingli.dailyLog = {};
+    if (!u.tingli.dailyLog[today]) u.tingli.dailyLog[today] = { learn:0, review:0, rewards:{}, learnTaskDone:false, reviewTaskDone:false, examTierClaimed:0, reviewTarget:-1 };
+    let dl = u.tingli.dailyLog[today];
+    if (dl.learnTaskDone === undefined) dl.learnTaskDone = false;
+    if (dl.reviewTaskDone === undefined) dl.reviewTaskDone = false;
+    if (dl.examTierClaimed === undefined) dl.examTierClaimed = 0;
+    if (dl.reviewTarget === undefined || dl.reviewTarget === -1) {
+        // 首次访问：记录今日应复习总数 = 剩余待复习 + 已完成复习数
+        dl.reviewTarget = getReviewCountFromUser(u) + (dl.review || 0);
+    }
+    if (!dl.rewards) dl.rewards = {};
+    return dl;
+}
+
+// 从用户数据计算当前待复习数
+function getReviewCountFromUser(u) {
+    let now = new Date(); now.setHours(23,59,59,999);
+    let todayEnd = now.getTime();
+    let count = 0;
+    for (let idx in u.tingli?.log || {}) {
+        let info = u.tingli.log[idx];
+        if (info.next && info.next <= todayEnd && info.c < PERIOD.length) count++;
+    }
+    return count;
+}
+
+// 获取今日任务状态（只读，不发奖）
+function getDailyTasks() {
+    let u = safeUser(getUser());
+    let today = todayKey();
+    let dl = ensureDailyLog(u, today);
+    // 学习任务：练习2篇
+    let learnCurrent = dl.learn || 0;
+    let learnTarget = 2;
+    let learnDone = dl.learnTaskDone;
+    // 复习任务：完成所有艾宾浩斯待复习
+    let reviewCurrent = dl.review || 0;
+    let reviewTarget = dl.reviewTarget || 0;
+    let reviewDone = dl.reviewTaskDone;
+    let hasReviewTask = reviewTarget > 0;
+    let reviewRemaining = getReviewCountFromUser(u);
+    // 考试任务：复习3/5/10篇
+    let examCurrent = dl.review || 0;
+    let examTier = dl.examTierClaimed || 0;
+    let examDone = examTier >= 3;
+    return { learnCurrent, learnTarget, learnDone, reviewCurrent, reviewTarget, reviewDone, hasReviewTask, reviewRemaining, examCurrent, examTier, examDone };
+}
+
+// 检查并发放每日任务奖励
+function checkDailyTasks() {
+    let u = safeUser(getUser());
+    let today = todayKey();
+    let dl = ensureDailyLog(u, today);
+    let totalReward = 0;
+
+    // 1. 学习任务：练习2篇 → +10⭐
+    if (!dl.learnTaskDone && dl.learn >= 2) {
+        dl.learnTaskDone = true;
+        totalReward += 10;
+        toast('📖 学习任务完成！+10⭐', 'success');
+    }
+
+    // 2. 复习任务：完成所有待复习 → +10⭐（0复习任务不奖励）
+    if (!dl.reviewTaskDone && dl.reviewTarget > 0) {
+        let remaining = getReviewCountFromUser(u);
+        if (remaining === 0 && dl.review > 0) {
+            dl.reviewTaskDone = true;
+            totalReward += 10;
+            toast('🔄 复习任务完成！+10⭐', 'success');
+        }
+    }
+
+    // 3. 考试任务：复习3/5/10篇，梯级奖励（替换制，非累加）
+    let newTier = 0;
+    if (dl.review >= 10) newTier = 10;
+    else if (dl.review >= 5) newTier = 5;
+    else if (dl.review >= 3) newTier = 3;
+    if (newTier > dl.examTierClaimed) {
+        let tierRewards = {3: 10, 5: 30, 10: 100};
+        let oldReward = dl.examTierClaimed > 0 ? (tierRewards[dl.examTierClaimed] || 0) : 0;
+        let newReward = tierRewards[newTier] || 0;
+        let additionalReward = newReward - oldReward;
+        dl.examTierClaimed = newTier;
+        totalReward += additionalReward;
+        toast(`🎯 考试任务(${newTier}篇)完成！+${additionalReward}⭐`, 'success');
+    }
+
+    if (totalReward > 0) {
+        u = safeUser(getUser()); // 重新读取（ensureDailyLog可能修改了u）
+        ensureDailyLog(u, today); // 确保引用一致
+        u.stars = Math.max(0, (u.stars || 0) + totalReward);
+        setUser(u);
+    }
+
+    // 检查打卡
+    updateStreak();
+    return totalReward;
+}
+
+// 连续打卡：需完成所有每日任务才算
+function updateStreak() {
+    let u = safeUser(getUser());
+    let today = todayKey();
+    let dl = ensureDailyLog(u, today);
+    if (!u.tingli.streak) u.tingli.streak = { count: 0, lastDate: '' };
+    let streak = u.tingli.streak;
+
+    // 判断所有任务是否完成
+    let allTasksDone = dl.learnTaskDone && (dl.reviewTaskDone || dl.reviewTarget <= 0) && dl.examTierClaimed >= 3;
+
+    // 只有全部完成且今天未记录过，才更新打卡
+    if (allTasksDone && streak.lastDate !== today) {
+        let yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+        let yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+        if (streak.lastDate === yesterdayKey) { streak.count += 1; }
+        else { streak.count = 1; }
+        streak.lastDate = today;
+
+        // 里程碑奖励
+        let reward = 0;
+        if (streak.count === 3) reward = 20;
+        else if (streak.count === 7) reward = 50;
+        else if (streak.count === 14) reward = 80;
+        else if (streak.count === 30) reward = 200;
+        if (reward > 0) {
+            u.stars = Math.max(0, (u.stars || 0) + reward);
+            toast(`🎉 连续${streak.count}天打卡奖励！+${reward}⭐`, 'success');
+        }
+        setUser(u);
+    }
+}
+
+// 兼容旧调用（页面加载时只初始化，不检查奖励）
+function checkStreakAndDailyRewards() {
+    let u = safeUser(getUser());
+    let today = todayKey();
+    ensureDailyLog(u, today);
+    setUser(u);
+}
+
+// 渲染首页任务卡片
+function renderDailyTasks() {
+    let tasks = getDailyTasks();
+    let el = document.getElementById('daily-tasks');
+    if (!el) return;
+
+    // 学习任务
+    let learnPct = Math.min(100, Math.round(tasks.learnCurrent / tasks.learnTarget * 100));
+    let learnClass = tasks.learnDone ? 'done' : '';
+    let learnHtml = `<div class="task-card ${learnClass}">
+        <div class="task-icon">📖</div>
+        <div class="task-title">学习任务</div>
+        <div class="task-progress">${tasks.learnCurrent}/${tasks.learnTarget} 篇</div>
+        <div class="task-reward">${tasks.learnDone ? '已完成' : '+10⭐'}</div>
+    </div>`;
+
+    // 复习任务
+    let reviewHtml = '';
+    if (tasks.hasReviewTask) {
+        let reviewPct = tasks.reviewTarget > 0 ? Math.min(100, Math.round(tasks.reviewCurrent / tasks.reviewTarget * 100)) : 0;
+        let reviewClass = tasks.reviewDone ? 'done' : '';
+        reviewHtml = `<div class="task-card ${reviewClass}">
+            <div class="task-icon">🔄</div>
+            <div class="task-title">复习任务</div>
+            <div class="task-progress">${tasks.reviewCurrent}/${tasks.reviewTarget} 篇（剩余${tasks.reviewRemaining}）</div>
+            <div class="task-reward">${tasks.reviewDone ? '已完成' : '+10⭐'}</div>
+        </div>`;
+    } else {
+        reviewHtml = `<div class="task-card done">
+            <div class="task-icon">🔄</div>
+            <div class="task-title">复习任务</div>
+            <div class="task-progress">今日无待复习</div>
+            <div class="task-reward">已完成</div>
+        </div>`;
+    }
+
+    // 考试任务
+    let examTier = tasks.examTier;
+    let examTarget = examTier >= 10 ? 10 : (examTier >= 5 ? 10 : (examTier >= 3 ? 5 : 3));
+    let examPct = Math.min(100, Math.round(tasks.examCurrent / 10 * 100));
+    let examClass = tasks.examDone ? 'done' : '';
+    let examRewardLabel = examTier >= 10 ? '已完成 +100⭐' : (examTier >= 5 ? '已完成 +30⭐，冲击+100⭐' : (examTier >= 3 ? '已完成 +10⭐，冲击+30⭐' : '+10⭐/30⭐/100⭐'));
+    examHtml = `<div class="task-card ${examClass}">
+        <div class="task-icon">🎯</div>
+        <div class="task-title">考试任务</div>
+        <div class="task-progress">已复习${tasks.examCurrent}篇</div>
+        <div class="task-reward">${examRewardLabel}</div>
+    </div>`;
+
+    el.innerHTML = learnHtml + reviewHtml + examHtml;
+}
+
+// ============================================================
 // UI 渲染
 // ============================================================
 function toggleUser() { user = user === "A" ? "B" : "A"; document.getElementById("user-btn").textContent = "同学" + user; renderAll(); }
@@ -1964,6 +2324,33 @@ function renderHomeStats() {
     document.getElementById('stat-learned').textContent = (u.tingli?.learn || []).length;
     document.getElementById('stat-done').textContent = (u.tingli?.done || []).length;
     document.getElementById('header-stars').textContent = u.stars || 0;
+    // 连续打卡信息（基于每日任务完成）
+    let streakEl = document.getElementById('streak-info');
+    if (streakEl) {
+        let streakDays = u.tingli?.streak?.count || 0;
+        let tasks = getDailyTasks();
+        let allDone = tasks.learnDone && (tasks.reviewDone || !tasks.hasReviewTask) && tasks.examDone;
+        if (streakDays > 0) {
+            let nextMilestone = streakDays < 3 ? 3 : streakDays < 7 ? 7 : streakDays < 14 ? 14 : streakDays < 30 ? 30 : null;
+            let html = `🔥 连续打卡 <b style="color:var(--primary);">${streakDays}</b> 天`;
+            if (!allDone) html += ` ｜完成今日任务延续打卡`;
+            if (nextMilestone && allDone) html += ` ｜再坚持 ${nextMilestone - streakDays} 天领奖励⭐`;
+            streakEl.innerHTML = html;
+        } else {
+            streakEl.innerHTML = '💡 完成今日所有任务即可打卡！';
+        }
+    }
+    // 快速开始按钮：有待复习时显示"复习N篇"
+    let reviewCount = getReviewList().length;
+    let desc = document.getElementById('quick-start-desc');
+    let btns = document.getElementById('quick-start-btns');
+    if (reviewCount > 0) {
+        desc.textContent = `有待复习短文 ${reviewCount} 篇，优先抽取复习`;
+        btns.innerHTML = `<button class="btn btn-green" onclick="startQuickListen(3)">🎧 复习3篇</button><button class="btn btn-blue" onclick="startQuickListen(5)">🎧 复习5篇</button><button class="btn btn-orange" onclick="startQuickListen(10)">🎧 复习10篇</button>`;
+    } else {
+        desc.textContent = '随机抽取短文进行听力练习';
+        btns.innerHTML = `<button class="btn btn-green" onclick="startQuickListen(3)">🎧 听3篇</button><button class="btn btn-blue" onclick="startQuickListen(5)">🎧 听5篇</button><button class="btn btn-orange" onclick="startQuickListen(10)">🎧 听10篇</button>`;
+    }
 }
 
 function renderHomeReview() {
@@ -1971,15 +2358,15 @@ function renderHomeReview() {
     let el = document.getElementById('home-review-list');
     if (items.length === 0) { el.innerHTML = '<div class="empty">今日无待复习短文 🎉</div>'; return; }
     let show = items.slice(0, 5);
-    el.innerHTML = show.map(item => `<div class="review-item"><div class="review-left"><div class="title">${item.article.title}</div><div class="meta">单词：${item.article.words} | 复习第${item.info.c+1}次</div></div><button class="btn btn-blue btn-sm" onclick="openListenModal(${item.article.id})">🎧</button></div>`).join('') + (items.length > 5 ? `<div style="text-align:center;padding:8px;color:var(--text3);font-size:13px;">还有 ${items.length-5} 篇...去待复习页面查看</div>` : '');
+    el.innerHTML = show.map(item => `<div class="review-item"><div class="review-left"><div class="title">${item.article.title}</div><div class="meta">单词：${item.article.words} | 复习第${item.info.c+1}次</div></div><button class="btn btn-blue btn-sm" onclick="openListenModal(${item.article.id},true)">🎧</button></div>`).join('') + (items.length > 5 ? `<div style="text-align:center;padding:8px;color:var(--text3);font-size:13px;">还有 ${items.length-5} 篇...去待复习页面查看</div>` : '');
 }
 
 function renderReviewList() {
     let items = getReviewList();
     let el = document.getElementById('review-list');
     if (items.length === 0) { el.innerHTML = '<div class="empty">暂无待复习短文 🎉</div>'; return; }
-    el.innerHTML = items.map(item => { let log = (safeUser(getUser()).listeningLog || {})[item.article.id]; let lc = log ? log.count : 0;
-        return `<div class="review-item"><div class="review-left"><div class="title">${item.article.title}</div><div class="meta">单词：${item.article.words} | 复习第${item.info.c+1}次 | 听力${lc}次</div></div><button class="btn btn-blue btn-sm" onclick="openListenModal(${item.article.id})">🎧 听力</button></div>`;
+    el.innerHTML = items.map(item => { let log = (safeUser(getUser()).tingli?.listeningLog || {})[item.article.id]; let pc = log ? (log.practiceCount || 0) : 0; let rc = log ? (log.reviewCount || 0) : 0;
+        return `<div class="review-item"><div class="review-left"><div class="title">${item.article.title}</div><div class="meta">单词：${item.article.words} | 复习${rc}次 | 练习${pc}次</div></div><div style="display:flex;gap:6px;"><button class="btn btn-blue btn-sm" onclick="openListenModal(${item.article.id},true)">🎧 复习</button></div></div>`;
     }).join('');
 }
 
@@ -2008,8 +2395,8 @@ function renderArticleList() {
             else if (nextD && nextD <= new Date().getTime()) statusHtml = '<span style="color:#ef5350;font-size:11px;font-weight:500;">📌 待复习</span>';
             else statusHtml = `<span style="color:#999;font-size:11px;">复习${reviewInfo.c}/${PERIOD.length-1}</span>`;
         }
-        let log = (u.tingli?.listeningLog || {})[a.id]; let lc = log ? log.count : 0;
-        return `<div class="article-item"><div class="article-info"><div class="article-title">${a.title} ${statusHtml}</div><div class="article-meta">单词：${a.words} | ${a.category} | 听力${lc}次</div></div><div class="article-actions"><button class="btn btn-blue btn-sm" onclick="openListenModal(${a.id})">🎧 开始</button></div></div>`;
+        let log = (u.tingli?.listeningLog || {})[a.id]; let pc = log ? (log.practiceCount || 0) : 0;
+        return `<div class="article-item"><div class="article-info"><div class="article-title">${a.title} ${statusHtml}</div><div class="article-meta">单词：${a.words} | ${a.category} | 练习${pc}次</div></div><div class="article-actions"><button class="btn btn-blue btn-sm" onclick="openListenModal(${a.id})">🎧 练习</button></div></div>`;
     }).join('');
 }
 
@@ -2183,9 +2570,9 @@ function updateGenerationProgress(data, pending, voice, speed, model) {
 // ============================================================
 function toast(msg, type='info') { let el = document.createElement('div'); el.className = 'toast ' + type; el.textContent = msg; document.body.appendChild(el); setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2500); }
 
-function renderAll() { renderHomeStats(); renderHomeReview(); renderReviewList(); renderCategoryTags(); renderArticleList(); renderManageList(); renderMineStats(); updateGenerateSummary(); }
+function renderAll() { renderHomeStats(); renderDailyTasks(); renderHomeReview(); renderReviewList(); renderCategoryTags(); renderArticleList(); renderManageList(); renderMineStats(); updateGenerateSummary(); }
 
-window.onload = async function() { await initArticles(); renderAll(); loadSettings(); };
+window.onload = async function() { await initArticles(); checkStreakAndDailyRewards(); renderAll(); loadSettings(); };
 </script>
 </body>
 </html>
