@@ -215,12 +215,42 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
       <div id="home-review-list"></div>
     </div>
     <div class="card">
-      <h2>🎯 快速开始</h2>
+      <h2>🎯 听力考试</h2>
       <p style="color:var(--text3);font-size:13px;margin-bottom:12px;" id="quick-start-desc">随机抽取短文进行听力练习</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;" id="quick-start-btns">
         <button class="btn btn-green" onclick="startQuickListen(3)">🎧 听3篇</button>
         <button class="btn btn-blue" onclick="startQuickListen(5)">🎧 听5篇</button>
         <button class="btn btn-orange" onclick="startQuickListen(10)">🎧 听10篇</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>⭐ 积分规则</h2>
+      <div style="font-size:13px;line-height:1.8;">
+        <div style="margin-bottom:8px;color:var(--primary);font-weight:600;">【每日任务】</div>
+        <div style="margin-bottom:4px;">📖 学习任务（完成2篇学习）：<span style="color:#43a047;">+10⭐</span></div>
+        <div style="margin-bottom:4px;">🔄 复习任务（完成所有待复习）：<span style="color:#43a047;">+10⭐</span></div>
+        <div style="margin-bottom:12px;">🎯 考试任务（随机练习）：</div>
+        <div style="padding-left:16px;margin-bottom:4px;">听3篇：<span style="color:#43a047;">+10⭐</span></div>
+        <div style="padding-left:16px;margin-bottom:4px;">听5篇：<span style="color:#43a047;">+20⭐</span>（累计30⭐）</div>
+        <div style="padding-left:16px;margin-bottom:12px;">听10篇：<span style="color:#43a047;">+70⭐</span>（累计100⭐）</div>
+        
+        <div style="margin-bottom:8px;color:var(--primary);font-weight:600;">【练习奖励】</div>
+        <div style="margin-bottom:4px;">🗣️ 拼读模式（≥60分）：<span style="color:#43a047;">+5⭐</span></div>
+        <div style="margin-bottom:4px;">✏️ 填空模式（≥60分）：<span style="color:#43a047;">+10⭐</span></div>
+        <div style="margin-bottom:4px;">🎧 听写模式（≥80分）：<span style="color:#43a047;">+20⭐</span></div>
+        <div style="margin-bottom:4px;">🎧 听写模式（60-79分）：<span style="color:#43a047;">+10⭐</span></div>
+        <div style="margin-bottom:12px;">📌 加入复习计划：<span style="color:#43a047;">+5~20⭐</span>（根据模式和分数）</div>
+        
+        <div style="margin-bottom:8px;color:var(--danger);font-weight:600;">【惩罚机制】</div>
+        <div style="margin-bottom:4px;">❌ 答题错误：<span style="color:#ef5350;">-5⭐</span></div>
+        <div style="margin-bottom:4px;">⏭️ 跳过题目：<span style="color:#ef5350;">-1⭐</span></div>
+        <div style="margin-bottom:12px;">⚠️ 星星不会为负数，最低为0</div>
+        
+        <div style="margin-bottom:8px;color:var(--primary);font-weight:600;">【连续打卡】</div>
+        <div style="margin-bottom:4px;">🔥 连续3天：<span style="color:#43a047;">+20⭐</span></div>
+        <div style="margin-bottom:4px;">🔥 连续7天：<span style="color:#43a047;">+50⭐</span></div>
+        <div style="margin-bottom:4px;">🔥 连续14天：<span style="color:#43a047;">+80⭐</span></div>
+        <div style="margin-bottom:4px;">🔥 连续30天：<span style="color:#43a047;">+200⭐</span></div>
       </div>
     </div>
   </div>
@@ -1355,9 +1385,10 @@ function initFillblank(cfg, article) {
 // 抖动元素动画
 function shakeElement(el) {
     if (!el) return;
-    el.style.animation = 'none';
-    el.offsetHeight; // 触发重绘
-    el.style.animation = 'shake 0.5s ease-in-out';
+    // 如果已经有 shake 类，说明动画正在进行中，不重复触发
+    if (el.classList.contains('shake')) return;
+    el.classList.add('shake');
+    setTimeout(() => el.classList.remove('shake'), 500); // 0.5秒后移除 class
 }
 
 function checkFillAnswers(cfg, article, onComplete) {
@@ -1367,12 +1398,12 @@ function checkFillAnswers(cfg, article, onComplete) {
     let hasInput = false;
     inputs.forEach(input => { if (input.value.trim() !== '') hasInput = true; });
     
-    // 如果没有输入任何答案，抖动检查按钮
+    // 如果没有输入任何答案，抖动按钮并返回 false
     if (!hasInput) {
         let btn = cfg.containerEl.closest('.modal')?.querySelector('.btn-green') || document.querySelector('#mode-fillblank .btn-green');
         if (btn) shakeElement(btn);
         toast('请先输入答案', 'warning');
-        return;
+        return false;  // 返回 false 表示未执行
     }
     
     let correct = 0, total = inputs.length;
@@ -1394,6 +1425,7 @@ function checkFillAnswers(cfg, article, onComplete) {
     cfg.resultsEl.innerHTML = `<h3>📊 填空结果</h3><div class="fill-score" style="color:${pctColor};">${pct}%</div><div class="fill-detail">正确 ${correct}/${total}</div>${wrongHtml}`;
     if (cfg === singleFill) { _lastSinglePct = pct; _lastSingleMode = 'fillblank'; updateActionBtnState(); }
     if (onComplete) onComplete(pct, correct, total, inputs);
+    return true;  // 返回 true 表示成功执行
 }
 
 function resetFillInputs(cfg) {
@@ -1827,13 +1859,17 @@ function submitBatchAnswer() {
     let article = batchArticles[batchIndex];
     if (currentMode === 'pronunciation') { batchPron.cleanup(); batchIndex++; renderBatchQuestion(); return; }
     if (currentMode === 'fillblank') {
-        checkFillAnswers(batchFill, article, (pct, correct, total, inputs) => {
+        let result = checkFillAnswers(batchFill, article, (pct, correct, total, inputs) => {
             let userInputs = Array.from(inputs).map(i => i.value.trim());
             batchAnswers.push({
                 idx: article.id, article, input: userInputs.join(' '), correct: pct >= 60, simScore: pct, mode: 'fillblank',
                 fillCorrect: correct, fillTotal: total, fillAnswers: Array.from(inputs).map(i => ({ user: i.value.trim(), answer: i.dataset.answer }))
             });
         });
+        // 如果 checkFillAnswers 返回 false（空输入），不继续执行
+        if (result === false) return;
+        batchAudio.cleanup(); batchIndex++; renderBatchQuestion();
+        return;
     } else {
         let input = document.getElementById('batch-answer').value.trim();
         let originalText = article.text.trim();
@@ -1912,7 +1948,11 @@ function finishBatch() {
         u.tingli.dailyLog[today].review++;
 
         // --- 计算星星奖励（FIX #1: 固定奖励值；FIX #2: rewards 标记在同一个 u 对象上累积）---
-        if (a.skipped || a.correct === null) return;
+        // 跳过题目扣1星
+        if (a.skipped || a.correct === null) {
+            starReward -= 1;
+            return;
+        }
         let rewardKey = idx + '_' + (a.mode || currentMode);
         if (u.tingli.dailyLog[today].rewards[rewardKey]) return; // 今日已发过
 
