@@ -1095,14 +1095,9 @@ class AudioPlayer {
 class PronunciationPlayer {
     constructor(els) {
         this.els = els;
-        this.audioContext = null;
-        this.audioBuffer = null;
-        this.bufferSource = null;
-        this.startTime = 0;
-        this.pausedTime = 0;
+        this.audio = null;
         this.timestamps = [];
         this.loading = false;
-        this.paused = false;
         this._highlightActive = false;
         this._requestId = 0;
         this._abortCtrl = null;
@@ -1115,12 +1110,27 @@ class PronunciationPlayer {
         if (!article) return;
         let btn = this.els.pronBtn;
         if (this.loading) return;
-        if (this.bufferSource && !this.paused) { this._pausePlayback(); this.paused = true; btn.innerHTML = '▶️ 继续播放'; this._clearHighlight(); return; }
-        if (this.audioBuffer && this.paused) { this._resumePlayback(btn); this.paused = false; return; }
+        
+        // 暂停状态
+        if (this.audio && !this.audio.paused) {
+            this.audio.pause();
+            btn.innerHTML = '▶️ 继续播放';
+            this._stopHighlight();
+            return;
+        }
+        
+        // 恢复状态
+        if (this.audio && this.audio.paused && !this.audio.ended) {
+            this.audio.play();
+            btn.innerHTML = '⏸️ 暂停播放';
+            this._startHighlight();
+            return;
+        }
+        
         let speed = parseInt(document.getElementById('tts-speed').value) / 100;
         let voice = document.getElementById('tts-voice').value || 'af_sarah';
         let model = document.getElementById('tts-model') ? document.getElementById('tts-model').value : 'kokoro';
-        this.loading = true; this.paused = false;
+        this.loading = true;
         btn.innerHTML = '⏳ 正在生成发音...'; btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none';
         let myRequestId = ++this._requestId;
         if (this._abortCtrl) this._abortCtrl.abort();
@@ -1142,82 +1152,35 @@ class PronunciationPlayer {
 
     _loadAndPlay(audioUrl, btn) {
         let myRequestId = this._requestId;
-        // 只有当audioContext不存在时才创建新的
-        if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // 清理之前的音频
+        if (this.audio) {
+            this.audio.pause();
+            this.audio = null;
         }
-        fetch(audioUrl).then(r => r.arrayBuffer()).then(ab => this.audioContext.decodeAudioData(ab)).then(buffer => {
-            if (myRequestId !== this._requestId) { this._cleanup(); return; }
-            this.audioBuffer = buffer;
-            this._startPlayback(btn);
-        }).catch(() => { if (myRequestId === this._requestId) { this._resetBtn(btn); this.loading = false; this.paused = false; toast('加载音频失败', 'error'); } });
-    }
-
-    _startPlayback(btn) {
-        if (!this.audioContext || !this.audioBuffer) return;
-        this.bufferSource = this.audioContext.createBufferSource();
-        this.bufferSource.buffer = this.audioBuffer;
-        let gain = this.audioContext.createGain();
-        gain.gain.value = parseInt(this.els.volumeEl.value) / 100;
-        this.bufferSource.connect(gain); gain.connect(this.audioContext.destination);
-        this.startTime = this.audioContext.currentTime - this.pausedTime;
-        this.bufferSource.start(0, this.pausedTime);
-        btn.innerHTML = '⏸️ 暂停播放'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
-        this._startHighlight();
-        this.bufferSource.onended = () => { 
-            this.bufferSource = null;
-            this.paused = false;
-            this.pausedTime = 0;
+        this.audio = new Audio(audioUrl);
+        this.audio.volume = parseInt(this.els.volumeEl.value) / 100;
+        this.audio.oncanplay = () => {
+            if (myRequestId !== this._requestId) return;
+            this.audio.play();
+            btn.innerHTML = '⏸️ 暂停播放'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+            this._startHighlight();
+        };
+        this.audio.onended = () => {
             this._stopHighlight();
             this._resetBtn(btn);
-            this._clearHighlight();
         };
-    }
-
-    _pausePlayback() {
-        if (!this.bufferSource || !this.audioContext) return;
-        this.pausedTime = this.audioContext.currentTime - this.startTime;
-        this.bufferSource.stop(); this.bufferSource = null; this._stopHighlight();
-    }
-
-    _resumePlayback(btn) {
-        if (!this.audioBuffer) return;
-        // 如果audioContext被关闭了，需要重新创建并重新解码audioBuffer
-        if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        this.bufferSource = this.audioContext.createBufferSource();
-        this.bufferSource.buffer = this.audioBuffer;
-        let gain = this.audioContext.createGain();
-        gain.gain.value = parseInt(this.els.volumeEl.value) / 100;
-        this.bufferSource.connect(gain); gain.connect(this.audioContext.destination);
-        this.startTime = this.audioContext.currentTime - this.pausedTime;
-        this.bufferSource.start(0, this.pausedTime);
-        btn.innerHTML = '⏸️ 暂停播放';
-        this._startHighlight();
-        this.bufferSource.onended = () => { 
-            this.bufferSource = null;
-            this.paused = false;
-            this.pausedTime = 0;
-            this._stopHighlight();
+        this.audio.onerror = () => {
+            toast('加载音频失败', 'error');
             this._resetBtn(btn);
-            this._clearHighlight();
         };
-    }
-
-    _cleanup() {
-        this._stopHighlight();
-        if (this.bufferSource) { try { this.bufferSource.stop(); } catch (e) {} this.bufferSource = null; }
-        if (this.audioContext) { this.audioContext.close(); this.audioContext = null; }
-        this.audioBuffer = null;
     }
 
     _startHighlight() {
         this._stopHighlight(); this._highlightActive = true;
         const update = () => {
             if (!this._highlightActive) return;
-            if (!this.audioContext || this.paused) { requestAnimationFrame(update); return; }
-            let ct = this.audioContext.currentTime - this.startTime;
+            if (!this.audio || this.audio.paused) { requestAnimationFrame(update); return; }
+            let ct = this.audio.currentTime;
             let idx = this.timestamps.findIndex(t => ct >= t.start && ct < t.end);
             if (idx >= 0) this._setActive(idx);
             requestAnimationFrame(update);
@@ -1238,7 +1201,7 @@ class PronunciationPlayer {
     _setActive(index) { this._clearHighlight(); let el = document.querySelector(`.${this.els.sentenceClass}[data-index="${index}"]`); if (el) { el.classList.add('active'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
     _resetBtn(btn) { btn.innerHTML = '🔊 听标准发音'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
 
-    cleanup() { this._requestId++; if (this._abortCtrl) { this._abortCtrl.abort(); this._abortCtrl = null; } this._cleanup(); this.paused = false; this.pausedTime = 0; this.loading = false; this._resetBtn(this.els.pronBtn); this._clearHighlight(); }
+    cleanup() { this._requestId++; if (this._abortCtrl) { this._abortCtrl.abort(); this._abortCtrl = null; } if (this.audio) { this.audio.pause(); this.audio = null; } this._stopHighlight(); this._resetBtn(this.els.pronBtn); this._clearHighlight(); }
 }
 
 // ============================================================
