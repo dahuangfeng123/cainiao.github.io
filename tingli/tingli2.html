@@ -1142,8 +1142,10 @@ class PronunciationPlayer {
 
     _loadAndPlay(audioUrl, btn) {
         let myRequestId = this._requestId;
-        if (this.audioContext) { this.audioContext.close(); this.audioContext = null; }
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // 只有当audioContext不存在时才创建新的
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
         fetch(audioUrl).then(r => r.arrayBuffer()).then(ab => this.audioContext.decodeAudioData(ab)).then(buffer => {
             if (myRequestId !== this._requestId) { this._cleanup(); return; }
             this.audioBuffer = buffer;
@@ -1162,7 +1164,14 @@ class PronunciationPlayer {
         this.bufferSource.start(0, this.pausedTime);
         btn.innerHTML = '⏸️ 暂停播放'; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
         this._startHighlight();
-        this.bufferSource.onended = () => { this._cleanup(); this.paused = false; this.pausedTime = 0; this._resetBtn(btn); this._clearHighlight(); };
+        this.bufferSource.onended = () => { 
+            this.bufferSource = null;
+            this.paused = false;
+            this.pausedTime = 0;
+            this._stopHighlight();
+            this._resetBtn(btn);
+            this._clearHighlight();
+        };
     }
 
     _pausePlayback() {
@@ -1173,6 +1182,10 @@ class PronunciationPlayer {
 
     _resumePlayback(btn) {
         if (!this.audioBuffer) return;
+        // 如果audioContext被关闭了，需要重新创建并重新解码audioBuffer
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
         this.bufferSource = this.audioContext.createBufferSource();
         this.bufferSource.buffer = this.audioBuffer;
         let gain = this.audioContext.createGain();
@@ -1182,7 +1195,14 @@ class PronunciationPlayer {
         this.bufferSource.start(0, this.pausedTime);
         btn.innerHTML = '⏸️ 暂停播放';
         this._startHighlight();
-        this.bufferSource.onended = () => { this._cleanup(); this.paused = false; this.pausedTime = 0; this._resetBtn(btn); this._clearHighlight(); };
+        this.bufferSource.onended = () => { 
+            this.bufferSource = null;
+            this.paused = false;
+            this.pausedTime = 0;
+            this._stopHighlight();
+            this._resetBtn(btn);
+            this._clearHighlight();
+        };
     }
 
     _cleanup() {
