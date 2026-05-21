@@ -1442,7 +1442,7 @@
                 if (titleSim > bestScore) bestScore = titleSim;
                 if (titleContain) containMatch = true;
             }
-            return { correct: bestScore >= 0.2 || containMatch, score: bestScore };
+            return { correct: bestScore >= 1.0, score: bestScore };
         }
 
         function formatDuration(ms) {
