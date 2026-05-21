@@ -2594,8 +2594,8 @@
             });
         }
 
-        function getUser() { return JSON.parse(localStorage.getItem("wuser" + user)); }
-        function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
+        function getUser() { return JSON.parse(localStorage.getItem("danci_wuser" + user)); }
+        function setUser(u) { localStorage.setItem("danci_wuser" + user, JSON.stringify(u)); }
 
         function show(p) {
             document.querySelectorAll(".page").forEach(el => el.classList.remove("active"));
@@ -3412,8 +3412,8 @@
         }
 
         function renderStats() {
-            let a = safeUser(JSON.parse(localStorage.getItem("wuserA") || "null"));
-            let b = safeUser(JSON.parse(localStorage.getItem("wuserB") || "null"));
+            let a = safeUser(JSON.parse(localStorage.getItem("danci_wuserA") || "null"));
+            let b = safeUser(JSON.parse(localStorage.getItem("danci_wuserB") || "null"));
             let u = safeUser(getUser());
             let today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -3822,7 +3822,7 @@
         // ==============================
         function resetUser() {
             if (!confirm("确定重置当前用户的所有学习记录？")) return;
-            localStorage.removeItem("wuser" + user);
+            localStorage.removeItem("danci_wuser" + user);
             renderAll();
         }
 
@@ -4830,7 +4830,7 @@
             let learnBarBorder = isSimple ? "rgba(52, 168, 83, 1)" : "rgba(255, 111, 145, 1)";
             let reviewBarColor = isSimple ? "rgba(66, 133, 244, 0.6)" : "rgba(79, 195, 247, 0.6)";
             let reviewBarBorder = isSimple ? "rgba(66, 133, 244, 1)" : "rgba(79, 195, 247, 1)";
-            let u = safeUser(JSON.parse(localStorage.getItem("wuser" + which) || "null"));
+            let u = safeUser(JSON.parse(localStorage.getItem("danci_wuser" + which) || "null"));
             let labels = [];
             let learnData = [];
             let reviewData = [];

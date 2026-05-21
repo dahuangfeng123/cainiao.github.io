@@ -689,8 +689,8 @@ let batchIndex = 0;
 let batchAnswers = [];
 let _isExamMode = false;  // 是否为考试模式（通过 startQuickListen 发起）
 
-function getUser() { try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; } }
-function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
+function getUser() { try { return JSON.parse(localStorage.getItem("tingli_wuser" + user)); } catch { return null; } }
+function setUser(u) { localStorage.setItem("tingli_wuser" + user, JSON.stringify(u)); }
 
 // ----------------------------------------------------------------
 // FIX #3: safeUser 只做字段补全，不做迁移（迁移逻辑移到 migrateUserOnce）
@@ -718,7 +718,7 @@ function safeUser(u) {
 // 老数据结构迁移：顶层字段 → tingli.*，只执行一次，执行后立即持久化
 function migrateUserOnce() {
     let raw = null;
-    try { raw = JSON.parse(localStorage.getItem("wuser" + user)); } catch { return; }
+    try { raw = JSON.parse(localStorage.getItem("tingli_wuser" + user)); } catch { return; }
     if (!raw) return;
     let needSave = false;
     if (!raw._migrated) {
@@ -735,7 +735,7 @@ function migrateUserOnce() {
         raw._migrated = true;
         needSave = true;
     }
-    if (needSave) localStorage.setItem("wuser" + user, JSON.stringify(raw));
+    if (needSave) localStorage.setItem("tingli_wuser" + user, JSON.stringify(raw));
 }
 
 function todayKey() { let d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -2535,7 +2535,7 @@ function renderMineStats() {
 
 function resetData() {
     if (!confirm('确定重置同学' + user + '的所有学习数据？此操作不可恢复！')) return;
-    localStorage.removeItem("wuser" + user);
+    localStorage.removeItem("tingli_wuser" + user);
     toast('数据已重置', 'info'); renderAll();
 }
 
