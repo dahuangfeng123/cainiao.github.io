@@ -1245,6 +1245,7 @@ class PronunciationPlayer {
         };
         this.audio.onended = () => {
             this._stopHighlight();
+            this._clearHighlight();
             this._resetBtn(btn);
         };
         this.audio.onerror = () => {
