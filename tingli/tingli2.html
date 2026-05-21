@@ -2961,7 +2961,7 @@ document.addEventListener('keydown', function(e) {
             // 左Ctrl键：播放标准发音
             if (e.code === 'ControlLeft') {
                 e.preventDefault();
-                singleAudio.toggle();
+                singlePron.playReference();
                 return;
             }
             // 空格键：开始/暂停录音
@@ -3006,7 +3006,7 @@ document.addEventListener('keydown', function(e) {
             // 左Ctrl键：播放标准发音
             if (e.code === 'ControlLeft') {
                 e.preventDefault();
-                batchAudio.toggle();
+                batchPron.playReference();
                 return;
             }
             // 空格键：开始/暂停录音
