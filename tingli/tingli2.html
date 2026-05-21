@@ -689,8 +689,52 @@ let batchIndex = 0;
 let batchAnswers = [];
 let _isExamMode = false;  // 是否为考试模式（通过 startQuickListen 发起）
 
-function getUser() { try { return JSON.parse(localStorage.getItem("tingli_wuser" + user)); } catch { return null; } }
-function setUser(u) { localStorage.setItem("tingli_wuser" + user, JSON.stringify(u)); }
+function getUser() { try { return JSON.parse(localStorage.getItem("wuser" + user)); } catch { return null; } }
+function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
+
+// =====================================================
+// 合并根数据中的 tingli 相关字段到当前 tingli 数据
+// 说明：从根数据（如 danci.html）读取 tingli 相关字段
+// stars 数据合并到 tingli 字段
+// =====================================================
+function mergeFromRootData() {
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem("wuser" + user)); } catch { return; }
+    if (!raw) return;
+    
+    let needSave = false;
+    let u = raw;
+    
+    // 如果没有 tingli 字段，创建一个
+    if (!u.tingli) {
+        u.tingli = {
+            learn: [], done: [], log: {}, dailyLog: {}, listeningLog: {},
+            listeningTotal: 0,
+            voice: 'af_sarah', ttsSpeed: 85, ttsModel: 'kokoro', wordMode: 'fillblank',
+            streak: { count: 0, lastDate: '' }
+        };
+        needSave = true;
+    }
+    
+    // 1. 合并 stars（不覆盖已有的更大值）
+    if (u.stars !== undefined && u.stars > 0) {
+        if (u.tingli.stars === undefined || u.stars > u.tingli.stars) {
+            u.tingli.stars = u.stars;
+            needSave = true;
+        }
+    }
+    
+    // 标记已合并，避免重复合并
+    if (!u._tingliFromRootMerged) {
+        u._tingliFromRootMerged = true;
+        needSave = true;
+    }
+    
+    if (needSave) {
+        setUser(u);
+        console.log('✅ 根数据已合并到 tingli');
+    }
+}
 
 // ----------------------------------------------------------------
 // FIX #3: safeUser 只做字段补全，不做迁移（迁移逻辑移到 migrateUserOnce）
@@ -700,10 +744,10 @@ function safeUser(u) {
         tingli: {
             learn: [], done: [], log: {}, dailyLog: {}, listeningLog: {},
             voice: 'af_sarah', ttsSpeed: 85, ttsModel: 'kokoro', wordMode: 'fillblank',
-            streak: { count: 0, lastDate: '' }
+            streak: { count: 0, lastDate: '' },
+            listeningTotal: 0  // 听力练习总次数，独立存储
         },
-        stars: 0,
-        listeningTotal: 0
+        stars: 0
     };
     if (!u) return def;
     let merged = { ...def, ...u };
@@ -718,7 +762,7 @@ function safeUser(u) {
 // 老数据结构迁移：顶层字段 → tingli.*，只执行一次，执行后立即持久化
 function migrateUserOnce() {
     let raw = null;
-    try { raw = JSON.parse(localStorage.getItem("tingli_wuser" + user)); } catch { return; }
+    try { raw = JSON.parse(localStorage.getItem("wuser" + user)); } catch { return; }
     if (!raw) return;
     let needSave = false;
     if (!raw._migrated) {
@@ -735,7 +779,7 @@ function migrateUserOnce() {
         raw._migrated = true;
         needSave = true;
     }
-    if (needSave) localStorage.setItem("tingli_wuser" + user, JSON.stringify(raw));
+    if (needSave) localStorage.setItem("wuser" + user, JSON.stringify(raw));
 }
 
 function todayKey() { let d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -745,7 +789,7 @@ function recordProgress(articleId, correct, context) {
     let u = safeUser(getUser());
     let now = Date.now();
     let idx = articleId;
-    u.listeningTotal = (u.listeningTotal || 0) + 1;
+    u.tingli.listeningTotal = (u.tingli.listeningTotal || 0) + 1;
     if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
     if (u.tingli.listeningLog[idx]) { u.tingli.listeningLog[idx].count += 1; u.tingli.listeningLog[idx].lastTime = now; }
     else { u.tingli.listeningLog[idx] = { count: 1, lastTime: now, practiceCount: 0, reviewCount: 0 }; }
@@ -1927,7 +1971,7 @@ function finishBatch() {
     batchAnswers.forEach(a => {
         let idx = a.idx;
         // --- 更新 listeningTotal & listeningLog ---
-        u.listeningTotal = (u.listeningTotal || 0) + 1;
+        u.tingli.listeningTotal = (u.tingli.listeningTotal || 0) + 1;
         if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
         if (u.tingli.listeningLog[idx]) {
             u.tingli.listeningLog[idx].count += 1;
@@ -2417,7 +2461,7 @@ function getReviewList() {
 
 function renderHomeStats() {
     let u = safeUser(getUser());
-    document.getElementById('stat-total').textContent = u.listeningTotal || 0;
+    document.getElementById('stat-total').textContent = u.tingli?.listeningTotal || 0;
     document.getElementById('stat-articles').textContent = Object.keys(u.tingli?.listeningLog || {}).length;
     document.getElementById('stat-learned').textContent = (u.tingli?.learn || []).length;
     document.getElementById('stat-done').textContent = (u.tingli?.done || []).length;
@@ -2528,14 +2572,14 @@ function renderMineStats() {
     document.getElementById('my-total').textContent = (u.tingli?.learn || []).length + ' 篇';
     document.getElementById('my-wait').textContent = countWait(u) + ' 篇';
     document.getElementById('my-done').textContent = (u.tingli?.done || []).length + ' 篇';
-    document.getElementById('my-listen-total').textContent = u.listeningTotal || 0;
+    document.getElementById('my-listen-total').textContent = u.tingli?.listeningTotal || 0;
     document.getElementById('my-listen-articles').textContent = Object.keys(u.tingli?.listeningLog || {}).length;
     document.getElementById('my-stars').textContent = u.stars || 0;
 }
 
 function resetData() {
     if (!confirm('确定重置同学' + user + '的所有学习数据？此操作不可恢复！')) return;
-    localStorage.removeItem("tingli_wuser" + user);
+    localStorage.removeItem("wuser" + user);
     toast('数据已重置', 'info'); renderAll();
 }
 
@@ -3024,6 +3068,7 @@ document.addEventListener('keydown', function(e) {
 
 window.onload = async function () {
     await initArticles();
+    mergeFromRootData(); // 从根数据合并 tingli 相关字段
     migrateUserOnce();   // FIX #3: 页面加载时执行一次迁移（有标记，不会重复）
     checkStreakAndDailyRewards();
     renderAll();

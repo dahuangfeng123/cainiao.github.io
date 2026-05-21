@@ -2594,8 +2594,8 @@
             });
         }
 
-        function getUser() { return JSON.parse(localStorage.getItem("danci_wuser" + user)); }
-        function setUser(u) { localStorage.setItem("danci_wuser" + user, JSON.stringify(u)); }
+        function getUser() { return JSON.parse(localStorage.getItem("wuser" + user)); }
+        function setUser(u) { localStorage.setItem("wuser" + user, JSON.stringify(u)); }
 
         function show(p) {
             document.querySelectorAll(".page").forEach(el => el.classList.remove("active"));
@@ -2634,6 +2634,46 @@
             document.getElementById("show-user").innerText = "同学" + user;
             selectedDate = null;
             renderAll();
+        }
+
+        // =====================================================
+        // 合并 tingli 数据到根数据（danci）
+        // 说明：将 tingli 的 stars 数据合并到根数据
+        // 其他 tingli 特有数据（log, dailyLog, listeningLog, voice, ttsSpeed, ttsModel, wordMode, listeningTotal，不合并到根数据 等）保持独立
+        // =====================================================
+        function mergeTingliData() {
+            let u = safeUser(getUser());
+            let needSave = false;
+            
+            // 确保 tingli 字段存在
+            if (!u.tingli) {
+                u.tingli = {
+                    learn: [], done: [], log: {}, dailyLog: {}, listeningLog: {},
+                    listeningTotal: 0,
+                    voice: 'af_sarah', ttsSpeed: 85, ttsModel: 'kokoro', wordMode: 'fillblank',
+                    streak: { count: 0, lastDate: '' }
+                };
+                needSave = true;
+            }
+            
+            // 1. 合并 stars（不覆盖已有的更大值）
+            if (u.tingli.stars !== undefined) {
+                if (u.stars === undefined || u.tingli.stars > u.stars) {
+                    u.stars = u.tingli.stars;
+                    needSave = true;
+                }
+            }
+            
+            // 标记已合并，避免重复合并
+            if (!u._tingliMerged) {
+                u._tingliMerged = true;
+                needSave = true;
+            }
+            
+            if (needSave) {
+                setUser(u);
+                console.log('✅ tingli 数据已合并到根数据');
+            }
         }
 
         function safeUser(u) {
@@ -3412,8 +3452,8 @@
         }
 
         function renderStats() {
-            let a = safeUser(JSON.parse(localStorage.getItem("danci_wuserA") || "null"));
-            let b = safeUser(JSON.parse(localStorage.getItem("danci_wuserB") || "null"));
+            let a = safeUser(JSON.parse(localStorage.getItem("wuserA") || "null"));
+            let b = safeUser(JSON.parse(localStorage.getItem("wuserB") || "null"));
             let u = safeUser(getUser());
             let today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -3822,7 +3862,7 @@
         // ==============================
         function resetUser() {
             if (!confirm("确定重置当前用户的所有学习记录？")) return;
-            localStorage.removeItem("danci_wuser" + user);
+            localStorage.removeItem("wuser" + user);
             renderAll();
         }
 
@@ -4830,7 +4870,7 @@
             let learnBarBorder = isSimple ? "rgba(52, 168, 83, 1)" : "rgba(255, 111, 145, 1)";
             let reviewBarColor = isSimple ? "rgba(66, 133, 244, 0.6)" : "rgba(79, 195, 247, 0.6)";
             let reviewBarBorder = isSimple ? "rgba(66, 133, 244, 1)" : "rgba(79, 195, 247, 1)";
-            let u = safeUser(JSON.parse(localStorage.getItem("danci_wuser" + which) || "null"));
+            let u = safeUser(JSON.parse(localStorage.getItem("wuser" + which) || "null"));
             let labels = [];
             let learnData = [];
             let reviewData = [];
@@ -4977,6 +5017,7 @@
         window.onload = function () {
             loadWords();
             loadRelations();
+            mergeTingliData(); // 合并 tingli 数据
             applyTheme(currentTheme);
             renderRules();
             show("home");
