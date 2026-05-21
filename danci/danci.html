@@ -2671,6 +2671,8 @@
             }
             
             if (needSave) {
+                // 清理 tingli 字段，避免污染 danci 的数据结构
+                delete u.tingli;
                 setUser(u);
                 console.log('✅ tingli 数据已合并到根数据');
             }
