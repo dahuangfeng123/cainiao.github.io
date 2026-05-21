@@ -236,13 +236,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
         <div style="padding-left:16px;margin-bottom:12px;">听10篇：<span style="color:#43a047;">+70⭐</span>（累计100⭐）</div>
         
         <div style="margin-bottom:8px;color:var(--primary);font-weight:600;">【练习奖励】</div>
-        <div style="margin-bottom:4px;">🗣️ 拼读模式（≥60分）：<span style="color:#43a047;">+5⭐</span></div>
-        <div style="margin-bottom:4px;">✏️ 填空模式（≥60分）：<span style="color:#43a047;">+10⭐</span></div>
-        <div style="margin-bottom:4px;">🎧 听写模式（≥80分）：<span style="color:#43a047;">+20⭐</span></div>
-        <div style="margin-bottom:4px;">🎧 听写模式（60-79分）：<span style="color:#43a047;">+10⭐</span></div>
-        <div style="margin-bottom:12px;">📌 加入复习计划：<span style="color:#43a047;">+5~20⭐</span>（根据模式和分数）</div>
+        <div style="margin-bottom:4px;">🗣️ 拼读模式：<span style="color:#43a047;">+3⭐</span></div>
+        <div style="margin-bottom:4px;">✏️ 填空模式：<span style="color:#43a047;">+3⭐</span></div>
+        <div style="margin-bottom:4px;">🎧 听写模式：<span style="color:#43a047;">+10⭐</span>（≥90分）</div>
+        <div style="margin-bottom:4px;">🎧 听写模式：<span style="color:#43a047;">+5⭐</span>（80-89分）</div>
+        <div style="margin-bottom:4px;">🎧 听写模式：<span style="color:#9e9e9e;">无奖励</span>（<80分）</div>
+        <div style="margin-bottom:12px;">📌 加入复习计划：<span style="color:#43a047;">+3~10⭐</span>（根据模式和分数）</div>
         
-        <div style="margin-bottom:8px;color:var(--danger);font-weight:600;">【惩罚机制】</div>
+        <div style="margin-bottom:8px;color:var(--danger);font-weight:600;">【考试惩罚】</div>
         <div style="margin-bottom:4px;">❌ 答题错误：<span style="color:#ef5350;">-5⭐</span></div>
         <div style="margin-bottom:4px;">⏭️ 跳过题目：<span style="color:#ef5350;">-1⭐</span></div>
         <div style="margin-bottom:12px;">⚠️ 星星不会为负数，最低为0</div>
@@ -737,7 +738,11 @@ function mergeFromRootData() {
 }
 
 // ----------------------------------------------------------------
-// FIX #3: safeUser 只做字段补全，不做迁移（迁移逻辑移到 migrateUserOnce）
+// safeUser：补全 tingli 用户的缺失字段
+// 注意：
+// 1. 如果用户数据是 tingli 的（有 tingli 字段），正常补全
+// 2. 如果用户数据来自 danci（没有 tingli 字段），不创建 tingli 字段
+// 3. mergeFromRootData 会为 danci 数据合并 stars 等字段
 // ----------------------------------------------------------------
 function safeUser(u) {
     let def = {
@@ -750,32 +755,50 @@ function safeUser(u) {
         stars: 0
     };
     if (!u) return def;
-    let merged = { ...def, ...u };
-    if (!merged.tingli) {
-        merged.tingli = def.tingli;
-    } else {
-        merged.tingli = { ...def.tingli, ...merged.tingli };
+    
+    // 如果用户数据没有 tingli 字段，说明可能是 danci 的数据
+    // 只补全顶层的 stars 字段，不创建 tingli 字段
+    if (!u.tingli) {
+        return { ...def, ...u };
     }
+    
+    // 如果有 tingli 字段，正常合并
+    let merged = { ...def, ...u };
+    merged.tingli = { ...def.tingli, ...merged.tingli };
     return merged;
 }
 
 // 老数据结构迁移：顶层字段 → tingli.*，只执行一次，执行后立即持久化
+// 注意：
+// 1. 只迁移 tingli 特有的字段，避免 danci 的数据被错误迁移
+// 2. 如果数据没有 tingli 字段（可能是 danci 的数据），不创建 tingli 字段
 function migrateUserOnce() {
     let raw = null;
     try { raw = JSON.parse(localStorage.getItem("wuser" + user)); } catch { return; }
     if (!raw) return;
+    
+    // 如果已经有 tingli 字段，说明是 tingli 的数据，检查是否已迁移
+    if (raw.tingli) {
+        if (raw.tingli._migrated) return;  // 已迁移，跳过
+    } else {
+        // 如果没有 tingli 字段，可能是 danci 的数据或其他来源
+        // 不创建 tingli 字段，跳过迁移
+        return;
+    }
+    
     let needSave = false;
     if (!raw._migrated) {
-        // 把可能散落在顶层的旧字段搬进 tingli
-        if (!raw.tingli) raw.tingli = {};
-        const fields = ['learn', 'done', 'log', 'dailyLog', 'listeningLog', 'voice', 'ttsSpeed', 'ttsModel', 'wordMode'];
-        for (let f of fields) {
+        // 只迁移 tingli 特有的字段（不包括 danci 的 learn, done, log, dailyLog）
+        // 注意：danci 的 learn/done/log/dailyLog 和 tingli 的完全不同，不能混淆
+        const tingliFields = ['voice', 'ttsSpeed', 'ttsModel', 'wordMode'];
+        for (let f of tingliFields) {
             if (raw[f] !== undefined && raw.tingli[f] === undefined) {
                 raw.tingli[f] = raw[f];
                 delete raw[f];
                 needSave = true;
             }
         }
+        
         raw._migrated = true;
         needSave = true;
     }
@@ -789,6 +812,16 @@ function recordProgress(articleId, correct, context) {
     let u = safeUser(getUser());
     let now = Date.now();
     let idx = articleId;
+    
+    // 确保 tingli 字段存在（如果是 danci 的数据，需要初始化）
+    if (!u.tingli) {
+        u.tingli = {
+            learn: [], done: [], log: {}, dailyLog: {}, listeningLog: {},
+            listeningTotal: 0, voice: 'af_sarah', ttsSpeed: 85, ttsModel: 'kokoro', wordMode: 'fillblank',
+            streak: { count: 0, lastDate: '' }
+        };
+    }
+    
     u.tingli.listeningTotal = (u.tingli.listeningTotal || 0) + 1;
     if (!u.tingli.listeningLog) u.tingli.listeningLog = {};
     if (u.tingli.listeningLog[idx]) { u.tingli.listeningLog[idx].count += 1; u.tingli.listeningLog[idx].lastTime = now; }
@@ -1759,11 +1792,22 @@ function completeListening() {
     if (u.tingli.dailyLog[today].rewards[rewardKey]) {
         starGain = 0; msg = '✅ 完成复习！（今日已获得该题奖励）';
     } else {
-        // FIX #1: 按各模式固定奖励值，不做差值计算
-        if (mode === 'pronunciation') { starGain = 5; msg = '✅ 拼读完成！+5⭐'; }
-        else if (mode === 'fillblank') { starGain = 10; msg = `✅ 填空完成！${pct}% +10⭐`; }
-        else { starGain = pct >= 99 ? 20 : 10; msg = `✅ 听写完成！${pct}% +${starGain}⭐`; }
-        u.tingli.dailyLog[today].rewards[rewardKey] = true;
+        // 更新后的练习奖励规则
+        if (mode === 'pronunciation') {
+            starGain = 3; msg = '✅ 拼读完成！+3⭐';
+        } else if (mode === 'fillblank') {
+            starGain = 3; msg = `✅ 填空完成！${pct}% +3⭐`;
+        } else {
+            // 听写模式：≥90分+10⭐，80-89分+5⭐，<80分无奖励
+            if (pct >= 90) {
+                starGain = 10; msg = `✅ 听写完成！${pct}% +10⭐`;
+            } else if (pct >= 80) {
+                starGain = 5; msg = `✅ 听写完成！${pct}% +5⭐`;
+            } else {
+                starGain = 0; msg = `✅ 听写完成！${pct}%（不足80分无奖励）`;
+            }
+        }
+        if (starGain > 0) u.tingli.dailyLog[today].rewards[rewardKey] = true;
     }
     u.stars = Math.max(0, (u.stars || 0) + starGain);
     setUser(u);
@@ -1789,14 +1833,25 @@ function joinReviewPlan() {
     if (u.tingli.dailyLog[today].rewards[rewardKey]) {
         msg = alreadyInPlan ? '📌 已在复习计划中！（今日已获得奖励）' : '📌 已加入复习计划！（今日已获得该题奖励）';
     } else {
-        // FIX #1: 固定奖励值
-        if (mode === 'pronunciation') { starGain = 5; }
-        else if (mode === 'fillblank') { starGain = 10; }
-        else { starGain = pct >= 99 ? 20 : 10; }
+        // 更新后的练习奖励规则
+        if (mode === 'pronunciation') {
+            starGain = 3;
+        } else if (mode === 'fillblank') {
+            starGain = 3;
+        } else {
+            // 听写模式：≥90分+10⭐，80-89分+5⭐，<80分无奖励
+            if (pct >= 90) {
+                starGain = 10;
+            } else if (pct >= 80) {
+                starGain = 5;
+            } else {
+                starGain = 0;
+            }
+        }
         msg = alreadyInPlan
-            ? `📌 已在复习计划中！${pct > 0 ? pct + '% ' : ''}+${starGain}⭐`
-            : `📌 已加入复习计划！${pct > 0 ? pct + '% ' : ''}+${starGain}⭐`;
-        u.tingli.dailyLog[today].rewards[rewardKey] = true;
+            ? `📌 已在复习计划中！${pct > 0 ? pct + '% ' : ''}${starGain > 0 ? '+' + starGain + '⭐' : '（不足80分无奖励）'}`
+            : `📌 已加入复习计划！${pct > 0 ? pct + '% ' : ''}${starGain > 0 ? '+' + starGain + '⭐' : '（不足80分无奖励）'}`;
+        if (starGain > 0) u.tingli.dailyLog[today].rewards[rewardKey] = true;
     }
     u.stars = Math.max(0, (u.stars || 0) + starGain);
     setUser(u);
@@ -2025,10 +2080,26 @@ function finishBatch() {
         let rewardKey = idx + '_' + (a.mode || currentMode);
         if (u.tingli.dailyLog[today].rewards[rewardKey]) return; // 今日已发过
 
-        // FIX #1: 各模式固定奖励值，答错扣5星
-        const TIER_REWARDS = { pronunciation: 5, fillblank: 10, dictation: 20 };
-        let base = TIER_REWARDS[a.mode] || 10;
-        let gain = a.correct ? base : -5;
+        // 更新后的练习奖励规则
+        let gain = 0;
+        if (a.mode === 'pronunciation') {
+            gain = a.correct ? 3 : -5;
+        } else if (a.mode === 'fillblank') {
+            gain = a.correct ? 3 : -5;
+        } else {
+            // 听写模式：≥90分+10⭐，80-89分+5⭐，<80分无奖励（考试模式答错-5⭐）
+            if (a.correct) {
+                if (a.simScore >= 90) {
+                    gain = 10;
+                } else if (a.simScore >= 80) {
+                    gain = 5;
+                } else {
+                    gain = 0;
+                }
+            } else {
+                gain = -5;
+            }
+        }
         if (gain > 0) u.tingli.dailyLog[today].rewards[rewardKey] = true;
         starReward += gain;
     });
@@ -2432,7 +2503,7 @@ function renderDailyTasks() {
 function toggleUser() {
     user = user === "A" ? "B" : "A";
     document.getElementById("user-btn").textContent = "同学" + user;
-    migrateUserOnce(); // FIX #3: 切换用户时也执行一次迁移
+    // 切换用户时不执行迁移，避免把 danci 的数据错误迁移
     renderAll();
 }
 function showPage(p) {
