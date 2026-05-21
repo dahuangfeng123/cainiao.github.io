@@ -253,6 +253,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
         <div style="margin-bottom:4px;">🔥 连续30天：<span style="color:#43a047;">+200⭐</span></div>
       </div>
     </div>
+    <div class="card">
+      <h2>⌨️ 键盘快捷键</h2>
+      <div style="font-size:13px;line-height:1.8;">
+        <div style="margin-bottom:8px;color:var(--primary);font-weight:600;">【拼读模式】</div>
+        <div style="margin-bottom:4px;"><kbd style="padding:2px 6px;background:#eee;border-radius:4px;">空格</kbd>：开始/暂停录音</div>
+        <div style="margin-bottom:4px;"><kbd style="padding:2px 6px;background:#eee;border-radius:4px;">回车</kbd>：播放/暂停自己的录音</div>
+        <div style="margin-bottom:12px;"><kbd style="padding:2px 6px;background:#eee;border-radius:4px;">左Ctrl</kbd>：听标准发音</div>
+        
+        <div style="margin-bottom:8px;color:var(--primary);font-weight:600;">【听写/填空模式】</div>
+        <div style="margin-bottom:4px;"><kbd style="padding:2px 6px;background:#eee;border-radius:4px;">回车</kbd>：练习时加入复习/考试时提交答案</div>
+        <div style="margin-bottom:12px;"><kbd style="padding:2px 6px;background:#eee;border-radius:4px;">右Ctrl</kbd>：练习时关闭弹窗/考试时跳过题目</div>
+        
+        <div style="margin-bottom:8px;color:var(--primary);font-weight:600;">【通用说明】</div>
+        <div style="margin-bottom:4px;">• 填空模式输入框中焦点时，快捷键不会生效，需先点击空白区域</div>
+        <div style="margin-bottom:4px;">• 快捷键仅在练习或考试弹窗打开时生效</div>
+      </div>
+    </div>
   </div>
 
   <!-- 待复习 -->
@@ -2932,8 +2949,8 @@ document.addEventListener('keydown', function(e) {
     
     // ========== 练习弹窗（listen-modal）==========
     if (listenActive) {
-        // Ctrl键：关闭练习弹窗
-        if (e.ctrlKey || e.code === 'ControlLeft' || e.code === 'ControlRight') {
+        // 右Ctrl键：关闭练习弹窗
+        if (e.code === 'ControlRight') {
             e.preventDefault();
             closeListenModal();
             return;
@@ -2941,25 +2958,28 @@ document.addEventListener('keydown', function(e) {
         
         // 拼读模式
         if (currentMode === 'pronunciation') {
+            // 左Ctrl键：播放标准发音
+            if (e.code === 'ControlLeft') {
+                e.preventDefault();
+                let playBtn = listenModal.querySelector('.audio-btn.play');
+                if (playBtn) {
+                    playBtn.click();
+                }
+                return;
+            }
             // 空格键：开始/暂停录音
             if (e.code === 'Space') {
                 e.preventDefault();
-                if (singleRec && singleRec.isRecording) {
-                    singleRec.stopRecording();
-                } else {
-                    singleRec.startRecording();
+                if (singleRec && singleRec.toggle) {
+                    singleRec.toggle();
                 }
                 return;
             }
             // 回车键：播放/暂停录音
             if (e.code === 'Enter') {
                 e.preventDefault();
-                if (singleRec && singleRec.recordingBlob) {
-                    if (singlePron.isPlaying) {
-                        singlePron.stop();
-                    } else {
-                        singlePron.play();
-                    }
+                if (singleRec && singleRec.playRecording) {
+                    singleRec.playRecording();
                 }
                 return;
             }
@@ -2977,8 +2997,8 @@ document.addEventListener('keydown', function(e) {
     
     // ========== 考试弹窗（batch-modal）==========
     if (batchActive) {
-        // Ctrl键：跳过
-        if (e.ctrlKey || e.code === 'ControlLeft' || e.code === 'ControlRight') {
+        // 右Ctrl键：跳过
+        if (e.code === 'ControlRight') {
             e.preventDefault();
             skipBatchAnswer();
             return;
@@ -2986,25 +3006,28 @@ document.addEventListener('keydown', function(e) {
         
         // 拼读模式
         if (currentMode === 'pronunciation') {
+            // 左Ctrl键：播放标准发音
+            if (e.code === 'ControlLeft') {
+                e.preventDefault();
+                let playBtn = batchModal.querySelector('.audio-btn.play');
+                if (playBtn) {
+                    playBtn.click();
+                }
+                return;
+            }
             // 空格键：开始/暂停录音
             if (e.code === 'Space') {
                 e.preventDefault();
-                if (batchRec && batchRec.isRecording) {
-                    batchRec.stopRecording();
-                } else if (!batchPron.isPlaying) {
-                    batchRec.startRecording();
+                if (batchRec && batchRec.toggle) {
+                    batchRec.toggle();
                 }
                 return;
             }
             // 回车键：播放/暂停录音
             if (e.code === 'Enter') {
                 e.preventDefault();
-                if (batchRec && batchRec.recordingBlob) {
-                    if (batchPron.isPlaying) {
-                        batchPron.stop();
-                    } else {
-                        batchPron.play();
-                    }
+                if (batchRec && batchRec.playRecording) {
+                    batchRec.playRecording();
                 }
                 return;
             }
