@@ -1340,8 +1340,8 @@ function escapeHtml(text) { let div = document.createElement('div'); div.textCon
 function displayPronResults(el, result) {
     let fluency = result.fluency || 0, phoneAccuracy = result.phone_accuracy || 0;
     let pauseRatio = result.pause_ratio || 0, duration = result.duration || 0, heard = result.heard || '';
-    let fClass = fluency >= 80 ? 'high' : fluency >= 60 ? 'mid' : 'low';
-    let aClass = phoneAccuracy >= 80 ? 'high' : phoneAccuracy >= 60 ? 'mid' : 'low';
+    let fClass = fluency >= 99 ? 'high' : fluency >= 80 ? 'mid' : 'low';
+    let aClass = phoneAccuracy >= 99 ? 'high' : phoneAccuracy >= 80 ? 'mid' : 'low';
     let resultsHtml = '';
     if (result.results && result.results.length > 0) {
         resultsHtml = '<div style="margin-top:8px;font-size:13px;color:var(--text2);">' + result.results.map(r => (r.correct ? '✅' : '❌') + ' /' + r.phone + '/').join(' ') + '</div>';
@@ -1423,7 +1423,7 @@ function checkFillAnswers(cfg, article, onComplete) {
         else { input.classList.add('wrong'); input.classList.remove('correct'); }
     });
     let pct = total > 0 ? Math.round(correct / total * 100) : 0;
-    let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
+    let pctColor = pct >= 99 ? '#43a047' : pct >= 80 ? '#ffa726' : '#ef5350';
     let wrongWords = [];
     inputs.forEach(input => { if (input.classList.contains('wrong')) wrongWords.push(input.dataset.answer); });
     let wrongHtml = wrongWords.length > 0 ?
@@ -1497,7 +1497,7 @@ function revealAnswer(cfg) {
         let wordPct = wordList.length > 0 ? Math.round(matched / wordList.length * 100) : 0;
         cfg.scoreBarEl.style.display = 'flex';
         cfg.scorePctEl.textContent = wordPct + '%';
-        cfg.scorePctEl.className = 'pct ' + (wordPct >= 80 ? 'high' : wordPct >= 60 ? 'mid' : 'low');
+        cfg.scorePctEl.className = 'pct ' + (wordPct >= 99 ? 'high' : wordPct >= 80 ? 'mid' : 'low');
         cfg.scoreDetailEl.textContent = `输入 ${inputWords} 词 / 关联词 ${matched}/${wordList.length} / 原文 ${totalWords} 词`;
         if (cfg === singleAnswerCfg) { _lastSinglePct = wordPct; _lastSingleMode = 'dictation'; updateActionBtnState(); }
     }
@@ -1714,7 +1714,7 @@ function completeListening() {
         // FIX #1: 按各模式固定奖励值，不做差值计算
         if (mode === 'pronunciation') { starGain = 5; msg = '✅ 拼读完成！+5⭐'; }
         else if (mode === 'fillblank') { starGain = 10; msg = `✅ 填空完成！${pct}% +10⭐`; }
-        else { starGain = pct >= 80 ? 20 : 10; msg = `✅ 听写完成！${pct}% +${starGain}⭐`; }
+        else { starGain = pct >= 99 ? 20 : 10; msg = `✅ 听写完成！${pct}% +${starGain}⭐`; }
         u.tingli.dailyLog[today].rewards[rewardKey] = true;
     }
     u.stars = Math.max(0, (u.stars || 0) + starGain);
@@ -1744,7 +1744,7 @@ function joinReviewPlan() {
         // FIX #1: 固定奖励值
         if (mode === 'pronunciation') { starGain = 5; }
         else if (mode === 'fillblank') { starGain = 10; }
-        else { starGain = pct >= 80 ? 20 : 10; }
+        else { starGain = pct >= 99 ? 20 : 10; }
         msg = alreadyInPlan
             ? `📌 已在复习计划中！${pct > 0 ? pct + '% ' : ''}+${starGain}⭐`
             : `📌 已加入复习计划！${pct > 0 ? pct + '% ' : ''}+${starGain}⭐`;
@@ -1761,9 +1761,9 @@ function updateActionBtnState() {
     let mode = currentMode;
     let pct = _lastSinglePct;
     let thresholdMet = false;
-    if (mode === 'pronunciation') thresholdMet = pct >= 80;
-    else if (mode === 'fillblank') thresholdMet = pct >= 80;
-    else thresholdMet = pct >= 60;
+    if (mode === 'pronunciation') thresholdMet = pct >= 99;
+    else if (mode === 'fillblank') thresholdMet = pct >= 99;
+    else thresholdMet = pct >= 80;
     let joinBtn = document.getElementById('join-plan-btn');
     let completeBtn = document.getElementById('complete-btn');
     if (joinBtn) joinBtn.disabled = !thresholdMet;
@@ -1870,7 +1870,7 @@ function submitBatchAnswer() {
         let result = checkFillAnswers(batchFill, article, (pct, correct, total, inputs) => {
             let userInputs = Array.from(inputs).map(i => i.value.trim());
             batchAnswers.push({
-                idx: article.id, article, input: userInputs.join(' '), correct: pct >= 60, simScore: pct, mode: 'fillblank',
+                idx: article.id, article, input: userInputs.join(' '), correct: pct >= 80, simScore: pct, mode: 'fillblank',
                 fillCorrect: correct, fillTotal: total, fillAnswers: Array.from(inputs).map(i => ({ user: i.value.trim(), answer: i.dataset.answer }))
             });
         });
@@ -1887,7 +1887,7 @@ function submitBatchAnswer() {
             let originalWords = originalText.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
             if (originalWords.length > 0) { let matched = inputWords.filter(w => originalWords.includes(w)).length; pct = Math.round((matched / originalWords.length) * 100); }
         }
-        batchAnswers.push({ idx: article.id, article, input, correct: pct >= 80, simScore: pct, mode: 'dictation' });
+        batchAnswers.push({ idx: article.id, article, input, correct: pct >= 99, simScore: pct, mode: 'dictation' });
     }
     batchAudio.cleanup(); batchIndex++; renderBatchQuestion();
 }
@@ -2016,7 +2016,7 @@ function showBatchResult(correctCount, starReward) {
     let list = document.getElementById('result-list');
     list.innerHTML = batchAnswers.map((a, i) => {
         let pct = a.simScore || 0;
-        let pctColor = pct >= 80 ? '#43a047' : pct >= 60 ? '#ffa726' : '#ef5350';
+        let pctColor = pct >= 99 ? '#43a047' : pct >= 80 ? '#ffa726' : '#ef5350';
         let statusIcon = a.correct === true ? '✅' : (a.skipped || a.correct === null ? '⏭️' : '❌');
         let bgColor = a.correct === true ? '#f0faf4' : (a.skipped || a.correct === null ? '#f5f5f5' : '#fff5f5');
         let wordList = (a.article.words || '').split(',').map(w => w.trim()).filter(Boolean);
