@@ -1610,9 +1610,12 @@ let batchRec = new RecordingSession({
 batchRec.getArticle = () => batchArticles[batchIndex] || null;
 batchRec.onScored = (result, article) => {
     let phoneAccuracy = result.phone_accuracy || 0;
+    let fluency = result.fluency || 0;
+    // 拼读通过标准：流利度 >= 90% 且 音素准确率 >= 99%
+    let isCorrect = fluency >= 90 && phoneAccuracy >= 99;
     batchAnswers.push({
-        idx: article.id, article, input: result.heard || '', correct: phoneAccuracy >= 60, simScore: phoneAccuracy, mode: 'pronunciation',
-        fluency: Math.round(result.fluency || 0), phone_accuracy: phoneAccuracy, pause_ratio: result.pause_ratio || 0, duration: result.duration || 0, heard: result.heard || ''
+        idx: article.id, article, input: result.heard || '', correct: isCorrect, simScore: phoneAccuracy, mode: 'pronunciation',
+        fluency: Math.round(fluency), phone_accuracy: phoneAccuracy, pause_ratio: result.pause_ratio || 0, duration: result.duration || 0, heard: result.heard || ''
     });
     setTimeout(() => {
         let submitBtn = document.getElementById('batch-submit-btn');
@@ -1870,7 +1873,7 @@ function submitBatchAnswer() {
         let result = checkFillAnswers(batchFill, article, (pct, correct, total, inputs) => {
             let userInputs = Array.from(inputs).map(i => i.value.trim());
             batchAnswers.push({
-                idx: article.id, article, input: userInputs.join(' '), correct: pct >= 80, simScore: pct, mode: 'fillblank',
+                idx: article.id, article, input: userInputs.join(' '), correct: pct >= 99, simScore: pct, mode: 'fillblank',
                 fillCorrect: correct, fillTotal: total, fillAnswers: Array.from(inputs).map(i => ({ user: i.value.trim(), answer: i.dataset.answer }))
             });
         });
@@ -1887,7 +1890,7 @@ function submitBatchAnswer() {
             let originalWords = originalText.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
             if (originalWords.length > 0) { let matched = inputWords.filter(w => originalWords.includes(w)).length; pct = Math.round((matched / originalWords.length) * 100); }
         }
-        batchAnswers.push({ idx: article.id, article, input, correct: pct >= 99, simScore: pct, mode: 'dictation' });
+        batchAnswers.push({ idx: article.id, article, input, correct: pct >= 80, simScore: pct, mode: 'dictation' });
     }
     batchAudio.cleanup(); batchIndex++; renderBatchQuestion();
 }
@@ -2912,6 +2915,111 @@ function updateGenerationProgress(data, pending, voice, speed, model) {
 function toast(msg, type = 'info') { let el = document.createElement('div'); el.className = 'toast ' + type; el.textContent = msg; document.body.appendChild(el); setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2500); }
 
 function renderAll() { renderHomeStats(); renderDailyTasks(); renderHomeReview(); renderReviewList(); renderCategoryTags(); renderArticleList(); renderManageList(); renderMineStats(); updateGenerateSummary(); }
+
+// 全局键盘快捷键处理
+document.addEventListener('keydown', function(e) {
+    // 检查模态框是否打开
+    let listenModal = document.getElementById('listen-modal');
+    let batchModal = document.getElementById('batch-modal');
+    let listenActive = listenModal && listenModal.classList.contains('active');
+    let batchActive = batchModal && batchModal.classList.contains('active');
+    
+    if (!listenActive && !batchActive) return;
+    
+    // 检查当前焦点是否在输入框中
+    let activeEl = document.activeElement;
+    let isFillInput = activeEl && activeEl.classList.contains('fill-input');
+    
+    // ========== 练习弹窗（listen-modal）==========
+    if (listenActive) {
+        // Ctrl键：关闭练习弹窗
+        if (e.ctrlKey || e.code === 'ControlLeft' || e.code === 'ControlRight') {
+            e.preventDefault();
+            closeListenModal();
+            return;
+        }
+        
+        // 拼读模式
+        if (currentMode === 'pronunciation') {
+            // 空格键：开始/暂停录音
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (singleRec && singleRec.isRecording) {
+                    singleRec.stopRecording();
+                } else {
+                    singleRec.startRecording();
+                }
+                return;
+            }
+            // 回车键：播放/暂停录音
+            if (e.code === 'Enter') {
+                e.preventDefault();
+                if (singleRec && singleRec.recordingBlob) {
+                    if (singlePron.isPlaying) {
+                        singlePron.stop();
+                    } else {
+                        singlePron.play();
+                    }
+                }
+                return;
+            }
+        }
+        
+        // 听写/填空模式：回车加入复习
+        if (currentMode === 'dictation' || currentMode === 'fillblank') {
+            if (e.code === 'Enter' && !isFillInput) {
+                e.preventDefault();
+                joinReviewPlan();
+                return;
+            }
+        }
+    }
+    
+    // ========== 考试弹窗（batch-modal）==========
+    if (batchActive) {
+        // Ctrl键：跳过
+        if (e.ctrlKey || e.code === 'ControlLeft' || e.code === 'ControlRight') {
+            e.preventDefault();
+            skipBatchAnswer();
+            return;
+        }
+        
+        // 拼读模式
+        if (currentMode === 'pronunciation') {
+            // 空格键：开始/暂停录音
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (batchRec && batchRec.isRecording) {
+                    batchRec.stopRecording();
+                } else if (!batchPron.isPlaying) {
+                    batchRec.startRecording();
+                }
+                return;
+            }
+            // 回车键：播放/暂停录音
+            if (e.code === 'Enter') {
+                e.preventDefault();
+                if (batchRec && batchRec.recordingBlob) {
+                    if (batchPron.isPlaying) {
+                        batchPron.stop();
+                    } else {
+                        batchPron.play();
+                    }
+                }
+                return;
+            }
+        }
+        
+        // 听写/填空模式：回车提交
+        if (currentMode === 'dictation' || currentMode === 'fillblank') {
+            if (e.code === 'Enter' && !isFillInput) {
+                e.preventDefault();
+                submitBatchAnswer();
+                return;
+            }
+        }
+    }
+});
 
 window.onload = async function () {
     await initArticles();
