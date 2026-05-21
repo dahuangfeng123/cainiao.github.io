@@ -2741,7 +2741,7 @@ function stopWebAudioHighlight() {
 }
 
 function fetchTtsWithTimestamp(text, model, voice, speed) {
-    return fetch('http://localhost:5003/tts/timestamp', {
+    return fetch(API_BASE + '/tts/timestamp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, model, voice, speed })
