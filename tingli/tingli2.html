@@ -2961,10 +2961,7 @@ document.addEventListener('keydown', function(e) {
             // 左Ctrl键：播放标准发音
             if (e.code === 'ControlLeft') {
                 e.preventDefault();
-                let playBtn = listenModal.querySelector('.audio-btn.play');
-                if (playBtn) {
-                    playBtn.click();
-                }
+                singleAudio.toggle();
                 return;
             }
             // 空格键：开始/暂停录音
@@ -3009,10 +3006,7 @@ document.addEventListener('keydown', function(e) {
             // 左Ctrl键：播放标准发音
             if (e.code === 'ControlLeft') {
                 e.preventDefault();
-                let playBtn = batchModal.querySelector('.audio-btn.play');
-                if (playBtn) {
-                    playBtn.click();
-                }
+                batchAudio.toggle();
                 return;
             }
             // 空格键：开始/暂停录音
