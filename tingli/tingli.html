@@ -527,8 +527,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hira
 </div>
 
 <script>
-const TTS_URL = 'http://localhost:5003/tts';
-const SCORE_URL = 'http://localhost:5003/score';
+const API_BASE = window.location.origin;
+const TTS_URL = API_BASE + '/tts';
+const SCORE_URL = API_BASE + '/score';
 
 const DEFAULT_ARTICLES = [
   { id:1, title:"The Seasons", words:"spring,summer,autumn,winter,season,year", category:"自然",
