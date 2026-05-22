@@ -8,6 +8,10 @@ voices-v1.0.bin
 __pycache__/
 *.pyc
 .venv/
+.trae/
+.codebuddy/
+.vscode/
+.workbuddy/
 .cache/
 data/audio/
 temp/
